@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Me vs Me — viewport review</title>
+<style>body{margin:20px;background:#23252a;color:white;font:14px system-ui}label{display:block;margin-bottom:16px}select{font:inherit;padding:8px}iframe{display:block;border:1px solid #aaa;background:#101319}</style></head>
+<body><label>Review viewport <select id="size"><option value="390,780">Phone · 390 × 780</option><option value="360,640">Small phone · 360 × 640</option><option value="320,568">Narrow phone · 320 × 568</option><option value="780,390">Landscape · 780 × 390</option></select></label>
+<iframe title="Game viewport" src="/" width="390" height="780"></iframe>
+<script>document.querySelector('select').onchange=e=>{const [w,h]=e.target.value.split(',');const frame=document.querySelector('iframe');frame.width=w;frame.height=h;};</script></body></html>
