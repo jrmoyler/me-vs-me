@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { motionFrame } from "./motion.js";
 import { MOVES, moveFrame, moveName, movePhase } from "./moves.js";
 import { paintAtmosphere, paintPower } from "./stage-effects.js";
 import {
@@ -52,6 +53,19 @@ export async function startCombat({
     `<div class="mvm-hud"><div><div class="mvm-hud-name">${safe(player.name)}</div><div class="mvm-health"><i data-health="0"></i></div><div class="mvm-energy"><i data-energy="0"></i></div><div class="mvm-rounds" data-rounds="0">○ ○</div></div><div class="mvm-clock"><small>TIME</small><span data-time>60</span></div><div class="mvm-hud-right"><div class="mvm-hud-name">${safe(opponent.name)}</div><div class="mvm-health"><i data-health="1"></i></div><div class="mvm-energy"><i data-energy="1"></i></div><div class="mvm-rounds" data-rounds="1">○ ○</div></div></div><div class="mvm-message"></div><button class="mvm-pause-button" aria-label="Pause match">Ⅱ PAUSE</button><div class="mvm-help">A D MOVE · W JUMP · S CROUCH · J K L PUNCH · U I O KICK · Q POWER · SHIFT GUARD · ESC PAUSE</div><div class="mvm-touch"><div class="mvm-touch-cluster"><button class="mvm-touch-up" data-control="jump" aria-label="Jump">↑</button><button class="mvm-touch-left" data-control="left" aria-label="Move left">←</button><button data-control="crouch" aria-label="Crouch">↓</button><button data-control="right" aria-label="Move right">→</button></div><div class="mvm-touch-cluster"><button data-control="light" aria-label="Light punch">LP</button><button data-control="medium" aria-label="Medium punch">MP</button><button data-control="heavy" aria-label="Heavy punch">HP</button><button data-control="kick" aria-label="Light kick">LK</button><button data-control="mediumKick" aria-label="Medium kick">MK</button><button data-control="heavyKick" aria-label="Heavy kick">HK</button><button data-control="special" class="special">POWER</button><button data-control="block" style="grid-column:span 2">GUARD</button></div></div>`,
   );
   container.append(wrapper);
+  wrapper.insertAdjacentHTML(
+    "beforeend",
+    '<div class="mvm-loading" role="status"><small>ME / VS / ME</small><strong>PREPARING THE ARENA</strong><div><i></i></div><span>Loading fighters and stage…</span></div>',
+  );
+  wrapper.querySelectorAll(".mvm-health").forEach((el, i) => {
+    el.setAttribute("role", "progressbar");
+    el.setAttribute(
+      "aria-label",
+      `${i === 0 ? player.name : opponent.name} health`,
+    );
+    el.setAttribute("aria-valuemin", "0");
+    el.setAttribute("aria-valuemax", "100");
+  });
   const message = wrapper.querySelector(".mvm-message");
   wrapper.dataset.mode = mode;
   let trainingGuard = false;
@@ -169,7 +183,7 @@ export async function startCombat({
       .forEach((b) => b.classList.remove("held"));
   }
   function resume() {
-    if (destroyed || ended || (assetFailed || scene?.assetFailure)) return;
+    if (destroyed || ended || assetFailed || scene?.assetFailure) return;
     paused = false;
     overlay?.remove();
     overlay = null;
@@ -258,7 +272,11 @@ export async function startCombat({
       inputs[k[0]][k[1]] = false;
     }
   });
-  bind(window, "resize", () => { wrapper.dataset.touch = String(matchMedia("(pointer:coarse)").matches || innerWidth < 800); });
+  bind(window, "resize", () => {
+    wrapper.dataset.touch = String(
+      matchMedia("(pointer:coarse)").matches || innerWidth < 800,
+    );
+  });
   bind(window, "blur", pause);
   bind(document, "visibilitychange", () => {
     if (document.hidden) pause();
@@ -292,10 +310,21 @@ export async function startCombat({
   };
   class Fight extends Phaser.Scene {
     preload() {
+      this.load.on("progress", (progress) => {
+        const loading = wrapper.querySelector(".mvm-loading");
+        if (loading) {
+          loading.querySelector("i").style.width =
+            `${Math.round(progress * 100)}%`;
+          loading.querySelector("span").textContent =
+            `${Math.round(progress * 100)}% · Loading fighters and stage`;
+        }
+      });
       this.load.on("loaderror", (file) => {
+        if (assetFailed) return;
         this.assetFailure = true;
         assetFailed = true;
-        if (overlay) return;
+        overlay?.remove();
+        wrapper.querySelector(".mvm-loading")?.remove();
         paused = true;
         overlay = document.createElement("div");
         overlay.className = "mvm-overlay";
@@ -308,23 +337,32 @@ export async function startCombat({
         };
       });
       this.load.image("stage", arena.background);
-      [player, opponent].forEach((c, i) =>
+      [player, opponent].forEach((c, i) => {
+        this.load.spritesheet(`ready${i}`, c.sheet, {
+          frameWidth: c.frameWidth,
+          frameHeight: c.frameHeight,
+        });
         this.load.spritesheet(`fighter${i}`, c.combatSheet, {
-          frameWidth: c.frameWidth || 256,
-          frameHeight: c.frameHeight || 256,
-        }),
-      );
+          frameWidth: 320,
+          frameHeight: 320,
+        });
+        this.load.spritesheet(`motion${i}`, c.motionSheet, {
+          frameWidth: 320,
+          frameHeight: 320,
+        });
+      });
     }
     create() {
       if (this.assetFailure) return;
       scene = this;
+      wrapper.querySelector(".mvm-loading")?.remove();
       this.add.image(480, 270, "stage").setDisplaySize(960, 540);
       this.add.rectangle(480, 510, 960, 60, 0x080a16, 0.28);
       this.atmosphere = this.add.graphics().setDepth(3);
       this.fx = this.add.graphics().setDepth(9);
       this.fighters = [player, opponent].map((c, i) => {
         const sprite = this.add
-          .sprite(i ? 690 : 270, 450, `fighter${i}`, 0)
+          .sprite(i ? 690 : 270, 450, `ready${i}`, 0)
           .setOrigin(
             (c.anchorX || 160) / (c.frameWidth || 320),
             (c.anchorY || 296) / (c.frameHeight || 320),
@@ -372,6 +410,12 @@ export async function startCombat({
     }
     sync() {
       this.fighters.forEach((f, i) => {
+        wrapper
+          .querySelector(`[data-health="${i}"]`)
+          .parentElement.setAttribute(
+            "aria-valuenow",
+            String(Math.round(f.hp)),
+          );
         wrapper.querySelector(`[data-health="${i}"]`).style.width =
           `${Math.max(0, f.hp)}%`;
         wrapper.querySelector(`[data-energy="${i}"]`).style.width =
@@ -495,7 +539,7 @@ export async function startCombat({
             );
           if (m.lift && m.t < dt * 2 && f.y >= 449) f.vy = -m.lift;
         }
-        f.sprite.setFrame(moveFrame(m));
+
         if (!m.hit && m.t >= m.start && m.t <= m.start + m.active) {
           if (m.type === "special" && m.variant === 3) {
             m.hit = true;
@@ -519,41 +563,68 @@ export async function startCombat({
           f.attack = null;
           f.cooldown = 0.07;
         }
-      } else f.sprite.setFrame(0);
+      }
+      this.renderFighter(f, a, dt, index);
+    }
+    renderFighter(f, a, dt, index, forcedState) {
       const moving =
         !f.attack &&
         !f.guard &&
         !f.crouch &&
         f.stun <= 0 &&
         (a.left || a.right);
-      const motion = settings.reducedMotion ? 0 : 1;
+      const state =
+        forcedState ||
+        (f.attack
+          ? "attack"
+          : f.stun > 0
+            ? "hurt"
+            : f.guard
+              ? "guard"
+              : f.y < 449
+                ? "jump"
+                : f.crouch
+                  ? "crouch"
+                  : moving
+                    ? "walk"
+                    : "idle");
+      if (f.visualState !== state) {
+        f.visualState = state;
+        f.visualTime = 0;
+      } else f.visualTime = (f.visualTime || 0) + dt;
+      const texture = state === "idle"
+        ? `ready${index}`
+        : state === "attack"
+          ? `fighter${index}`
+          : `motion${index}`;
+      if (f.textureKey !== texture) {
+        f.sprite.setTexture(texture);
+        f.textureKey = texture;
+      }
+      const frame =
+        state === "attack"
+          ? moveFrame(f.attack)
+          : state === "idle"
+            ? 0
+            : state === "crouch"
+              ? 4
+              : motionFrame(state, f.visualTime, f.vy);
+      f.sprite.setFrame(frame);
+      // Limb animation comes from authored frames; no squash or rotation substitutes.
       const bob =
-        f.y < 449
-          ? 0
-          : Math.sin(this.elapsed * (moving ? 19 : 4) + index) *
-            (moving ? 3 : 1.2) *
-            motion;
-      const lean = f.attack
-        ? Math.sin(Math.min(1, f.attack.t / f.attack.duration) * Math.PI) *
-          f.face *
-          0.065
-        : moving
-          ? ((a.right ? 1 : 0) - (a.left ? 1 : 0)) * 0.045
+        state === "idle" && !settings.reducedMotion
+          ? Math.sin(this.elapsed * 4 + index) * 0.65
           : 0;
-      f.sprite.setRotation(lean * motion);
       f.sprite
+        .setRotation(0)
         .setPosition(f.x, f.y + bob)
         .setFlipX(f.face < 0)
-        .setScale(
-          f.scale * (f.crouch ? 1.06 : 1),
-          f.scale * (f.crouch ? 0.77 : 1),
-        );
+        .setScale(f.scale);
       f.shadow.setPosition(f.x, 452).setScale(1 - (450 - f.y) / 600);
-      if (f.stun > 0) {
-        f.sprite.setTint(0xff9d90).setRotation(-f.face * 0.13);
-      } else if (f.guard) f.sprite.setTint(0x9de6ff);
+      if (f.stun > 0 && f.visualTime < 0.05) f.sprite.setTint(0xffc6b4);
       else f.sprite.clearTint();
     }
+
     hit(f, e, m, index) {
       const outcome = hitOutcome(f, e, m);
       const { blocking, damage } = outcome;
@@ -610,6 +681,11 @@ export async function startCombat({
       p.rounds = result.playerRounds;
       o.rounds = result.opponentRounds;
       this.phase = "result";
+      this.roundWinner = win;
+      this.fighters.forEach((f) => {
+        f.attack = null;
+        f.visualState = null;
+      });
       this.phaseTime = 2.5;
       message.textContent = win
         ? (this.timer <= 0 ? "TIME! " : "K.O. ") +
@@ -631,7 +707,13 @@ export async function startCombat({
           guard: false,
           crouch: false,
         });
-        f.sprite.setPosition(f.x, 450).setFrame(0).clearTint();
+        f.sprite
+          .setTexture(`ready${i}`)
+          .setPosition(f.x, 450)
+          .setFrame(0)
+          .clearTint();
+        f.textureKey = `ready${i}`;
+        f.visualState = null;
       });
       this.projectiles = [];
       this.pendingHits = [];
@@ -697,6 +779,22 @@ export async function startCombat({
         }
       }
       if (this.phase !== "fight") {
+        if (this.phase === "result")
+          this.fighters.forEach((f, i) => {
+            f.vy += 1450 * dt;
+            f.y = Math.min(450, f.y + f.vy * dt);
+            this.renderFighter(
+              f,
+              {},
+              dt,
+              i,
+              !this.roundWinner
+                ? "idle"
+                : f === this.roundWinner
+                  ? "victory"
+                  : "ko",
+            );
+          });
         this.phaseTime -= dt;
         if (this.phase === "intro") {
           if (this.phaseTime < 0.7) message.textContent = "FIGHT!";

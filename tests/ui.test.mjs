@@ -89,3 +89,16 @@ test('all eleven fighters expose seven animated moves including their named powe
   h.click('.modal-done');assert.equal(h.document.querySelector('.modal-layer'),null);
  }
 });
+
+for (const mode of ['duel', 'training']) {
+ test(`${mode} move list follows opponent selection without changing the player`, async()=>{
+  const h=setup({'mvm-onboarded':true});h.click(`[data-mode="${mode}"]`);
+  h.click('[data-action="fighter"][data-index="2"]');h.key('Enter');
+  h.click('[data-action="fighter"][data-index="7"]');h.click('[data-action="moves"]');
+  assert.ok(h.document.querySelector('.move-card').getAttribute('style').includes(characters[7].combatSheet));
+  assert.ok(h.document.querySelector('.move-card:last-child').textContent.includes(characters[7].move));
+  h.click('.modal-done');h.key('Enter');h.key('Enter');await h.launch();
+  assert.equal(h.latest.player.id,characters[2].id);
+  assert.equal(h.latest.opponent.id,characters[7].id);
+ });
+}

@@ -29,16 +29,16 @@ npm run build
 npm run package:offline
 ```
 
-Vercel builds `dist` using the included configuration. The offline command produces `release/Me-vs-Me.html`, including new arena and combat assets. Settings and local records persist in browser storage when available. No game backend or account is required.
+Vercel runs the test suite before building `dist` using the included configuration. The offline command produces `release/Me-vs-Me.html`, including new arena and combat assets. Settings and local records persist in browser storage when available. No game backend or account is required.
 
 ## Assets
 
-See [ASSET-NOTES.md](ASSET-NOTES.md). Original supplied GIFs, sheets, and portraits are preserved. The combat edition adds 308 illustrated poses across 77 four-pose sequences. Every move's impact pose is synchronized to its damage window. New stages are WebP backgrounds, with bounded runtime rain, petals, furnace glow, and lighting details. Reduced motion disables environmental movement and menu preview loops.
+See [ASSET-NOTES.md](ASSET-NOTES.md). Original supplied GIFs, sheets, and portraits are preserved. The combat edition adds 308 attack poses across 77 four-pose sequences, plus 264 poses for walking, jumping, guarding, hurt reactions, knockouts, and victories. Every move's impact pose is synchronized to its damage window. New stages are WebP backgrounds, with bounded runtime rain, petals, furnace glow, and lighting details. Reduced motion disables environmental movement and menu preview loops.
 
 Review [all 77 impact poses](docs/qa/all-77-move-peaks.jpg) and [five arenas](docs/qa/five-arenas.jpg). These are asset contact sheets, not browser screenshots.
 
 ## Verification boundaries
 
-84 automated checks cover original and new asset integrity, all 77 runtime attacks, meter costs, one-hit damage, tap buffering, pause, progression, bonus stages, and UI navigation. Runtime tests use a Phaser graphics stub; they exercise actual game scene logic but do not establish GPU performance or visual acceptance. See [QA notes](docs/qa/validation.md) for rendered-playtest status.
+101 automated checks cover original and new asset integrity, all 77 runtime attacks, meter costs, one-hit damage, tap buffering, pause, progression, bonus stages, and UI navigation. Runtime tests use a Phaser graphics stub; they exercise actual game scene logic but do not establish GPU performance or visual acceptance. See [QA notes](docs/qa/validation.md) for rendered-playtest status.
 
-The structural reference is Street Fighter II arcade progression. Exact video matching, hand-authored walk/guard/hurt animations, physical Galaxy A15 performance, and physical gamepad validation are not established by these checks. This is a substantial combat and presentation upgrade, not a claim of independently certified AAA quality.
+The structural reference is Street Fighter II arcade progression. Exact video matching, physical Galaxy A15 performance, and physical gamepad validation are not established by these checks. This is a substantial combat and presentation upgrade, not a claim of independently certified AAA quality.

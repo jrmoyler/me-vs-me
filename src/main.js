@@ -405,7 +405,7 @@ function bind() {
           begin(el.dataset.mode);
           break;
         case "moves":
-          showMoves(characters[state.player]);
+          showMoves(characters[state.screen === "selection" ? state[state.selecting] : state.player]);
           break;
         case "help":
           showHelp();
