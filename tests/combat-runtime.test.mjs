@@ -233,3 +233,13 @@ test('all fighters return to original ready art when idle and after round reset'
   h.control.destroy();
  }
 });
+
+test('Pause is a HUD control outside every fighting-button cluster', async () => {
+ const h=await setup();
+ const pause=h.window.document.querySelector('.mvm-pause-button');
+ assert.ok(pause.closest('.mvm-clock'));
+ assert.equal(pause.closest('.mvm-touch'),null);
+ pause.click();
+ assert.ok(h.window.document.querySelector('.mvm-overlay'));
+ h.control.destroy();
+});

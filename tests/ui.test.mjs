@@ -102,3 +102,32 @@ for (const mode of ['duel', 'training']) {
   assert.equal(h.latest.opponent.id,characters[7].id);
  });
 }
+
+test('primary title action chooses both fighters through pointer clicks', async()=>{
+ const h=setup({'mvm-onboarded':true});
+ h.click('.start-button');
+ h.click('[data-action="fighter"][data-index="3"]');
+ h.click('[data-action="confirm-fighter"]');
+ assert.match(h.document.querySelector('.roster-caption').textContent,/SELECT YOUR OPPONENT/);
+ h.click('[data-action="fighter"][data-index="9"]');
+ h.click('[data-action="confirm-fighter"]');
+ h.click('[data-action="fight"]');await h.launch();
+ assert.equal(h.latest.mode,'duel');assert.equal(h.latest.player.id,characters[3].id);assert.equal(h.latest.opponent.id,characters[9].id);
+});
+test('roster taps preserve scroll and the explicit opponent tab edits only the rival',()=>{
+ const h=setup({'mvm-onboarded':true});h.click('.start-button');
+ let jumps=0;h.window.scrollTo=()=>jumps++;
+ h.click('[data-action="fighter"][data-index="4"]');
+ h.click('[data-action="select-opponent"]');
+ h.click('[data-action="fighter"][data-index="8"]');
+ assert.equal(jumps,0);
+ assert.equal(h.document.querySelector('[data-action="select-opponent"]').getAttribute('aria-pressed'),'true');
+ h.click('[data-action="select-player"]');
+ assert.equal(h.document.querySelector('.roster-fighter.selected').dataset.index,'4');
+ h.click('[data-action="select-opponent"]');
+ assert.equal(h.document.querySelector('.roster-fighter.selected').dataset.index,'8');
+});
+test('Enter from title uses the same choose-both-fighters flow',()=>{
+ const h=setup({'mvm-onboarded':true});h.key('Enter');h.key('Enter');
+ assert.match(h.document.querySelector('.roster-caption').textContent,/SELECT YOUR OPPONENT/);
+});

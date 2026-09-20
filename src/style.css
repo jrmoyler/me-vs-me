@@ -2502,3 +2502,38 @@ button:focus-visible {
 @media(prefers-reduced-motion:reduce){.move-sprite{animation:none;background-position-x:66.6667%}.arena-option{transition:none}}
 
 .mvm-loading{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#080c15;color:#f6d78c;text-align:center}.mvm-loading small{font:11px monospace;letter-spacing:5px;color:#f36a4e}.mvm-loading strong{font:900 clamp(20px,4vw,40px) var(--display)}.mvm-loading>div{height:3px;width:min(65%,360px);background:#243044}.mvm-loading i{display:block;height:100%;background:#f6d78c;width:0;transition:width .15s}.mvm-loading span{font:11px monospace;color:#aeb7c5}
+
+/* Mobile menus use document flow: artwork can never cover the mode buttons. */
+.selection-tabs { display:flex; gap:10px; margin-bottom:16px; }
+.selection-tabs button { flex:1; min-height:44px; padding:10px; border:1px solid #ffffff40; background:#10151e; font:700 11px monospace; }
+.selection-tabs button[aria-pressed=true] { border-color:var(--red); color:var(--red); background:#211a1c; }
+.mvm-combat .mvm-hud .mvm-pause-button {
+  position:static; inset:auto; display:block; margin:6px auto 0;
+  width:48px; min-height:44px; padding:0; font:700 9px monospace;
+  pointer-events:auto; touch-action:manipulation;
+}
+@media (max-width:700px) {
+  .title-screen { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+  .title-copy { display:contents; }
+  .title-copy > .eyebrow { order:0; padding:16px 20px 0; }
+  .game-title { order:1; display:flex; flex-direction:row; align-items:center; gap:10px; font-size:clamp(62px,19vw,108px); letter-spacing:-2px; margin:20px 20px 16px; line-height:.85; }
+  .game-title em { margin:0; font-size:clamp(12px,3.4vw,22px); letter-spacing:1px; }
+  .hero-description { order:2; margin:0 20px 10px; max-width:none; font-size:10px; }
+  .hero-stage { order:3; position:relative; inset:auto; height:clamp(180px,29svh,260px); width:100%; flex:none; }
+  .hero-character-front { width:60%; height:100%; left:12%; bottom:0; }
+  .hero-character-back { width:47%; height:84%; right:0; bottom:0; }
+  .stage-caption { left:20px; bottom:12px; font-size:7px; }
+  .stage-caption strong { font-size:17px; }
+  .title-actions { order:4; margin:0; padding:16px 20px 0; position:relative; background:#101319; }
+  .secondary-actions { margin-top:10px; gap:12px; padding:0; }
+  .secondary-actions button { flex:1; min-height:44px; font-size:9px; border:1px solid #ffffff30; }
+  .secondary-actions button span { padding-left:4px; }
+  .hero-meta { order:5; margin:0; padding:14px 20px 20px; }
+  .selection-bottom { position:sticky; bottom:0; z-index:6; background:#101319; padding:12px 0 max(12px,env(safe-area-inset-bottom)); }
+  .selection-actions .button.primary { order:-1; min-height:48px; }
+  .selection-tabs { gap:8px; }
+  .selection-tabs button { font-size:10px; }
+}
+@media (orientation:portrait) {
+  .mvm-combat[data-touch=true] .mvm-touch-cluster { grid-template-columns:repeat(3,clamp(40px,11vw,48px)); }
+}
