@@ -41,7 +41,7 @@ test('supplied character identities select distinct projectile, dash and rising 
   assert.equal(inMeleeRange(fighter(),fighter({x:210}),moves[0]),false);
 });
 test('impact windows align with sprite peak and finish within attack duration',()=>{
-  for(const type of ['light','heavy','special']){const m=createAttack(fighter(),type);assert.ok(Math.floor(m.start/m.duration*16)>=6);assert.ok(m.start+m.active<m.duration);}
+  for(const type of ['light','medium','heavy','kick','mediumKick','heavyKick','special']){const m=createAttack(fighter(),type);assert.ok(Math.floor(m.start/m.duration*16)>=6);assert.ok(m.start+m.active<m.duration);}
 });
 test('best of three finishes after two wins; draws award no round',()=>{
   let p=fighter({hp:100}),o=fighter({hp:0});
@@ -51,4 +51,24 @@ test('best of three finishes after two wins; draws award no round',()=>{
   o.rounds=second.opponentRounds;p.hp=0;o.hp=60;
   const third=roundOutcome(p,o);assert.equal(third.complete,true);assert.equal(third.winner,'opponent');assert.equal(third.opponentRounds,2);
   const draw=roundOutcome(fighter({rounds:1}),fighter({rounds:1}));assert.equal(draw.winner,null);assert.equal(draw.complete,false);assert.equal(draw.playerRounds,1);
+});
+
+test('six normal strikes have increasing damage by strength and distinct timing',()=>{
+ const f=fighter();
+ for(const names of [['light','medium','heavy'],['kick','mediumKick','heavyKick']]){
+  const moves=names.map(type=>createAttack(f,type));
+  assert.ok(moves[0].damage<moves[1].damage&&moves[1].damage<moves[2].damage);
+  assert.ok(moves[0].duration<moves[1].duration&&moves[1].duration<moves[2].duration);
+ }
+ assert.equal(createAttack(f,'unknown'),null);
+});
+test('projectiles retain travel direction when their owner turns after launch',()=>{
+ const f=fighter({face:-1}),target=fighter({guard:true,face:-1});
+ const move={...createAttack(f,'special'),face:1};
+ assert.equal(hitOutcome(f,target,move).blocking,true);
+ target.face=1;assert.equal(hitOutcome(f,target,move).blocking,false);
+});
+test('simultaneous lethal hits yield a rematch without awarding either round',()=>{
+ const result=roundOutcome(fighter({hp:0,rounds:1}),fighter({hp:0,rounds:1}));
+ assert.deepEqual(result,{winner:null,playerRounds:1,opponentRounds:1,complete:false});
 });

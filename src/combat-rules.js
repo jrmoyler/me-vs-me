@@ -37,7 +37,7 @@ export function inMeleeRange(attacker, target, move) {
   return dx * attacker.face >= 0 && Math.abs(dx) < move.reach + stat(attacker.c.reach) * 3 && Math.abs(target.y - attacker.y) < (target.crouch ? 85 : 120);
 }
 export function hitOutcome(attacker, target, move) {
-  const blocking = Boolean(target.guard && target.face === -attacker.face);
+  const blocking = Boolean(target.guard && target.face === -(move.face ?? attacker.face));
   const damage = move.damage * (.88 + stat(attacker.c.power) * .025) * (blocking ? .16 : 1);
   return { blocking, damage, health: Math.max(0, target.hp - damage), energy: Math.min(100, attacker.energy + (blocking ? 3 : 8)), knockback: blocking ? 9 : move.type === 'special' ? 35 : 18, stun: blocking ? .04 : move.type === 'special' ? .28 : .15 };
 }
