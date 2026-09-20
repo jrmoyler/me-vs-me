@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { inflateSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { characters } from '../src/characters.js';
@@ -52,15 +53,17 @@ test('roster contains eleven distinct identities and signature attacks', () => {
   for (const key of ['id', 'name', 'move', 'sheet', 'portrait']) assert.equal(new Set(characters.map(c => c[key])).size, 11, `Unique ${key}`);
 });
 
-test('all five arena manifests resolve to distinct SVG artwork', () => {
+test('all five arena manifests resolve to distinct 1536×864 WebP artwork', () => {
   assert.equal(arenas.length, 5);
   for (const key of ['id', 'name', 'background']) assert.equal(new Set(arenas.map(a => a[key])).size, 5);
   const art = arenas.map(a => {
     assert.match(a.color, /^#[a-f\d]{6}$/i);
-    const svg = asset(a.background).toString();
-    assert.match(svg, /<svg\b/);
-    assert.match(svg, /viewBox=/);
-    return svg;
+    const data = asset(a.background);
+    assert.equal(data.toString('ascii',0,4),'RIFF');
+    assert.equal(data.toString('ascii',8,12),'WEBP');
+    assert.equal(data.readUInt16LE(26)&0x3fff,1536);
+    assert.equal(data.readUInt16LE(28)&0x3fff,864);
+    return createHash('sha256').update(data).digest('hex');
   });
   assert.equal(new Set(art).size, 5);
 });
@@ -92,5 +95,27 @@ for (const fighter of characters) {
       assert.ok(left > 0 && right < fighter.frameWidth - 1 && top > 0 && bottom < height - 1, `Frame ${frame} must not touch sheet edges`);
       assert.ok(Math.abs(bottom + 1 - fighter.anchorY) <= 2, `Frame ${frame} feet must match ground anchor`);
     }
+  });
+}
+
+for (const fighter of characters) {
+  test(`${fighter.name}: seven distinct combat rows, 28 nonempty grounded frames`, () => {
+    const {width,height,pixels}=png(asset(fighter.combatSheet),true);
+    assert.equal(width,1280);assert.equal(height,2240);assert.equal(fighter.combatFrameCount,28);
+    const peaks=[];
+    for(let row=0;row<7;row++) for(let col=0;col<4;col++){
+      let left=320,right=-1,top=320,bottom=-1;
+      const hash=createHash('sha256');
+      for(let y=0;y<320;y++) {
+        const start=((row*320+y)*width+col*320)*4;
+        hash.update(pixels.subarray(start,start+1280));
+        for(let x=0;x<320;x++) if(pixels[start+x*4+3]){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
+      }
+      assert.ok(right>=left,`row ${row} pose ${col} is visible`);
+      assert.ok(left>0 && right<319 && top>0 && bottom<319,`row ${row} pose ${col} has transparent padding`);
+      assert.ok(Math.abs(bottom+1-296)<=2,`row ${row} pose ${col} is grounded`);
+      if(col===2)peaks.push(hash.digest('hex'));
+    }
+    assert.equal(new Set(peaks).size,7,'Seven genuinely different impact illustrations');
   });
 }

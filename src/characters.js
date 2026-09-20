@@ -2,6 +2,8 @@
 export const characters = [
   {
     "id": "hataalii",
+    "combatSheet": "/assets/characters/hataalii-combat.png",
+    "combatFrameCount": 28,
     "name": "HATAALII",
     "title": "The Original",
     "color": "#ff6148",
@@ -23,6 +25,8 @@ export const characters = [
   },
   {
     "id": "urban",
+    "combatSheet": "/assets/characters/urban-combat.png",
+    "combatFrameCount": 28,
     "name": "AFTER HOURS",
     "title": "The Architect",
     "color": "#a8bfcf",
@@ -44,6 +48,8 @@ export const characters = [
   },
   {
     "id": "gauntlet",
+    "combatSheet": "/assets/characters/gauntlet-combat.png",
+    "combatFrameCount": 28,
     "name": "IRON WILL",
     "title": "The Augmented",
     "color": "#3de2ef",
@@ -65,6 +71,8 @@ export const characters = [
   },
   {
     "id": "tote",
+    "combatSheet": "/assets/characters/tote-combat.png",
+    "combatFrameCount": 28,
     "name": "QUIET LUXURY",
     "title": "The Counterpuncher",
     "color": "#ddc3a2",
@@ -86,6 +94,8 @@ export const characters = [
   },
   {
     "id": "vector",
+    "combatSheet": "/assets/characters/vector-combat.png",
+    "combatFrameCount": 28,
     "name": "BLUEPRINT",
     "title": "The Technician",
     "color": "#729cff",
@@ -107,6 +117,8 @@ export const characters = [
   },
   {
     "id": "kinetic",
+    "combatSheet": "/assets/characters/kinetic-combat.png",
+    "combatFrameCount": 28,
     "name": "GREEN LIGHT",
     "title": "The Juggernaut",
     "color": "#57df8f",
@@ -128,6 +140,8 @@ export const characters = [
   },
   {
     "id": "corvette",
+    "combatSheet": "/assets/characters/corvette-combat.png",
+    "combatFrameCount": 28,
     "name": "FAST LANE",
     "title": "The Showstopper",
     "color": "#ffcc55",
@@ -149,6 +163,8 @@ export const characters = [
   },
   {
     "id": "curly",
+    "combatSheet": "/assets/characters/curly-combat.png",
+    "combatFrameCount": 28,
     "name": "WILD CARD",
     "title": "The Freestyler",
     "color": "#d5d5e3",
@@ -170,6 +186,8 @@ export const characters = [
   },
   {
     "id": "pixel",
+    "combatSheet": "/assets/characters/pixel-combat.png",
+    "combatFrameCount": 28,
     "name": "SHADOW SELF",
     "title": "The Instinct",
     "color": "#b093fc",
@@ -191,6 +209,8 @@ export const characters = [
   },
   {
     "id": "tweed",
+    "combatSheet": "/assets/characters/tweed-combat.png",
+    "combatFrameCount": 28,
     "name": "OLD SOUL",
     "title": "The Gentleman",
     "color": "#cfa075",
@@ -212,6 +232,8 @@ export const characters = [
   },
   {
     "id": "varsity",
+    "combatSheet": "/assets/characters/varsity-combat.png",
+    "combatFrameCount": 28,
     "name": "VARSITY",
     "title": "The All-Star",
     "color": "#f48aab",

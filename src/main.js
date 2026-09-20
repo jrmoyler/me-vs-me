@@ -1,74 +1,534 @@
-import './style.css';
-import { characters } from './characters.js';
-import { arenas } from './arenas.js';
-import { startCombat } from './combat.js';
-import { startBonus } from './bonus.js';
+import "./style.css";
+import { characters } from "./characters.js";
+import { arenas } from "./arenas.js";
+import { MOVES } from "./moves.js";
+import { startCombat } from "./combat.js";
+import { startBonus } from "./bonus.js";
 
-const app = document.querySelector('#app');
-const read = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
-const save = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} };
-let settings = { sound: true, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches, difficulty: 'normal', ...read('mvm-settings', {}) };
-let record = { wins: 0, matches: 0, streak: 0, best: 0, ...read('mvm-record', {}) };
-let state = { screen: 'title', mode: 'arcade', player: 0, opponent: 1, arena: 0, selecting: 'player', ladder: [], stage: 0 };
-let combat = null, transitionTimer = null, audioCtx;
-let continueTimer = null, bonus = null;
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const icon = (name) => ({sound:'♫', muted:'♪', close:'×', arrow:'↗', back:'←', fullscreen:'⛶', gear:'⚙'}[name] || name);
-const playClick = () => { if (!settings.sound) return; try { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = 'square'; o.frequency.setValueAtTime(440, audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(240, audioCtx.currentTime + .07); g.gain.setValueAtTime(.025, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + .09); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + .1); } catch {} };
-function applySettings() { document.body.classList.toggle('reduced-motion', settings.reducedMotion); save('mvm-settings', settings); }
+const app = document.querySelector("#app");
+const read = (key, fallback) => {
+  try {
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+const save = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+};
+let settings = {
+  sound: true,
+  reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
+  difficulty: "normal",
+  ...read("mvm-settings", {}),
+};
+let record = {
+  wins: 0,
+  matches: 0,
+  streak: 0,
+  best: 0,
+  ...read("mvm-record", {}),
+};
+let state = {
+  screen: "title",
+  mode: "arcade",
+  player: 0,
+  opponent: 1,
+  arena: 0,
+  selecting: "player",
+  ladder: [],
+  stage: 0,
+};
+let combat = null,
+  transitionTimer = null,
+  audioCtx;
+let continueTimer = null,
+  bonus = null;
+const esc = (s) =>
+  String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ],
+  );
+const icon = (name) =>
+  ({
+    sound: "♫",
+    muted: "♪",
+    close: "×",
+    arrow: "↗",
+    back: "←",
+    fullscreen: "⛶",
+    gear: "⚙",
+  })[name] || name;
+const playClick = () => {
+  if (!settings.sound) return;
+  try {
+    audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+    const o = audioCtx.createOscillator(),
+      g = audioCtx.createGain();
+    o.type = "square";
+    o.frequency.setValueAtTime(440, audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(240, audioCtx.currentTime + 0.07);
+    g.gain.setValueAtTime(0.025, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.09);
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + 0.1);
+  } catch {}
+};
+function applySettings() {
+  document.body.classList.toggle("reduced-motion", settings.reducedMotion);
+  save("mvm-settings", settings);
+}
 applySettings();
-function portrait(c, classes = '', style = '') { return `<img class="fighter-art ${classes}" src="${esc(c.portrait)}" alt="${esc(c.name)}" draggable="false" style="${style}">`; }
-function chrome(label = 'THE ONLY RIVAL IS YOU') { return `<header class="topbar"><button class="brand" data-action="home" aria-label="Me vs Me home">M<span>×</span>M<span class="brand-dot">™</span></button><div class="topbar-center"><span class="live-dot"></span>${label}</div><nav class="utility"><button class="icon-button" data-action="sound" aria-label="${settings.sound ? 'Mute' : 'Enable'} sound" title="Sound ${settings.sound ? 'on' : 'off'}">${icon(settings.sound ? 'sound' : 'muted')}<span class="sound-state">${settings.sound ? 'ON' : 'OFF'}</span></button><button class="icon-button fullscreen-button" data-action="fullscreen" aria-label="Toggle fullscreen">${icon('fullscreen')}</button><button class="icon-button" data-action="settings" aria-label="Settings">${icon('gear')}</button></nav></header>`; }
-function footer(text = 'ONE MIND. ELEVEN WAYS TO FIGHT.') { return `<footer class="bottom-bar"><span>${text}</span><span>COLLECTIVE AI <span class="footer-cross">×</span> HATAALII</span><button data-action="help">HOW TO PLAY <span>?</span></button></footer>`; }
-function setScreen(screen) { clearTimeout(transitionTimer);clearTimeout(continueTimer);continueTimer=null; state.screen = screen; document.body.dataset.screen = screen; window.scrollTo(0,0); }
-function title() { setScreen('title'); const lead = characters[0], second = characters[Math.min(5,characters.length-1)]; app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">Eleven versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="arcade">ENTER THE ARENA <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="duel">QUICK DUEL <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button></div></div><div class="hero-meta"><span>11 <small>FIGHTERS</small></span><i></i><span>05 <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>NO SECOND PLAYER REQUIRED</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>FIVE PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`; bind(); }
-function begin(mode) { state.mode = mode; state.selecting = 'player'; state.stage = 0; state.ladder = []; if (!read('mvm-onboarded', false)) { showHelp(() => { save('mvm-onboarded',true); selection(); }); } else selection(); }
-function fighterPreview(c, side) { return `<section class="selection-fighter ${side}" style="--fighter-color:${esc(c.color || '#eb533d')}"><div class="fighter-index">${side === 'left' ? '01 / YOU' : '02 / YOUR OTHER SIDE'}</div><div class="preview-watermark">${side === 'left' ? 'PLAYER' : 'RIVAL'}</div><div class="fighter-floor"></div>${portrait(c)}<div class="fighter-bio"><span class="eyebrow">${esc(c.title || 'ANOTHER SIDE OF YOU')}</span><h2>${esc(c.name)}</h2><p>${esc(c.description || 'A different version. The same fighting spirit.')}</p><div class="fighter-stats">${[['POWER',c.power],['SPEED',c.speed],['REACH',c.reach]].map(([n,v]) => `<div><span>${n}</span><div class="stat-track"><i style="width:${Math.max(20,Math.min(100,Number(v || 6) <= 10 ? Number(v || 6)*10 : Number(v)))}%"></i></div></div>`).join('')}</div><div class="signature"><span>SIGNATURE</span><strong>${esc(c.move || 'Inner conflict')}</strong></div></div></section>`; }
-function selection() { setScreen('selection'); const p = characters[state.player], o = characters[state.opponent]; app.innerHTML = `${chrome('CHOOSE YOUR SIDE')}<main class="selection-screen"><div class="screen-heading"><button class="text-button" data-action="home">← BACK</button><div><span class="eyebrow">${state.mode === 'arcade' ? 'ARCADE / FIGHT YOUR WAY THROUGH THE ROSTER' : state.mode === 'training' ? 'TRAINING / NO PRESSURE. FIND YOUR RHYTHM.' : 'QUICK DUEL / SETTLE IT IN THREE ROUNDS'}</span><h1>CHOOSE YOUR <em>${state.selecting === 'player' ? 'SELF.' : 'RIVAL.'}</em></h1></div><span class="step-counter">01 <small>/ 03</small></span></div><div class="selection-stage">${fighterPreview(p,'left')}<div class="selection-vs"><span>VS</span><small>SAME SOUL.<br>DIFFERENT FIGHT.</small></div>${fighterPreview(o,'right')}</div><div class="roster-section"><div class="roster-caption"><span><b>${state.selecting === 'player' ? 'P1' : 'CPU'}</b> ${state.selecting === 'player' ? 'SELECT YOUR FIGHTER' : 'SELECT YOUR OPPONENT'}</span><span>ALL 11 VERSIONS UNLOCKED</span></div><div class="roster">${characters.map((c,i) => `<button class="roster-fighter ${state[state.selecting] === i ? 'selected' : ''} ${state.player === i ? 'p1-chosen' : ''}" data-action="fighter" data-index="${i}" style="--fighter-color:${esc(c.color || '#e95541')}" aria-label="Select ${esc(c.name)}" aria-pressed="${state[state.selecting] === i}"><span class="roster-num">${String(i+1).padStart(2,'0')}</span>${portrait(c)}<strong>${esc(c.name)}</strong>${state[state.selecting] === i ? `<span class="selected-marker">${state.selecting === 'player' ? 'P1' : 'CPU'}</span>` : ''}</button>`).join('')}</div><div class="selection-bottom"><div class="selection-hint"><span class="keycap">←</span><span class="keycap">→</span> CHOOSE <span class="keycap">↵</span> CONFIRM</div><div class="selection-actions">${state.selecting === 'opponent' ? '<button class="button outline" data-action="mirror">MIRROR MATCH</button><button class="text-button" data-action="select-player">CHANGE P1</button>' : ''}<button class="button primary" data-action="confirm-fighter">${state.selecting === 'player' ? 'LOCK IN FIGHTER' : 'CHOOSE YOUR STAGE'} <span>→</span></button></div></div></div></main>${footer('EVERY VERSION HAS SOMETHING TO PROVE.')}`; bind(); }
-function confirmFighter() { if (state.selecting === 'player') { if (state.mode === 'arcade') { state.stage = 0; state.ladder = characters.map((_,i)=>i).filter(i=>i !== state.player); state.opponent = state.ladder[0]; arenaSelection(); } else { state.selecting = 'opponent'; if (state.opponent === state.player) state.opponent = (state.player+1)%characters.length; selection(); } } else arenaSelection(); }
-function arenaSelection() { setScreen('arena'); const a = arenas[state.arena]; app.innerHTML = `${chrome('PICK YOUR BATTLEGROUND')}<main class="arena-screen"><div class="screen-heading"><button class="text-button" data-action="back-fighters">← FIGHTERS</button><div><span class="eyebrow">FIVE STAGES. NO PLACE TO HIDE.</span><h1>WHERE IT <em>GOES DOWN.</em></h1></div><span class="step-counter">02 <small>/ 03</small></span></div><div class="arena-showcase" style="--arena-color:${esc(a.color || '#f05d46')};background-image:url('${esc(a.background)}')"><div class="arena-vignette"></div><span class="arena-coordinate">STAGE ${String(state.arena+1).padStart(2,'0')} / 05<br>PRIVATE BATTLEGROUNDS</span><div class="arena-showcase-copy"><span class="eyebrow">${esc(a.subtitle || 'THE NEXT CHAPTER')}</span><h2>${esc(a.name)}</h2></div><div class="arena-fighters">${portrait(characters[state.player])}<b>VS</b>${portrait(characters[state.opponent],'flipped')}</div></div><div class="arena-strip">${arenas.map((ar,i)=>`<button class="arena-option ${i === state.arena?'selected':''}" data-action="arena" data-index="${i}" style="background-image:url('${esc(ar.background)}')" aria-pressed="${i===state.arena}"><span>0${i+1}</span><strong>${esc(ar.name)}</strong>${i===state.arena?'<i>SELECTED</i>':''}</button>`).join('')}</div><div class="selection-bottom"><span class="mode-info">${state.mode === 'arcade' ? `ARCADE · STAGE ${state.stage+1} OF ${state.ladder.length}` : state.mode.toUpperCase()} <b> / </b>${settings.difficulty.toUpperCase()} CPU</span><button class="button primary" data-action="fight">LET'S SETTLE THIS <span>→</span></button></div></main>${footer('YOU CAN CHANGE THE SCENERY. NOT YOUR OPPONENT.')}`; bind(); }
-function nextChallenger() {
-  const completed=state.stage+1;
-  state.stage++;state.opponent=state.ladder[state.stage];state.arena=(state.arena+1)%arenas.length;
-  if(completed%3!==0){arcadeRoute();return;}
-  setScreen('bonus');app.innerHTML='<main id="bonus-host" aria-label="Bonus challenge"></main>';
-  bonus=startBonus({container:document.querySelector('#bonus-host'),character:characters[state.player],arena:arenas[state.arena],settings:{...settings},onEnd:()=>{bonus?.destroy();bonus=null;arcadeRoute();}});
+function portrait(c, classes = "", style = "") {
+  return `<img class="fighter-art ${classes}" src="${esc(c.portrait)}" alt="${esc(c.name)}" draggable="false" style="${style}">`;
 }
-function beginContinueCountdown() {
-  let remaining=10;
-  const tick=()=>{if(state.screen!=='result')return;if(document.querySelector('.modal-layer')){continueTimer=setTimeout(tick,1000);return;}remaining--;const display=document.querySelector('.continue-seconds');if(display)display.textContent=remaining;if(remaining<=0){title();return;}continueTimer=setTimeout(tick,1000);};
-  continueTimer=setTimeout(tick,1000);
+function chrome(label = "THE ONLY RIVAL IS YOU") {
+  return `<header class="topbar"><button class="brand" data-action="home" aria-label="Me vs Me home">M<span>×</span>M<span class="brand-dot">™</span></button><div class="topbar-center"><span class="live-dot"></span>${label}</div><nav class="utility"><button class="icon-button" data-action="sound" aria-label="${settings.sound ? "Mute" : "Enable"} sound" title="Sound ${settings.sound ? "on" : "off"}">${icon(settings.sound ? "sound" : "muted")}<span class="sound-state">${settings.sound ? "ON" : "OFF"}</span></button><button class="icon-button fullscreen-button" data-action="fullscreen" aria-label="Toggle fullscreen">${icon("fullscreen")}</button><button class="icon-button" data-action="settings" aria-label="Settings">${icon("gear")}</button></nav></header>`;
 }
-function arcadeRoute() {
-  setScreen('route');
-  app.innerHTML=`${chrome('THE ROAD TO SELF MASTERY')}<main class="route-screen"><span class="eyebrow">ARCADE JOURNEY · CHALLENGER ${state.stage+1} OF ${state.ladder.length}</span><h1>THE NEXT<br><em>REFLECTION.</em></h1><div class="route-locations">${arenas.map((arena,index)=>`<div class="route-location ${index===state.arena?'current':''}" style="background-image:url('${esc(arena.background)}')"><span>0${index+1}</span><strong>${esc(arena.name)}</strong>${index===state.arena?'<b>NEXT DESTINATION</b>':''}</div>`).join('')}</div><ol class="route-roster">${state.ladder.map((id,index)=>`<li class="${index<state.stage?'cleared':index===state.stage?'current':''}">${portrait(characters[id])}<span>${esc(characters[id].name)}</span><b>${index<state.stage?'DEFEATED':index===state.stage?'NEXT':'WAITING'}</b></li>`).join('')}</ol><button class="button primary" data-action="fight">FACE ${esc(characters[state.opponent].name)} <span>→</span></button></main>${footer('TEN REFLECTIONS. ONE CHAMPION.')}`;
+function footer(text = "ONE MIND. ELEVEN WAYS TO FIGHT.") {
+  return `<footer class="bottom-bar"><span>${text}</span><span>COLLECTIVE AI <span class="footer-cross">×</span> HATAALII</span><button data-action="help">HOW TO PLAY <span>?</span></button></footer>`;
+}
+function setScreen(screen) {
+  clearTimeout(transitionTimer);
+  clearTimeout(continueTimer);
+  continueTimer = null;
+  state.screen = screen;
+  document.body.dataset.screen = screen;
+  window.scrollTo(0, 0);
+}
+function title() {
+  setScreen("title");
+  const lead = characters[0],
+    second = characters[Math.min(5, characters.length - 1)];
+  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">Eleven versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="arcade">ENTER THE ARENA <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="duel">QUICK DUEL <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button></div></div><div class="hero-meta"><span>11 <small>FIGHTERS</small></span><i></i><span>05 <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>NO SECOND PLAYER REQUIRED</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>FIVE PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
   bind();
 }
-async function fight() { setScreen('versus'); const p=characters[state.player],o=characters[state.opponent],a=arenas[state.arena]; app.innerHTML = `<main class="versus-screen"><div class="versus-top"><span>ME VS ME / ${state.mode.toUpperCase()}</span><span>${esc(a.name)}</span></div><div class="versus-panels"><div class="versus-player" style="--fighter-color:${esc(p.color)}">${portrait(p)}<div><small>PLAYER ONE</small><h2>${esc(p.name)}</h2></div></div><strong class="versus-mark">VS</strong><div class="versus-player rival" style="--fighter-color:${esc(o.color)}">${portrait(o)}<div><small>YOUR OTHER SIDE</small><h2>${esc(o.name)}</h2></div></div></div><div class="versus-bottom"><span>BEST OF THREE</span><span class="blink">GET READY TO MEET YOURSELF</span><span>${settings.difficulty.toUpperCase()}</span></div></main>`; transitionTimer = setTimeout(launchCombat, settings.reducedMotion ? 250 : 1900); }
-async function launchCombat() { setScreen('combat'); app.innerHTML = '<main class="combat-host" id="combat-host" aria-label="Battle arena"></main>'; try { combat = await startCombat({container:document.querySelector('#combat-host'),player:characters[state.player],opponent:characters[state.opponent],arena:arenas[state.arena],difficulty:settings.difficulty,mode:state.mode,settings:{...settings},onEnd:result,onExit:()=>{combat?.destroy();combat=null;title();}}); } catch(e) { console.error(e); app.innerHTML = `<div class="error-screen"><h1>ROUND INTERRUPTED</h1><p>The arena could not start. Please try again.</p><button class="button primary" data-action="back-arena">RETURN TO STAGE SELECT</button></div>`;bind(); } }
-function result(data) { combat?.destroy();combat=null; const won = data.winner==='player'; if(state.mode!=='training'){record.matches++;record.wins+=won?1:0;record.streak=won?record.streak+1:0;record.best=Math.max(record.best,record.streak);save('mvm-record',record);}setScreen('result');const complete=state.mode==='arcade'&&won&&state.stage>=state.ladder.length-1;app.innerHTML=`${chrome('THE REFLECTION NEVER LIES')}<main class="result-screen ${won?'victory':'defeat'}"><div class="result-art">${portrait(characters[won?state.player:state.opponent])}<div class="result-art-floor"></div></div><div class="result-copy"><span class="eyebrow">${complete?'ARCADE COMPLETE · EVERY SELF DEFEATED':state.mode==='training'?'TRAINING COMPLETE':won?'YOU WON THE FIGHT.':'YOUR OTHER SIDE HAD THE EDGE.'}</span><h1>${complete?'KNOW<br>THYSELF.':won?'SELF<br>MASTERY.':'MEET YOUR<br>MATCH.'}</h1><div class="result-score"><b>${data.playerRounds??(won?2:0)}</b><span>ROUNDS</span><b>${data.opponentRounds??(won?0:2)}</b></div><p>${complete?'Ten reflections faced. Every version defeated. You have come full circle — the strongest self is the one that keeps growing.':won?'One version stronger. The next version is waiting.':'Every loss is a lesson from yourself. Run it back.'}</p>${complete?'<div class="champion-seal">SELF MASTERED <span>10 / 10 REFLECTIONS DEFEATED</span></div>':''}${state.mode==='arcade'&&!won?'<div class="continue-prompt">CONTINUE? <b class="continue-seconds" role="timer">10</b><span>Run it back before time runs out.</span></div>':''}<div class="result-actions">${state.mode==='arcade'&&won&&!complete?'<button class="button primary" data-action="next-stage">NEXT CHALLENGER <span>→</span></button>':'<button class="button primary" data-action="rematch">RUN IT BACK <span>↻</span></button>'}<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button></div><div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> FIGHTS</span><span><b>${record.best}</b> BEST STREAK</span></div></div></main>${footer('THE WORK ON YOURSELF IS NEVER FINISHED.')}`;bind();if(state.mode==='arcade'&&!won)beginContinueCountdown(); }
-function modal(content, cls='', onClose) {
-  document.querySelector('.modal-layer')?.dismiss?.(false);
-  const trigger=document.activeElement;
-  const layer=document.createElement('div');layer.className=`modal-layer ${cls}`;
-  layer.innerHTML=`<section class="arcade-modal" role="dialog" aria-modal="true" aria-labelledby="dialog-heading"><button class="modal-close icon-button" aria-label="Close dialog">×</button>${content}</section>`;
-  layer.querySelector('h2')?.setAttribute('id','dialog-heading');
-  const siblings=[...app.children]; siblings.forEach(el=>el.inert=true);
-  app.append(layer);document.body.classList.add('dialog-open');
-  layer.dismiss=(notify=true)=>{layer.remove();siblings.forEach(el=>el.inert=false);document.body.classList.remove('dialog-open');if(trigger?.isConnected)trigger.focus();if(notify)onClose?.();};
-  layer.querySelector('.modal-close').onclick=()=>layer.dismiss();
-  layer.addEventListener('click',e=>{if(e.target===layer)layer.dismiss();});
-  layer.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();layer.dismiss();}if(e.key==='Tab'){const items=[...layer.querySelectorAll('button:not([disabled]),a[href],input,select,textarea,[tabindex="0"]')];const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
-  layer.querySelector('button')?.focus();return layer;
+function begin(mode) {
+  state.mode = mode;
+  state.selecting = "player";
+  state.stage = 0;
+  state.ladder = [];
+  if (!read("mvm-onboarded", false)) {
+    showHelp(() => {
+      save("mvm-onboarded", true);
+      selection();
+    });
+  } else selection();
 }
-function showHelp(onDone) { const layer=modal(`<span class="eyebrow">BEFORE YOU FACE YOURSELF</span><h2>LEARN THE<br><em>HARD WAY.</em></h2><p class="modal-intro">Two rounds to win. One rival: another you. Move in, find your opening, and make it count.</p><div class="control-grid"><div><span class="keycap">A</span><span class="keycap">D</span><p>MOVE <small>left / right</small></p></div><div><span class="keycap">W</span><p>JUMP <small>air movement</small></p></div><div><span class="keycap">S</span><p>CROUCH <small>stay low</small></p></div><div><span class="keycap">J K L</span><p>PUNCHES <small>light / medium / heavy</small></p></div><div><span class="keycap">U I O</span><p>KICKS <small>light / medium / heavy</small></p></div><div><span class="keycap">Q</span><p>SPECIAL <small>uses meter</small></p></div><div><span class="keycap">SHIFT</span><p>BLOCK <small>hold to defend</small></p></div><div><span class="keycap">ESC</span><p>PAUSE <small>take a breath</small></p></div></div><div class="help-tip"><b>ON YOUR PHONE?</b> Use the on-screen directional pad and attack buttons. Landscape gives you the best view.</div><button class="button primary modal-done">${onDone?'I’M READY. LET’S FIGHT.':'GOT IT.'} <span>→</span></button>`,'help-modal',onDone);layer.querySelector('.modal-done').onclick=()=>{playClick();layer.dismiss();}; }
-function showSettings() { const layer=modal(`<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound?'active':''}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion?'active':''}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${['easy','normal','hard'].map(d=>`<button class="${settings.difficulty===d?'active':''}" data-difficulty="${d}" aria-pressed="${settings.difficulty===d}">${d}</button>`).join('')}</div><small>Applies to your next fight.</small></div><div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,'',refresh);layer.querySelectorAll('[data-setting]').forEach(b=>b.onclick=()=>{const k=b.dataset.setting;settings[k]=!settings[k];applySettings();updateSettingsModal(layer);});layer.querySelectorAll('[data-difficulty]').forEach(b=>b.onclick=()=>{settings.difficulty=b.dataset.difficulty;applySettings();updateSettingsModal(layer);});layer.querySelector('.modal-done').onclick=()=>{layer.dismiss();}; }
+function fighterPreview(c, side) {
+  return `<section class="selection-fighter ${side}" style="--fighter-color:${esc(c.color || "#eb533d")}"><div class="fighter-index">${side === "left" ? "01 / YOU" : "02 / YOUR OTHER SIDE"}</div><div class="preview-watermark">${side === "left" ? "PLAYER" : "RIVAL"}</div><div class="fighter-floor"></div>${portrait(c)}<div class="fighter-bio"><span class="eyebrow">${esc(c.title || "ANOTHER SIDE OF YOU")}</span><h2>${esc(c.name)}</h2><p>${esc(c.description || "A different version. The same fighting spirit.")}</p><div class="fighter-stats">${[
+    ["POWER", c.power],
+    ["SPEED", c.speed],
+    ["REACH", c.reach],
+  ]
+    .map(
+      ([n, v]) =>
+        `<div><span>${n}</span><div class="stat-track"><i style="width:${Math.max(20, Math.min(100, Number(v || 6) <= 10 ? Number(v || 6) * 10 : Number(v)))}%"></i></div></div>`,
+    )
+    .join(
+      "",
+    )}</div><div class="signature"><span>SIGNATURE</span><strong>${esc(c.move || "Inner conflict")}</strong></div></div></section>`;
+}
+function selection() {
+  setScreen("selection");
+  const p = characters[state.player],
+    o = characters[state.opponent];
+  app.innerHTML = `${chrome("CHOOSE YOUR SIDE")}<main class="selection-screen"><div class="screen-heading"><button class="text-button" data-action="home">← BACK</button><div><span class="eyebrow">${state.mode === "arcade" ? "ARCADE / FIGHT YOUR WAY THROUGH THE ROSTER" : state.mode === "training" ? "TRAINING / NO PRESSURE. FIND YOUR RHYTHM." : "QUICK DUEL / SETTLE IT IN THREE ROUNDS"}</span><h1>CHOOSE YOUR <em>${state.selecting === "player" ? "SELF." : "RIVAL."}</em></h1></div><span class="step-counter">01 <small>/ 03</small></span></div><div class="selection-stage">${fighterPreview(p, "left")}<div class="selection-vs"><span>VS</span><small>SAME SOUL.<br>DIFFERENT FIGHT.</small></div>${fighterPreview(o, "right")}</div><div class="roster-section"><div class="roster-caption"><span><b>${state.selecting === "player" ? "P1" : "CPU"}</b> ${state.selecting === "player" ? "SELECT YOUR FIGHTER" : "SELECT YOUR OPPONENT"}</span><span>ALL 11 VERSIONS UNLOCKED</span></div><div class="roster">${characters.map((c, i) => `<button class="roster-fighter ${state[state.selecting] === i ? "selected" : ""} ${state.player === i ? "p1-chosen" : ""}" data-action="fighter" data-index="${i}" style="--fighter-color:${esc(c.color || "#e95541")}" aria-label="Select ${esc(c.name)}" aria-pressed="${state[state.selecting] === i}"><span class="roster-num">${String(i + 1).padStart(2, "0")}</span>${portrait(c)}<strong>${esc(c.name)}</strong>${state[state.selecting] === i ? `<span class="selected-marker">${state.selecting === "player" ? "P1" : "CPU"}</span>` : ""}</button>`).join("")}</div><div class="selection-bottom"><div class="selection-hint"><span class="keycap">←</span><span class="keycap">→</span> CHOOSE <span class="keycap">↵</span> CONFIRM</div><div class="selection-actions"><button class="button outline" data-action="moves">MOVE LIST</button>${state.selecting === "opponent" ? '<button class="button outline" data-action="mirror">MIRROR MATCH</button><button class="text-button" data-action="select-player">CHANGE P1</button>' : ""}<button class="button primary" data-action="confirm-fighter">${state.selecting === "player" ? "LOCK IN FIGHTER" : "CHOOSE YOUR STAGE"} <span>→</span></button></div></div></div></main>${footer("EVERY VERSION HAS SOMETHING TO PROVE.")}`;
+  bind();
+}
+function confirmFighter() {
+  if (state.selecting === "player") {
+    if (state.mode === "arcade") {
+      state.stage = 0;
+      state.ladder = characters
+        .map((_, i) => i)
+        .filter((i) => i !== state.player);
+      state.opponent = state.ladder[0];
+      arenaSelection();
+    } else {
+      state.selecting = "opponent";
+      if (state.opponent === state.player)
+        state.opponent = (state.player + 1) % characters.length;
+      selection();
+    }
+  } else arenaSelection();
+}
+function arenaSelection() {
+  setScreen("arena");
+  const a = arenas[state.arena];
+  app.innerHTML = `${chrome("PICK YOUR BATTLEGROUND")}<main class="arena-screen"><div class="screen-heading"><button class="text-button" data-action="back-fighters">← FIGHTERS</button><div><span class="eyebrow">FIVE STAGES. NO PLACE TO HIDE.</span><h1>WHERE IT <em>GOES DOWN.</em></h1></div><span class="step-counter">02 <small>/ 03</small></span></div><div class="arena-showcase" style="--arena-color:${esc(a.color || "#f05d46")};background-image:url('${esc(a.background)}')"><div class="arena-vignette"></div><span class="arena-coordinate">STAGE ${String(state.arena + 1).padStart(2, "0")} / 05<br>PRIVATE BATTLEGROUNDS</span><div class="arena-showcase-copy"><span class="eyebrow">${esc(a.subtitle || "THE NEXT CHAPTER")}</span><h2>${esc(a.name)}</h2></div><div class="arena-fighters">${portrait(characters[state.player])}<b>VS</b>${portrait(characters[state.opponent], "flipped")}</div></div><div class="arena-strip">${arenas.map((ar, i) => `<button class="arena-option ${i === state.arena ? "selected" : ""}" data-action="arena" data-index="${i}" style="background-image:url('${esc(ar.background)}')" aria-pressed="${i === state.arena}"><span>0${i + 1}</span><strong>${esc(ar.name)}</strong>${i === state.arena ? "<i>SELECTED</i>" : ""}</button>`).join("")}</div><div class="selection-bottom"><span class="mode-info">${state.mode === "arcade" ? `ARCADE · STAGE ${state.stage + 1} OF ${state.ladder.length}` : state.mode.toUpperCase()} <b> / </b>${settings.difficulty.toUpperCase()} CPU</span><button class="button primary" data-action="fight">LET'S SETTLE THIS <span>→</span></button></div></main>${footer("YOU CAN CHANGE THE SCENERY. NOT YOUR OPPONENT.")}`;
+  bind();
+}
+function nextChallenger() {
+  const completed = state.stage + 1;
+  state.stage++;
+  state.opponent = state.ladder[state.stage];
+  state.arena = (state.arena + 1) % arenas.length;
+  if (completed % 3 !== 0) {
+    arcadeRoute();
+    return;
+  }
+  setScreen("bonus");
+  app.innerHTML = '<main id="bonus-host" aria-label="Bonus challenge"></main>';
+  bonus = startBonus({
+    container: document.querySelector("#bonus-host"),
+    character: characters[state.player],
+    arena: arenas[state.arena],
+    settings: { ...settings },
+    onEnd: () => {
+      bonus?.destroy();
+      bonus = null;
+      arcadeRoute();
+    },
+  });
+}
+function beginContinueCountdown() {
+  let remaining = 10;
+  const tick = () => {
+    if (state.screen !== "result") return;
+    if (document.querySelector(".modal-layer")) {
+      continueTimer = setTimeout(tick, 1000);
+      return;
+    }
+    remaining--;
+    const display = document.querySelector(".continue-seconds");
+    if (display) display.textContent = remaining;
+    if (remaining <= 0) {
+      title();
+      return;
+    }
+    continueTimer = setTimeout(tick, 1000);
+  };
+  continueTimer = setTimeout(tick, 1000);
+}
+function arcadeRoute() {
+  setScreen("route");
+  app.innerHTML = `${chrome("THE ROAD TO SELF MASTERY")}<main class="route-screen"><span class="eyebrow">ARCADE JOURNEY · CHALLENGER ${state.stage + 1} OF ${state.ladder.length}</span><h1>THE NEXT<br><em>REFLECTION.</em></h1><div class="route-locations">${arenas.map((arena, index) => `<div class="route-location ${index === state.arena ? "current" : ""}" style="background-image:url('${esc(arena.background)}')"><span>0${index + 1}</span><strong>${esc(arena.name)}</strong>${index === state.arena ? "<b>NEXT DESTINATION</b>" : ""}</div>`).join("")}</div><ol class="route-roster">${state.ladder.map((id, index) => `<li class="${index < state.stage ? "cleared" : index === state.stage ? "current" : ""}">${portrait(characters[id])}<span>${esc(characters[id].name)}</span><b>${index < state.stage ? "DEFEATED" : index === state.stage ? "NEXT" : "WAITING"}</b></li>`).join("")}</ol><button class="button primary" data-action="fight">FACE ${esc(characters[state.opponent].name)} <span>→</span></button></main>${footer("TEN REFLECTIONS. ONE CHAMPION.")}`;
+  bind();
+}
+async function fight() {
+  setScreen("versus");
+  const p = characters[state.player],
+    o = characters[state.opponent],
+    a = arenas[state.arena];
+  app.innerHTML = `<main class="versus-screen"><div class="versus-top"><span>ME VS ME / ${state.mode.toUpperCase()}</span><span>${esc(a.name)}</span></div><div class="versus-panels"><div class="versus-player" style="--fighter-color:${esc(p.color)}">${portrait(p)}<div><small>PLAYER ONE</small><h2>${esc(p.name)}</h2></div></div><strong class="versus-mark">VS</strong><div class="versus-player rival" style="--fighter-color:${esc(o.color)}">${portrait(o)}<div><small>YOUR OTHER SIDE</small><h2>${esc(o.name)}</h2></div></div></div><div class="versus-bottom"><span>BEST OF THREE</span><span class="blink">GET READY TO MEET YOURSELF</span><span>${settings.difficulty.toUpperCase()}</span></div></main>`;
+  transitionTimer = setTimeout(
+    launchCombat,
+    settings.reducedMotion ? 250 : 1900,
+  );
+}
+async function launchCombat() {
+  setScreen("combat");
+  app.innerHTML =
+    '<main class="combat-host" id="combat-host" aria-label="Battle arena"></main>';
+  try {
+    combat = await startCombat({
+      container: document.querySelector("#combat-host"),
+      player: characters[state.player],
+      opponent: characters[state.opponent],
+      arena: arenas[state.arena],
+      difficulty: settings.difficulty,
+      mode: state.mode,
+      settings: { ...settings },
+      onMoves: () => showMoves(characters[state.player]),
+      onEnd: result,
+      onExit: () => {
+        combat?.destroy();
+        combat = null;
+        title();
+      },
+    });
+  } catch (e) {
+    console.error(e);
+    app.innerHTML = `<div class="error-screen"><h1>ROUND INTERRUPTED</h1><p>The arena could not start. Please try again.</p><button class="button primary" data-action="back-arena">RETURN TO STAGE SELECT</button></div>`;
+    bind();
+  }
+}
+function result(data) {
+  combat?.destroy();
+  combat = null;
+  const won = data.winner === "player";
+  if (state.mode !== "training") {
+    record.matches++;
+    record.wins += won ? 1 : 0;
+    record.streak = won ? record.streak + 1 : 0;
+    record.best = Math.max(record.best, record.streak);
+    save("mvm-record", record);
+  }
+  setScreen("result");
+  const complete =
+    state.mode === "arcade" && won && state.stage >= state.ladder.length - 1;
+  app.innerHTML = `${chrome("THE REFLECTION NEVER LIES")}<main class="result-screen ${won ? "victory" : "defeat"}"><div class="result-art">${portrait(characters[won ? state.player : state.opponent])}<div class="result-art-floor"></div></div><div class="result-copy"><span class="eyebrow">${complete ? "ARCADE COMPLETE · EVERY SELF DEFEATED" : state.mode === "training" ? "TRAINING COMPLETE" : won ? "YOU WON THE FIGHT." : "YOUR OTHER SIDE HAD THE EDGE."}</span><h1>${complete ? "KNOW<br>THYSELF." : won ? "SELF<br>MASTERY." : "MEET YOUR<br>MATCH."}</h1><div class="result-score"><b>${data.playerRounds ?? (won ? 2 : 0)}</b><span>ROUNDS</span><b>${data.opponentRounds ?? (won ? 0 : 2)}</b></div><p>${complete ? "Ten reflections faced. Every version defeated. You have come full circle — the strongest self is the one that keeps growing." : won ? "One version stronger. The next version is waiting." : "Every loss is a lesson from yourself. Run it back."}</p>${complete ? '<div class="champion-seal">SELF MASTERED <span>10 / 10 REFLECTIONS DEFEATED</span></div>' : ""}${state.mode === "arcade" && !won ? '<div class="continue-prompt">CONTINUE? <b class="continue-seconds" role="timer">10</b><span>Run it back before time runs out.</span></div>' : ""}<div class="result-actions">${state.mode === "arcade" && won && !complete ? '<button class="button primary" data-action="next-stage">NEXT CHALLENGER <span>→</span></button>' : '<button class="button primary" data-action="rematch">RUN IT BACK <span>↻</span></button>'}<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button></div><div class="match-breakdown"><span><b>${data.stats?.hits ?? 0}</b> STRIKES LANDED</span><span><b>${data.stats?.specials ?? 0}</b> POWERS USED</span><span><b>${data.stats?.damageDealt ?? 0}</b> DAMAGE DEALT</span></div><div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> FIGHTS</span><span><b>${record.best}</b> BEST STREAK</span></div></div></main>${footer("THE WORK ON YOURSELF IS NEVER FINISHED.")}`;
+  bind();
+  if (state.mode === "arcade" && !won) beginContinueCountdown();
+}
+function modal(content, cls = "", onClose) {
+  document.querySelector(".modal-layer")?.dismiss?.(false);
+  const trigger = document.activeElement;
+  const layer = document.createElement("div");
+  layer.className = `modal-layer ${cls}`;
+  layer.innerHTML = `<section class="arcade-modal" role="dialog" aria-modal="true" aria-labelledby="dialog-heading"><button class="modal-close icon-button" aria-label="Close dialog">×</button>${content}</section>`;
+  layer.querySelector("h2")?.setAttribute("id", "dialog-heading");
+  const siblings = [...app.children];
+  siblings.forEach((el) => (el.inert = true));
+  app.append(layer);
+  document.body.classList.add("dialog-open");
+  layer.dismiss = (notify = true) => {
+    layer.remove();
+    siblings.forEach((el) => (el.inert = false));
+    document.body.classList.remove("dialog-open");
+    if (trigger?.isConnected) trigger.focus();
+    if (notify) onClose?.();
+  };
+  layer.querySelector(".modal-close").onclick = () => layer.dismiss();
+  layer.addEventListener("click", (e) => {
+    if (e.target === layer) layer.dismiss();
+  });
+  layer.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      layer.dismiss();
+    }
+    if (e.key === "Tab") {
+      const items = [
+        ...layer.querySelectorAll(
+          'button:not([disabled]),a[href],input,select,textarea,[tabindex="0"]',
+        ),
+      ];
+      const first = items[0],
+        last = items.at(-1);
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    }
+  });
+  layer.querySelector("button")?.focus();
+  return layer;
+}
+function showMoves(character) {
+  const layer = modal(
+    `<span class="eyebrow">FIGHTER MANUAL / ${esc(character.name)}</span><h2>SEVEN WAYS<br><em>TO STRIKE.</em></h2><p class="modal-intro">Six normal attacks and ${esc(character.move)}. Tap once per strike; use the recovery to plan your next move.</p><div class="move-gallery">${MOVES.map((m) => `<article class="move-card" style="--move-row:${(m.row / 6) * 100}%;--move-sheet:url('${esc(character.combatSheet)}');--fighter-color:${esc(character.color)}"><div class="move-sprite" role="img" aria-label="${esc(m.type === "special" ? character.move : m.label)} animation"></div><div><kbd>${m.key}</kbd><small>${m.button}</small><h3>${esc(m.type === "special" ? character.move : m.label)}</h3><p>${esc(m.hint)}</p></div></article>`).join("")}</div><p class="help-tip">POWER: Q / right trigger / touch POWER. Costs 35 meter. Training keeps your meter full.</p><button class="button primary modal-done">BACK TO FIGHTER <span>→</span></button>`,
+    "moves-modal",
+  );
+  layer.querySelector(".modal-done").onclick = () => layer.dismiss();
+}
+function showHelp(onDone) {
+  const layer = modal(
+    `<span class="eyebrow">BEFORE YOU FACE YOURSELF</span><h2>LEARN THE<br><em>HARD WAY.</em></h2><p class="modal-intro">Two rounds to win. One rival: another you. Move in, find your opening, and make it count.</p><div class="control-grid"><div><span class="keycap">A</span><span class="keycap">D</span><p>MOVE <small>left / right</small></p></div><div><span class="keycap">W</span><p>JUMP <small>air movement</small></p></div><div><span class="keycap">S</span><p>CROUCH <small>stay low</small></p></div><div><span class="keycap">J K L</span><p>PUNCHES <small>light / medium / heavy</small></p></div><div><span class="keycap">U I O</span><p>KICKS <small>light / medium / heavy</small></p></div><div><span class="keycap">Q</span><p>POWER <small>35 meter · signature move</small></p></div><div><span class="keycap">SHIFT</span><p>BLOCK <small>hold to defend</small></p></div><div><span class="keycap">ESC</span><p>PAUSE <small>take a breath</small></p></div></div><div class="help-tip"><b>ON YOUR PHONE?</b> Use the on-screen directional pad and attack buttons. Landscape gives you the best view.</div><button class="button primary modal-done">${onDone ? "I’M READY. LET’S FIGHT." : "GOT IT."} <span>→</span></button>`,
+    "help-modal",
+    onDone,
+  );
+  layer.querySelector(".modal-done").onclick = () => {
+    playClick();
+    layer.dismiss();
+  };
+}
+function showSettings() {
+  const layer = modal(
+    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div><div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
+    "",
+    refresh,
+  );
+  layer.querySelectorAll("[data-setting]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const k = b.dataset.setting;
+        settings[k] = !settings[k];
+        applySettings();
+        updateSettingsModal(layer);
+      }),
+  );
+  layer.querySelectorAll("[data-difficulty]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        settings.difficulty = b.dataset.difficulty;
+        applySettings();
+        updateSettingsModal(layer);
+      }),
+  );
+  layer.querySelector(".modal-done").onclick = () => {
+    layer.dismiss();
+  };
+}
 function updateSettingsModal(layer) {
-  layer.querySelectorAll('[data-setting]').forEach(b=>{const active=settings[b.dataset.setting];b.classList.toggle('active',active);b.setAttribute('aria-pressed',active);b.textContent=active?'ON':'OFF';});
-  layer.querySelectorAll('[data-difficulty]').forEach(b=>{const active=settings.difficulty===b.dataset.difficulty;b.classList.toggle('active',active);b.setAttribute('aria-pressed',active);});
-  const sound=app.querySelector('[data-action="sound"]');if(sound){sound.setAttribute('aria-label',settings.sound?'Mute sound':'Enable sound');sound.innerHTML=icon(settings.sound?'sound':'muted')+`<span class="sound-state">${settings.sound?'ON':'OFF'}</span>`;}
+  layer.querySelectorAll("[data-setting]").forEach((b) => {
+    const active = settings[b.dataset.setting];
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-pressed", active);
+    b.textContent = active ? "ON" : "OFF";
+  });
+  layer.querySelectorAll("[data-difficulty]").forEach((b) => {
+    const active = settings.difficulty === b.dataset.difficulty;
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-pressed", active);
+  });
+  const sound = app.querySelector('[data-action="sound"]');
+  if (sound) {
+    sound.setAttribute(
+      "aria-label",
+      settings.sound ? "Mute sound" : "Enable sound",
+    );
+    sound.innerHTML =
+      icon(settings.sound ? "sound" : "muted") +
+      `<span class="sound-state">${settings.sound ? "ON" : "OFF"}</span>`;
+  }
 }
-function refresh() { if(state.screen==='title')title();else if(state.screen==='selection')selection();else if(state.screen==='arena')arenaSelection();else if(state.screen==='route')arcadeRoute(); }
-function bind() { app.querySelectorAll('[data-action]').forEach(el=>el.addEventListener('click',async()=>{playClick();const a=el.dataset.action;switch(a){case'home':title();break;case'start':begin(el.dataset.mode);break;case'help':showHelp();break;case'settings':showSettings();break;case'sound':settings.sound=!settings.sound;applySettings();el.setAttribute('aria-label',settings.sound?'Mute sound':'Enable sound');el.innerHTML=icon(settings.sound?'sound':'muted')+`<span class="sound-state">${settings.sound?'ON':'OFF'}</span>`;refresh();break;case'fullscreen':try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{}break;case'fighter':state[state.selecting]=Number(el.dataset.index);selection();app.querySelector(`.roster-fighter[data-index="${state[state.selecting]}"]`)?.focus({preventScroll:true});break;case'confirm-fighter':confirmFighter();break;case'select-player':state.selecting='player';selection();break;case'mirror':state.opponent=state.player;selection();break;case'back-fighters':state.selecting=state.mode==='arcade'?'player':'opponent';selection();break;case'arena':state.arena=Number(el.dataset.index);arenaSelection();app.querySelector(`.arena-option[data-index="${state.arena}"]`)?.focus({preventScroll:true});break;case'fight':case'rematch':fight();break;case'back-arena':arenaSelection();break;case'change-fighters':state.selecting='player';selection();break;case'next-stage':nextChallenger();break;}})); }
-document.addEventListener('keydown',e=>{if(document.querySelector('.modal-layer')){if(e.key==='Escape')document.querySelector('.modal-layer').dismiss();return;}if(e.target?.closest?.('button:not(.roster-fighter):not(.arena-option)')&&e.key==='Enter')return;if(state.screen==='selection'){if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();state[state.selecting]=(state[state.selecting]+(e.key==='ArrowRight'?1:-1)+characters.length)%characters.length;playClick();selection();app.querySelector('.roster-fighter.selected')?.focus({preventScroll:true});}if(e.key==='Enter'){e.preventDefault();confirmFighter();}}else if(state.screen==='arena'){if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();state.arena=(state.arena+(e.key==='ArrowRight'?1:-1)+arenas.length)%arenas.length;arenaSelection();app.querySelector('.arena-option.selected')?.focus({preventScroll:true});}if(e.key==='Enter'){e.preventDefault();fight();}}else if(state.screen==='route'&&e.key==='Enter'){e.preventDefault();fight();}else if(state.screen==='title'&&e.key==='Enter'){e.preventDefault();begin('arcade');}});
+function refresh() {
+  if (state.screen === "title") title();
+  else if (state.screen === "selection") selection();
+  else if (state.screen === "arena") arenaSelection();
+  else if (state.screen === "route") arcadeRoute();
+}
+function bind() {
+  app.querySelectorAll("[data-action]").forEach((el) =>
+    el.addEventListener("click", async () => {
+      playClick();
+      const a = el.dataset.action;
+      switch (a) {
+        case "home":
+          title();
+          break;
+        case "start":
+          begin(el.dataset.mode);
+          break;
+        case "moves":
+          showMoves(characters[state.player]);
+          break;
+        case "help":
+          showHelp();
+          break;
+        case "settings":
+          showSettings();
+          break;
+        case "sound":
+          settings.sound = !settings.sound;
+          applySettings();
+          el.setAttribute(
+            "aria-label",
+            settings.sound ? "Mute sound" : "Enable sound",
+          );
+          el.innerHTML =
+            icon(settings.sound ? "sound" : "muted") +
+            `<span class="sound-state">${settings.sound ? "ON" : "OFF"}</span>`;
+          refresh();
+          break;
+        case "fullscreen":
+          try {
+            if (document.fullscreenElement) await document.exitFullscreen();
+            else await document.documentElement.requestFullscreen();
+          } catch {}
+          break;
+        case "fighter":
+          state[state.selecting] = Number(el.dataset.index);
+          selection();
+          app
+            .querySelector(
+              `.roster-fighter[data-index="${state[state.selecting]}"]`,
+            )
+            ?.focus({ preventScroll: true });
+          break;
+        case "confirm-fighter":
+          confirmFighter();
+          break;
+        case "select-player":
+          state.selecting = "player";
+          selection();
+          break;
+        case "mirror":
+          state.opponent = state.player;
+          selection();
+          break;
+        case "back-fighters":
+          state.selecting = state.mode === "arcade" ? "player" : "opponent";
+          selection();
+          break;
+        case "arena":
+          state.arena = Number(el.dataset.index);
+          arenaSelection();
+          app
+            .querySelector(`.arena-option[data-index="${state.arena}"]`)
+            ?.focus({ preventScroll: true });
+          break;
+        case "fight":
+        case "rematch":
+          fight();
+          break;
+        case "back-arena":
+          arenaSelection();
+          break;
+        case "change-fighters":
+          state.selecting = "player";
+          selection();
+          break;
+        case "next-stage":
+          nextChallenger();
+          break;
+      }
+    }),
+  );
+}
+document.addEventListener("keydown", (e) => {
+  if (document.querySelector(".modal-layer")) {
+    if (e.key === "Escape") document.querySelector(".modal-layer").dismiss();
+    return;
+  }
+  if (
+    e.target?.closest?.("button:not(.roster-fighter):not(.arena-option)") &&
+    e.key === "Enter"
+  )
+    return;
+  if (state.screen === "selection") {
+    if (["ArrowLeft", "ArrowRight"].includes(e.key)) {
+      e.preventDefault();
+      state[state.selecting] =
+        (state[state.selecting] +
+          (e.key === "ArrowRight" ? 1 : -1) +
+          characters.length) %
+        characters.length;
+      playClick();
+      selection();
+      app
+        .querySelector(".roster-fighter.selected")
+        ?.focus({ preventScroll: true });
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmFighter();
+    }
+  } else if (state.screen === "arena") {
+    if (["ArrowLeft", "ArrowRight"].includes(e.key)) {
+      e.preventDefault();
+      state.arena =
+        (state.arena + (e.key === "ArrowRight" ? 1 : -1) + arenas.length) %
+        arenas.length;
+      arenaSelection();
+      app
+        .querySelector(".arena-option.selected")
+        ?.focus({ preventScroll: true });
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      fight();
+    }
+  } else if (state.screen === "route" && e.key === "Enter") {
+    e.preventDefault();
+    fight();
+  } else if (state.screen === "title" && e.key === "Enter") {
+    e.preventDefault();
+    begin("arcade");
+  }
+});
 title();
