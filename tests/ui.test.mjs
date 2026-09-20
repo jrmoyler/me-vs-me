@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { Window } from 'happy-dom';
 import { characters } from '../src/characters.js';
 import { arenas } from '../src/arenas.js';
+import { MOVES } from '../src/moves.js';
 
 const source=(await readFile(new URL('../src/main.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'');
 function setup(saved={}) {
@@ -13,7 +14,7 @@ function setup(saved={}) {
   for(const [key,value] of Object.entries(saved))window.localStorage.setItem(key,JSON.stringify(value));
   let pending, latest, bonusLatest, bonuses=0, destroys=0;
   const context=vm.createContext({window,document:window.document,localStorage:window.localStorage,
-    matchMedia:()=>({matches:false}),characters,arenas,console,
+    matchMedia:()=>({matches:false}),characters,arenas,MOVES,console,
     setTimeout:fn=>(pending=fn,1),clearTimeout:()=>{pending=null;},
     startBonus:options=>{bonuses++;bonusLatest=options;return {destroy(){}};},
     startCombat:async options=>{latest=options;return {destroy(){destroys++;}};}});
@@ -77,3 +78,27 @@ test('arcade continue expires without erasing match records',async()=>{
  assert.match(h.document.body.textContent,/CONTINUE/);for(let i=0;i<10;i++)await h.launch();
  assert.equal(h.screen(),'title');assert.equal(JSON.parse(h.window.localStorage.getItem('mvm-record')).matches,1);
 });
+
+test('all eleven fighters expose seven animated moves including their named power',()=>{
+ const h=setup({'mvm-onboarded':true});h.click('[data-mode="training"]');
+ for(let i=0;i<characters.length;i++){
+  h.click(`[data-action="fighter"][data-index="${i}"]`);h.click('[data-action="moves"]');
+  assert.equal(h.document.querySelectorAll('.move-card').length,7);
+  assert.match(h.document.querySelector('.move-card:last-child').textContent,new RegExp(characters[i].move));
+  assert.ok(h.document.querySelector('.move-card').getAttribute('style').includes(characters[i].combatSheet));
+  h.click('.modal-done');assert.equal(h.document.querySelector('.modal-layer'),null);
+ }
+});
+
+for (const mode of ['duel', 'training']) {
+ test(`${mode} move list follows opponent selection without changing the player`, async()=>{
+  const h=setup({'mvm-onboarded':true});h.click(`[data-mode="${mode}"]`);
+  h.click('[data-action="fighter"][data-index="2"]');h.key('Enter');
+  h.click('[data-action="fighter"][data-index="7"]');h.click('[data-action="moves"]');
+  assert.ok(h.document.querySelector('.move-card').getAttribute('style').includes(characters[7].combatSheet));
+  assert.ok(h.document.querySelector('.move-card:last-child').textContent.includes(characters[7].move));
+  h.click('.modal-done');h.key('Enter');h.key('Enter');await h.launch();
+  assert.equal(h.latest.player.id,characters[2].id);
+  assert.equal(h.latest.opponent.id,characters[7].id);
+ });
+}

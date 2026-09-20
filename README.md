@@ -1,43 +1,44 @@
 # ME VS ME — The Mirror Tournament
 
-An original browser arcade fighter featuring all 11 supplied versions of Hataalii and five original pixel arenas. Built with Phaser 3 and Vite.
+A browser arcade fighter with 11 versions of Hataalii, five illustrated arenas, and 77 combat animations. Phaser 3 + Vite; keyboard, touch, and standard gamepad inputs.
 
 ## Play
 
-Open `Me-vs-Me.html` from the release package in a modern desktop or mobile browser. It contains the game and its character/arena assets. On some mobile file viewers you must choose **Open in browser**. A hosted version is recommended for mobile. Source development: `npm ci`, then `npm run dev`.
-
-- **Arcade:** fight the other ten identities in a ladder, travel through the five arenas, play destruction bonuses after wins 3/6/9, and unlock the champion ending. Defeat offers a ten-second continue countdown.
+- **Arcade:** face the other ten identities, with destruction bonuses after wins 3/6/9 and a champion ending. Two rounds win each match. Defeat offers a ten-second continue.
 - **Quick duel:** choose both fighters, including a mirror match.
-- **Training:** practice against a passive opponent with replenishing health and meter.
-- Eleven identities; five selectable stages; three CPU difficulties; two rounds to win; 60-second rounds.
-- Move **A/D**, jump **W**, crouch **S**, punches **J/K/L**, kicks **U/I/O**, special **Q**, guard **Shift**, pause **Escape**. Touch controls appear on phones.
-- Settings and local match records persist when browser storage is available. No account or server is required.
+- **Training:** infinite health/meter, reset controls, optional guarding dummy, move-phase and hit feedback.
+- **Move list:** preview all seven attacks from character selection, training, or the pause menu.
 
-## Build and deploy
+| Action | Keyboard | Touch |
+|---|---|---|
+| Move / jump / crouch | A D / W / S | Direction pad |
+| Jab / cross / uppercut | J / K / L | LP / MP / HP |
+| Low kick / sidekick / roundhouse | U / I / O | LK / MK / HK |
+| Signature power | Q | POWER |
+| Guard / pause | Shift / Escape | GUARD / PAUSE |
+
+Tap once per attack. A 160 ms input buffer catches quick taps and late recovery inputs. Powers cost **35 meter**; the meter marks the threshold and shows readiness. Each fighter has separately illustrated normal attacks and a named power with its own gameplay profile and effect style. Standard controllers map face buttons/bumpers to strikes, left trigger to guard, right trigger to power, and Start to pause.
+
+## Develop and build
 
 ```sh
 npm ci
+npm test
+npm run dev
 npm run build
+npm run package:offline
 ```
 
-Vercel configuration is included: Vite framework, `npm run build`, output `dist`. Connect this directory as a Git repository to Vercel or run an authenticated `vercel --prod`. No secrets or API keys are needed by the game.
+Vercel runs the test suite before building `dist` using the included configuration. The offline command produces `release/Me-vs-Me.html`, including new arena and combat assets. Settings and local records persist in browser storage when available. No game backend or account is required.
 
-Create the self-contained offline edition using `node scripts/package-offline.mjs`.
+## Assets
 
-## Assets and reference
+See [ASSET-NOTES.md](ASSET-NOTES.md). Original supplied GIFs, sheets, and portraits are preserved. The combat edition adds 308 attack poses across 77 four-pose sequences, plus 264 poses for walking, jumping, guarding, hurt reactions, knockouts, and victories. Every move's impact pose is synchronized to its damage window. New stages are WebP backgrounds, with bounded runtime rain, petals, furnace glow, and lighting details. Reduced motion disables environmental movement and menu preview loops.
 
-The supplied GIFs are retained in `public/assets/originals`; all 176 frames were extracted into normalized transparent PNG sprite sheets. See `ASSET-NOTES.md`. Character identities and unique attack animations are preserved. Other movement states use transformations of the supplied ready pose; additional walk, jump, hurt and guard sprite artwork was not supplied.
+Review [all 77 impact poses](docs/qa/all-77-move-peaks.jpg) and [five arenas](docs/qa/five-arenas.jpg). These are asset contact sheets, not browser screenshots.
 
-The reference URL identifies **Street Fighter II: The World Warrior arcade Ryu Gameplay Playthrough Longplay** by arcadegamesfreak. This implementation follows its arcade fighting structure with original title, roster, stages and interface. The full video could not be visually inspected, so exact video matching is not established.
+## Verification boundaries
 
-## Validation and remaining release gates
+101 automated checks cover original and new asset integrity, all 77 runtime attacks, meter costs, one-hit damage, tap buffering, pause, progression, bonus stages, and UI navigation. Runtime tests use a Phaser graphics stub; they exercise actual game scene logic but do not establish GPU performance or visual acceptance. See [QA notes](docs/qa/validation.md) for rendered-playtest status.
 
-Asset tests verify all 11 fighters, five arenas and every sprite frame. UI integration and combat rules tests are included. The automated asset, combat, bonus and interface tests and production build pass. These are automated structural/logic checks, not rendered browser acceptance.
-
-Cloud-browser security blocked local preview URLs in this session. Therefore rendered browser playtesting, real-device touch/performance validation, and exact reference comparison remain open. Vercel's advertised deployment action returned `tool not found`. The project-import browser currently requires account sign-in. Do not represent this repository as already deployed or visually signed off until a live deployment has been verified.
-
-## Source and continuous verification
-
-Canonical repository: https://github.com/jrmoyler/me-vs-me. GitHub Actions runs asset, combat and UI checks, builds production output and uploads the offline edition. The repository includes every supplied original GIF, normalized animation sheet, portrait, five arena backgrounds and all game code.
-
-Six normal strikes have distinct strength, reach and timing. Standard gamepads are supported in combat: directional pad or left stick to move, face buttons and bumpers for normal strikes, left trigger to guard, right trigger for power, Start to pause. Controller hardware has not been physically tested in this session.
+The structural reference is Street Fighter II arcade progression. Exact video matching, physical Galaxy A15 performance, and physical gamepad validation are not established by these checks. This is a substantial combat and presentation upgrade, not a claim of independently certified AAA quality.
