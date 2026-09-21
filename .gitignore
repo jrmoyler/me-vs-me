@@ -1,5 +1,9 @@
 node_modules/
 dist/
 release/
+asset-exports/
+asset-sources/expansion/*-first.png
+asset-sources/expansion/*-rejected*.png
 .vercel/
 .DS_Store
+__pycache__/

@@ -17,8 +17,8 @@ for(const c of characters) test(`${c.name}: all six strikes and power map impact
  assert.equal(new Set(impactFrames).size,7);
  f.energy=SPECIAL_COST-1;assert.equal(createAttack(f,'special'),null);
 });
-test('eleven signature powers have distinct art styles and authored gameplay profiles',()=>{
- assert.equal(Object.keys(POWERS).length,11);
- assert.equal(new Set(Object.values(POWERS).map(p=>p.style)).size,11);
- assert.equal(new Set(Object.values(POWERS).map(p=>JSON.stringify([p.variant,p.damage,p.reach,p.duration,p.travel,p.lift,p.projectileSpeed]))).size,11);
+test('all signature powers have distinct art styles and authored gameplay profiles',()=>{
+ assert.equal(Object.keys(POWERS).length,characters.length);
+ assert.equal(new Set(Object.values(POWERS).map(p=>p.style)).size,characters.length);
+ assert.equal(new Set(Object.values(POWERS).map(p=>JSON.stringify([p.variant,p.damage,p.reach,p.duration,p.travel,p.lift,p.projectileSpeed]))).size,characters.length);
 });

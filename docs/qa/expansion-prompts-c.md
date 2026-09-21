@@ -1,0 +1,44 @@
+# Expansion sprite prompts — Aether, Gaia, Zenith
+
+Generated with built-in image_gen. Identity sources supplied by user; existing gauntlet portrait used only as rendering-style reference. Combat 4x7, motion 4x6. Raw generation outputs retained under asset-sources/expansion.
+
+## aether-combat
+
+Use case: stylized-concept. Create a production game sprite sheet, polished detailed pixel/chibi style matching second reference portrait (style only). Actual transparent background, no text, no grid lines, no scenery. EXACTLY 4 columns and 7 equal rows, 28 isolated full-body poses, all facing RIGHT. Equal-sized cells, character feet consistent baseline within each row, generous transparent gutter, no overlap between cells. First reference is identity/clothing, preserve likeness and clothing exactly. Rows from top: jab; cross punch; uppercut; low kick; side kick; roundhouse kick; signature power. Each row left to right four distinct animation phases anticipation, windup, impact, recovery. Clear anatomical body movement rather than recolored copies. Keep full body inside every cell. Fighter AETHER: brown skin, short locs under orange bucket hat, cream quilted jacket with concentric stitching, rust-orange cargo trousers and orange boots. Signature last row an orange wind roundhouse spiral released toward right.
+
+## aether-motion
+
+Use case: stylized-concept. Create new production game animation sprite sheet matching exact fighter identity, clothing, chibi pixel style from reference sheet. Transparent background. EXACT 4 columns x6 rows =24 full body isolated poses. Equal cell spacing with generous gutter, all characters facing right, feet baseline consistent. NO grid lines NO text NO scenery. Rows: 1 walking four different steps; 2 jump anticipation airborne apex landing; 3 guard raise block absorb lower; 4 hurt recoil stagger doubled over recovery; 5 KO stumble kneel collapse lying on ground; 6 victory raise fist cheer confident ready. All bodies fully inside cell, no effects crossing cell boundaries. Fighter AETHER, orange bucket hat cream quilted jacket orange pants and boots. Do not repeat attack sheet: generate the requested walk/jump/guard/hurt/KO/victory body states.
+
+## gaia-combat
+
+Use case: stylized-concept. Create a production game sprite sheet, polished detailed pixel/chibi style matching second reference portrait (style only). Actual transparent background, no text, no grid lines, no scenery. EXACTLY 4 columns and 7 equal rows, 28 isolated full-body poses, all facing RIGHT. Equal-sized cells, character feet consistent baseline within each row, generous transparent gutter, no overlap between cells. First reference is identity/clothing, preserve likeness and clothing exactly. Rows from top: jab; cross punch; uppercut; low kick; side kick; roundhouse kick; signature power. Each row left to right four distinct animation phases anticipation, windup, impact, recovery. Clear anatomical body movement rather than recolored copies. Keep full body inside every cell. Fighter GAIA: brown skin, black curly hair, white long scientist labcoat over dark teal polo, tan trousers black shoes. No basket. Signature row 7 green root eruption driven by palm strike. Each pose occupies only central 65 percent of cell, LARGE EMPTY gutters. Transparent alpha background no gradient.
+
+## aether-motion-final
+
+Use case: stylized-concept. Create new production game animation sprite sheet matching exact fighter identity, clothing, chibi pixel style from reference sheet. Transparent background. EXACT 4 columns x6 rows =24 full body isolated poses. Equal cell spacing with generous gutter, all characters facing right, feet baseline consistent. NO grid lines NO text NO scenery. Rows: 1 walking four different steps; 2 jump anticipation airborne apex landing; 3 guard raise block absorb lower; 4 hurt recoil stagger doubled over recovery; 5 KO stumble kneel collapse lying on ground; 6 victory raise fist cheer confident ready. All bodies fully inside cell, no effects crossing cell boundaries. AETHER. Orange bucket hat, cream jacket, orange cargo trousers orange boots. CRITICAL flat plain white #FFFFFF background, no shadows no gradient. 4 columns SIX rows 24 isolated distinct sprites.
+
+## gaia-combat-final
+
+Use case: stylized-concept. Create a production game sprite sheet, polished detailed pixel/chibi style matching second reference portrait (style only). Actual transparent background, no text, no grid lines, no scenery. EXACTLY 4 columns and 7 equal rows, 28 isolated full-body poses, all facing RIGHT. Equal-sized cells, character feet consistent baseline within each row, generous transparent gutter, no overlap between cells. First reference is identity/clothing, preserve likeness and clothing exactly. Rows from top: jab; cross punch; uppercut; low kick; side kick; roundhouse kick; signature power. Each row left to right four distinct animation phases anticipation, windup, impact, recovery. Clear anatomical body movement rather than recolored copies. Keep full body inside every cell. Fighter GAIA: brown skin curly black hair, white scientist labcoat dark teal polo tan trousers black shoes. No basket. Exactly SEVEN ROWS. Row1 jab. Row2 cross. Row3 uppercut. Row4 LOW kick. Row5 SIDE kick. Row6 ROUNDHOUSE kick. Row7 ROOT UPRISING green palm root blast. Never omit row6. Four columns. Sparse compact effects fully inside each cell. Each pose fills 65% its cell. No background whatsoever.
+
+## gaia-motion
+
+Use case: stylized-concept. Create new production game animation sprite sheet matching exact fighter identity, clothing, chibi pixel style from reference sheet. Transparent background. EXACT 4 columns x6 rows =24 full body isolated poses. Equal cell spacing with generous gutter, all characters facing right, feet baseline consistent. NO grid lines NO text NO scenery. Rows: 1 walking four different steps; 2 jump anticipation airborne apex landing; 3 guard raise block absorb lower; 4 hurt recoil stagger doubled over recovery; 5 KO stumble kneel collapse lying on ground; 6 victory raise fist cheer confident ready. All bodies fully inside cell, no effects crossing cell boundaries. GAIA white long labcoat dark teal polo tan pants black shoes curly black hair brown skin. Exact reference identity. Transparent.
+
+## zenith-combat
+
+Use case: stylized-concept. Create a production game sprite sheet, polished detailed pixel/chibi style matching second reference portrait (style only). Actual transparent background, no text, no grid lines, no scenery. EXACTLY 4 columns and 7 equal rows, 28 isolated full-body poses, all facing RIGHT. Equal-sized cells, character feet consistent baseline within each row, generous transparent gutter, no overlap between cells. First reference is identity/clothing, preserve likeness and clothing exactly. Rows from top: jab; cross punch; uppercut; low kick; side kick; roundhouse kick; signature power. Each row left to right four distinct animation phases anticipation, windup, impact, recovery. Clear anatomical body movement rather than recolored copies. Keep full body inside every cell. Fighter ZENITH, brown skin, slim braids tucked back, black rectangular glasses, black turtleneck tucked into gray tailored trousers, black dress shoes. Signature last row APEX PULSE: calm one-finger violet psychic projectile right. Exactly 7 rows4cols. Compact purple effects contained within central 70% of each cell. Preserve sophisticated glasses and black turtleneck identity in all poses.
+
+## zenith-motion
+
+Use case: stylized-concept. Create new production game animation sprite sheet matching exact fighter identity, clothing, chibi pixel style from reference sheet. Transparent background. EXACT 4 columns x6 rows =24 full body isolated poses. Equal cell spacing with generous gutter, all characters facing right, feet baseline consistent. NO grid lines NO text NO scenery. Rows: 1 walking four different steps; 2 jump anticipation airborne apex landing; 3 guard raise block absorb lower; 4 hurt recoil stagger doubled over recovery; 5 KO stumble kneel collapse lying on ground; 6 victory raise fist cheer confident ready. All bodies fully inside cell, no effects crossing cell boundaries. ZENITH black rectangular glasses slim braids black turtleneck gray tailored pants black dress shoes brown skin. Preserve exact identity and detailed pixel shading.
+
+## Targeted refinements
+
+Aether combat: shrink each of28poses/effects inside its cell; fully separate last-row Solar Cyclone and keep all effects away from canvas edges. Original rejected for clipping retained as aether-combat-rejected-clipping.png.
+
+Zenith combat: replace only row5column3 tucked knee with fully extended horizontal sidekick toward right, preserve clothing/likeness and all other poses.
+
+Note: tool previews displayed colored backdrops on motion sheets; actual authored alpha is validated by the packing pipeline. No image backgrounds were programmatically removed.
+
