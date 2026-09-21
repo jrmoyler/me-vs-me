@@ -58,14 +58,31 @@ function png(data, decode = false) {
   return { width, height, pixels };
 }
 
-test("roster contains eleven distinct identities and signature attacks", () => {
-  assert.equal(characters.length, 11);
+test("roster contains twenty distinct identities and signature attacks", () => {
+  assert.equal(characters.length, 20);
   for (const key of ["id", "name", "move", "sheet", "portrait"])
     assert.equal(
       new Set(characters.map((c) => c[key])).size,
-      11,
+      characters.length,
       `Unique ${key}`,
     );
+});
+
+test("expansion ready poses ground visible feet and match runtime body scale", () => {
+  for (const fighter of characters.slice(11)) {
+    const { width, height, pixels } = png(asset(fighter.portrait), true);
+    let top = height, bottom = -1;
+    for (let y = 0; y < height; y++)
+      for (let x = 0; x < width; x++)
+        if (pixels[(y * width + x) * 4 + 3] > 128) {
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y);
+        }
+    assert.ok(Math.abs(bottom + 1 - fighter.anchorY) <= 3,
+      `${fighter.id}: visible feet, not faint padding, must meet the ground`);
+    assert.ok(Math.abs(bottom - top + 1 - fighter.bodyHeight) <= 4,
+      `${fighter.id}: runtime scale must match the visible body`);
+  }
 });
 
 test("all five arena manifests resolve to distinct 1536×864 WebP artwork", () => {

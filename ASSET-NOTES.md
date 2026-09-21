@@ -1,6 +1,6 @@
 # Me vs Me asset notes
 
-The eleven playable character animations come from the supplied “Me vs Me battle animation gifs.zip” archive. The original GIFs are retained in `public/assets/originals/`.
+The original eleven playable character animations come from the supplied “Me vs Me battle animation gifs.zip” archive. The original GIFs are retained in `public/assets/originals/`.
 
 Each GIF contains sixteen frames. The transparent PNG sheets in `public/assets/characters/` contain those same supplied frames, resized using nearest-neighbor sampling and positioned on a consistent canvas. They are not newly drawn animation or a reconstruction of unseen character views. Portraits are cropped from each supplied ready pose. Names, titles, combat statistics, and signature move names are game-specific interpretations of the visible characters.
 
@@ -50,3 +50,26 @@ Five newly generated 1536×864 WebP arena illustrations replace the original SVG
 Each `*-motion.png` adds a 1280×1920 atlas: four poses across six rows (walk, jump, guard, hurt, knockout, victory). All 11 identities receive this set, adding 66 sequences / 264 poses. The same image-generation process and original portrait references apply. The brief requires actual limb changes, four-step walk cycles, takeoff/ascent/descent/landing, a held forearm block, recoil and recovery, falling to a held grounded knockout, and a raised-fist victory. `motion.js` maps the runtime state and physics to these frames. Combat no longer substitutes whole-sprite squash/rotation for these actions. KO and victory settle into their last pose instead of looping back upright. Source packing accepts a `motions` dictionary in addition to `fighters` and `arenas`.
 
 The bonus stage now uses the new six strike rows too. Rendered browser evidence in `docs/qa/browser-*.jpg` is captured from the Vercel preview; contact sheets remain separately identified.
+
+
+## Nine-fighter expansion — September 21, 2026
+
+Nine supplied photographic references are interpreted as pixel fighters, bringing the roster to 20. Original fighters and supplied GIFs remain unchanged. Each addition has 28 authored combat key poses and 24 authored movement/reaction key poses. Names and signature powers are game interpretations of the references.
+
+| ID | Reference outfit | Power |
+|---|---|---|
+| hybrid | Navy bucket hat, Hybrid Living sweatshirt, black printed pants, shoulder bag | Fusion Orbit |
+| civic | Pale green Civic Core overshirt, knit beanie, matching joggers | Accord Ward |
+| nexus | Black-and-white Nexus Labs tracksuit, headband, crossbody bag | Pulse Relay |
+| glyph | Burgundy beanie, dark hoodie with red graphic | Crimson Forge |
+| quilt | White quilted jacket, navy/pink Civic Core set, striped beanie, tote | Cloudburst Counter |
+| binary | Black turtleneck, patterned scarf, cargo pants, boots | Null Sweep |
+| aether | Orange bucket hat, cream quilted jacket, orange cargo pants/boots | Solar Cyclone |
+| gaia | Curly-haired scientist in white lab coat | Root Uprising |
+| zenith | Long braids, black glasses/turtleneck, gray trousers | Apex Pulse |
+
+Accepted raw generations are in `asset-sources/expansion`. Prompts are recorded in `docs/qa/expansion-prompts-*.md`. Repack with `python3 scripts/package-expansion-assets.py` (Pillow, NumPy, SciPy required only for repacking). The packer trims near-transparent outer padding using alpha >16 bounds, retains generated alpha inside each crop, aligns feet to y=296, and preserves cell-relative attack extension. It does not synthesize poses or remove backgrounds.
+
+Each export includes seven combat GIFs, six movement/reaction GIFs, and one signature GIF, plus both atlases, portrait, horizontal signature sheet, 4×4 signature sheet, and a provenance/timing manifest. The signature sheet has **16 timeline cells using ready plus four power key poses with holds**, not 16 independently drawn poses. PNG keeps alpha inside the packed crops; GIF uses binary transparency. Signature GIFs use 70 ms timeline ticks (GIF only supports 10 ms increments); the runtime sheet uses 65 ms. The game uses four key poses for each attack, matching the existing 11 fighters' combat format.
+
+These are stylized interpretations with newly authored unseen poses, not pixel-for-pixel reproductions of photographic references. Review artwork and gameplay separately from automated structural checks.

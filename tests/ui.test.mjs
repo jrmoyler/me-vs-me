@@ -27,9 +27,9 @@ function setup(saved={}) {
     finishBonus(){assert.ok(bonusLatest);bonusLatest.onEnd({score:1000,destroyed:1,skipped:false});},
     screen:()=>window.document.body.dataset.screen};
 }
-test('first visit onboarding, 11 keyboard-selectable fighters, 5 arenas, duel and rematch',async()=>{
+test('first visit onboarding, all keyboard-selectable fighters, 5 arenas, duel and rematch',async()=>{
   const h=setup();h.click('[data-mode="duel"]');assert.ok(h.document.querySelector('[role="dialog"]'));
-  h.click('.modal-done');assert.equal(h.screen(),'selection');assert.equal(h.document.querySelectorAll('.roster-fighter').length,11);
+  h.click('.modal-done');assert.equal(h.screen(),'selection');assert.equal(h.document.querySelectorAll('.roster-fighter').length,characters.length);
   assert.equal(h.window.localStorage.getItem('mvm-onboarded'),'true');
   h.key('ArrowRight');assert.equal(h.document.querySelector('.roster-fighter.selected').dataset.index,'1');h.key('Enter');
   h.click('[data-action="mirror"]');h.key('Enter');assert.equal(h.screen(),'arena');assert.equal(h.document.querySelectorAll('.arena-option').length,5);
@@ -46,15 +46,15 @@ test('settings persist into the next combat and reduce motion',async()=>{
   h.click('[data-mode="training"]');h.key('Enter');h.key('Enter');h.key('Enter');await h.launch();assert.equal(h.latest.mode,'training');assert.equal(h.latest.difficulty,'hard');assert.equal(h.latest.settings.sound,false);
   h.end();assert.equal(h.window.localStorage.getItem('mvm-record'),null);
 });
-test('arcade faces each of the ten other selves then completes',async()=>{
+test('arcade faces each of the other selves then completes',async()=>{
   const h=setup({'mvm-onboarded':true});h.click('[data-mode="arcade"]');h.key('Enter');h.key('Enter');await h.launch();
   const faced=[];
-  for(let n=0;n<10;n++){faced.push(h.latest.opponent.id);h.end();if(n<9){h.click('[data-action="next-stage"]');if(h.screen()==='bonus')h.finishBonus();assert.equal(h.screen(),'route');h.click('[data-action="fight"]');await h.launch();}}
-  assert.equal(h.bonuses,3);assert.equal(new Set(faced).size,10);assert.ok(!faced.includes(characters[0].id));assert.match(h.document.body.textContent,/ARCADE COMPLETE/);assert.equal(JSON.parse(h.window.localStorage.getItem('mvm-record')).wins,10);
+  for(let n=0;n<characters.length-1;n++){faced.push(h.latest.opponent.id);h.end();if(n<characters.length-2){h.click('[data-action="next-stage"]');if(h.screen()==='bonus')h.finishBonus();assert.equal(h.screen(),'route');h.click('[data-action="fight"]');await h.launch();}}
+  assert.equal(h.bonuses,Math.floor((characters.length-2)/3));assert.equal(new Set(faced).size,characters.length-1);assert.ok(!faced.includes(characters[0].id));assert.match(h.document.body.textContent,/ARCADE COMPLETE/);assert.equal(JSON.parse(h.window.localStorage.getItem('mvm-record')).wins,characters.length-1);
 });
 test('changing fighters after progressing arcade resets the ladder stage',async()=>{
   const h=setup({'mvm-onboarded':true});h.click('[data-mode="arcade"]');h.key('Enter');h.key('Enter');await h.launch();h.end();h.click('[data-action="next-stage"]');if(h.screen()==='bonus')h.finishBonus();assert.equal(h.screen(),'route');h.click('[data-action="fight"]');await h.launch();h.end();
-  h.click('[data-action="change-fighters"]');h.key('ArrowRight');h.key('Enter');assert.match(h.document.querySelector('.mode-info').textContent,/STAGE 1 OF 10/);
+  h.click('[data-action="change-fighters"]');h.key('ArrowRight');h.key('Enter');assert.match(h.document.querySelector('.mode-info').textContent,new RegExp(`STAGE 1 OF ${characters.length-1}`));
 });
 test('onboarding escape proceeds consistently and dialogs trap focus and restore their trigger',()=>{
   const h=setup();h.click('[data-mode="duel"]');h.key('Escape');assert.equal(h.screen(),'selection');
@@ -79,7 +79,7 @@ test('arcade continue expires without erasing match records',async()=>{
  assert.equal(h.screen(),'title');assert.equal(JSON.parse(h.window.localStorage.getItem('mvm-record')).matches,1);
 });
 
-test('all eleven fighters expose seven animated moves including their named power',()=>{
+test('all fighters expose seven animated moves including their named power',()=>{
  const h=setup({'mvm-onboarded':true});h.click('[data-mode="training"]');
  for(let i=0;i<characters.length;i++){
   h.click(`[data-action="fighter"][data-index="${i}"]`);h.click('[data-action="moves"]');
