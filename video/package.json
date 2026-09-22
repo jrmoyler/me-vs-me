@@ -1,0 +1,14 @@
+{
+  "name": "me-vs-me-nine-fighters-promo",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "render": "remotion render src/index.ts Promo out/me-vs-me-nine-fighters-30s.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.392",
+    "remotion": "^4.0.392",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}
