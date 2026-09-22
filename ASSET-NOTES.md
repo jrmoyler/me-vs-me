@@ -73,3 +73,14 @@ Accepted raw generations are in `asset-sources/expansion`. Prompts are recorded 
 Each export includes seven combat GIFs, six movement/reaction GIFs, and one signature GIF, plus both atlases, portrait, horizontal signature sheet, 4×4 signature sheet, and a provenance/timing manifest. The signature sheet has **16 timeline cells using ready plus four power key poses with holds**, not 16 independently drawn poses. PNG keeps alpha inside the packed crops; GIF uses binary transparency. Signature GIFs use 70 ms timeline ticks (GIF only supports 10 ms increments); the runtime sheet uses 65 ms. The game uses four key poses for each attack, matching the existing 11 fighters' combat format.
 
 These are stylized interpretations with newly authored unseen poses, not pixel-for-pixel reproductions of photographic references. Review artwork and gameplay separately from automated structural checks.
+
+
+## Ten-arena expansion — September 22, 2026
+
+Five new 1536×864 WebP stage backgrounds join the original five: Terminal Nine (`terminal-nine`), Glasshouse (`glasshouse`), Overtime Field (`overtime-field`), Redline Overpass (`redline-overpass`) and Null Vault (`null-vault`). They were generated through the connected Higgsfield connector (`gpt_image_2_5`, quality high, 2k, 16:9) with `neon-avenue-v2.webp` supplied as a style reference so the new stages share the rendering of the existing set. Prompts, scene briefs and job ids are recorded in `docs/qa/arena-prompts.md`. The 2688×1520 raw outputs are not committed (`asset-sources/arenas/` is ignored).
+
+`scripts/render-arenas.mjs` turns a source image into the shipped asset: cover-fit onto an opaque 1536×864 canvas in Playwright's Chromium, export as lossy WebP, and rewrite the RIFF wrapper to the simple `VP8 ` container when Chromium emits `VP8X` without alpha. `--check` validates container, dimensions, size and distinct hashes for all ten; `--sheet docs/qa/ten-arenas.jpg` renders the contact sheet. Each stage also has a bounded atmosphere painter in `src/stage-effects.js` (train sweep and tube flicker, dawn shafts and pollen, camera flashes and confetti, heat shimmer and headlights, rack LEDs and a scan sweep).
+
+The touch controller (`src/controller.js`) draws its own keycap-style pad, cluster and bars in CSS; no bitmap assets were added for it. Screenshots in `docs/qa/controller-*.jpg` are headless Chromium captures produced by `scripts/qa-screens.mjs`.
+
+These are stylized generated illustrations; art direction acceptance is a human review, separate from the automated structural checks.

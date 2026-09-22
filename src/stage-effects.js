@@ -1,8 +1,6 @@
 // Bounded, deterministic environmental animation: no emitter allocation per tick.
-export function paintAtmosphere(g, arena, time, reducedMotion) {
-  g.clear();
-  const t = reducedMotion ? 0 : time;
-  if (arena.id === "neon-avenue") {
+const ATMOSPHERES = {
+  "neon-avenue"(g, t) {
     g.lineStyle(1, 0x9dc9df, 0.19);
     for (let i = 0; i < 44; i++) {
       const x = ((i * 137 + t * 55) % 1000) - 20;
@@ -11,29 +9,121 @@ export function paintAtmosphere(g, arena, time, reducedMotion) {
     }
     g.fillStyle(0x4ef3ee, 0.035 + Math.sin(t * 2) * 0.012);
     g.fillEllipse(220, 464, 250, 18);
-  } else if (arena.id === "mirror-garden") {
+  },
+  "mirror-garden"(g, t) {
     for (let i = 0; i < 18; i++) {
       const x = ((i * 139 + t * 27) % 1000) - 20;
       const y = (i * 59 + t * 17) % 450;
       g.fillStyle(i % 2 ? 0xf5b6d1 : 0xffe0e4, 0.55);
       g.fillEllipse(x + Math.sin(t + i) * 14, y, 5, 2);
     }
-  } else if (arena.id === "the-foundry") {
+  },
+  "the-foundry"(g, t) {
     g.fillStyle(0xff7f27, 0.05 + Math.sin(t * 4) * 0.018);
     g.fillRect(0, 230, 960, 260);
     for (let i = 0; i < 18; i++) {
       g.fillStyle(0xffc775, 0.5);
       g.fillRect(80 + ((i * 43) % 800), 360 - ((t * 70 + i * 29) % 270), 2, 3);
     }
-  } else if (arena.id === "sunset-court") {
+  },
+  "sunset-court"(g) {
     g.fillStyle(0xffbd82, 0.045);
     g.fillTriangle(0, 90, 390, 490, 540, 490);
     g.fillTriangle(100, 90, 610, 490, 640, 490);
-  } else {
+  },
+  "midnight-terrace"(g, t) {
     g.lineStyle(1, 0xafc9ff, 0.12 + Math.sin(t) * 0.04);
     for (let i = 0; i < 6; i++)
       g.lineBetween(85 + i * 150, 469, 160 + i * 150, 469);
-  }
+  },
+  // A train slides past behind the platform; the tubes flicker; steam drifts up.
+  "terminal-nine"(g, t) {
+    const sweep = ((t * 260) % 1500) - 300;
+    g.fillStyle(0xfff1c2, 0.11);
+    for (let i = 0; i < 6; i++) g.fillRect(sweep + i * 112, 262, 72, 40);
+    g.fillStyle(0xbdfff0, Math.sin(t * 23) > 0.86 ? 0.11 : 0.05);
+    g.fillRect(0, 58, 960, 5);
+    g.fillStyle(0xd9fff2, 0.07);
+    for (let i = 0; i < 5; i++)
+      g.fillEllipse(
+        120 + i * 190 + Math.sin(t * 0.6 + i) * 16,
+        470 - ((t * 14 + i * 37) % 120),
+        70,
+        16,
+      );
+  },
+  // Dawn shafts through the glass roof, pollen rising, mist along the floor.
+  glasshouse(g, t) {
+    g.fillStyle(0xfff3b8, 0.04 + Math.sin(t * 0.8) * 0.01);
+    g.fillTriangle(300, 0, 560, 480, 700, 480);
+    g.fillTriangle(560, 0, 760, 480, 860, 480);
+    for (let i = 0; i < 30; i++) {
+      const x = (i * 131 + Math.sin(t * 0.7 + i) * 20 + 1000) % 960;
+      const y = 480 - ((t * 22 + i * 53) % 470);
+      g.fillStyle(i % 3 ? 0xf3ffb0 : 0xffffff, 0.45);
+      g.fillCircle(x, y, 1.6);
+    }
+    g.fillStyle(0xc9f7d8, 0.06);
+    g.fillEllipse(480, 472, 900, 40);
+  },
+  // Camera flashes in the stands and confetti drifting over the sideline.
+  "overtime-field"(g, t) {
+    for (let i = 0; i < 5; i++) {
+      const cycle = t * 1.7 + i * 1.31;
+      const phase = cycle % 1;
+      if (phase < 0.08) {
+        const n = Math.floor(cycle);
+        const x = (i * 191 + n * 97) % 960;
+        const y = 90 + ((i * 67 + n * 41) % 180);
+        g.fillStyle(0xffffff, (0.08 - phase) * 6);
+        g.fillCircle(x, y, 6 + phase * 60);
+      }
+    }
+    for (let i = 0; i < 24; i++) {
+      const x = (i * 97 + t * 18 + Math.sin(t * 2 + i) * 10 + 1000) % 960;
+      const y = (i * 71 + t * 55) % 470;
+      g.fillStyle([0xff8fb1, 0xffffff, 0xffd257][i % 3], 0.7);
+      g.fillRect(x, y, 3, 5);
+    }
+  },
+  // Heat shimmer over the deck and headlights passing on the far lane.
+  "redline-overpass"(g, t) {
+    for (let i = 0; i < 14; i++) {
+      const y = 300 + i * 9;
+      g.lineStyle(1, 0xffb070, 0.05 + 0.03 * Math.sin(t * 3 + i));
+      g.lineBetween(0, y + Math.sin(t * 2 + i) * 1.5, 960, y + Math.cos(t * 2 + i) * 1.5);
+    }
+    const car = ((t * 420) % 1500) - 300;
+    g.fillStyle(0xfff0c0, 0.18);
+    g.fillRect(car, 330, 120, 3);
+    g.fillStyle(0xff5040, 0.14);
+    g.fillRect(car - 160, 336, 60, 2);
+    g.fillStyle(0xffd2a0, 0.35);
+    for (let i = 0; i < 12; i++)
+      g.fillRect((i * 83 + t * 40) % 960, 380 + ((i * 29) % 90), 2, 1);
+  },
+  // Rack status lights stepping through their columns under a slow scan.
+  "null-vault"(g, t) {
+    for (let col = 0; col < 8; col++)
+      for (let row = 0; row < 6; row++) {
+        const on = (Math.floor(t * 6) + col * 3 + row * 5) % 7 < 2;
+        g.fillStyle(row % 2 ? 0xa98bff : 0x66c2ff, on ? 0.75 : 0.12);
+        g.fillRect(90 + col * 110, 150 + row * 28, 4, 4);
+      }
+    g.fillStyle(0xa98bff, 0.05);
+    g.fillRect(0, (t * 90) % 540, 960, 3);
+    g.lineStyle(1, 0x8a7bff, 0.08 + Math.sin(t * 1.5) * 0.03);
+    for (let i = 0; i < 7; i++) g.lineBetween(60 + i * 140, 470, 60 + i * 140, 540);
+  },
+};
+
+export function atmosphereFor(id) {
+  return ATMOSPHERES[id] || ATMOSPHERES["midnight-terrace"];
+}
+
+export function paintAtmosphere(g, arena, time, reducedMotion) {
+  g.clear();
+  atmosphereFor(arena?.id)(g, reducedMotion ? 0 : time);
 }
 
 export function paintPower(g, f, time, reducedMotion) {

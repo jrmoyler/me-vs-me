@@ -85,10 +85,10 @@ test("expansion ready poses ground visible feet and match runtime body scale", (
   }
 });
 
-test("all five arena manifests resolve to distinct 1536×864 WebP artwork", () => {
-  assert.equal(arenas.length, 5);
+test("all ten arena manifests resolve to distinct 1536×864 WebP artwork", () => {
+  assert.equal(arenas.length, 10);
   for (const key of ["id", "name", "background"])
-    assert.equal(new Set(arenas.map((a) => a[key])).size, 5);
+    assert.equal(new Set(arenas.map((a) => a[key])).size, arenas.length);
   const art = arenas.map((a) => {
     assert.match(a.color, /^#[a-f\d]{6}$/i);
     const data = asset(a.background);
@@ -98,7 +98,7 @@ test("all five arena manifests resolve to distinct 1536×864 WebP artwork", () =
     assert.equal(data.readUInt16LE(28) & 0x3fff, 864);
     return createHash("sha256").update(data).digest("hex");
   });
-  assert.equal(new Set(art).size, 5);
+  assert.equal(new Set(art).size, arenas.length);
 });
 
 for (const fighter of characters) {
