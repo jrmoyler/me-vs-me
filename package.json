@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build && npm run render:promo",
+    "build": "node scripts/vercel-promo-build.mjs",
     "render:promo": "node scripts/stage-promo.mjs && remotion render video/src/index.ts Promo dist/me-vs-me-nine-fighters-30s.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.mjs",
