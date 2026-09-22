@@ -9,6 +9,7 @@ import * as rules from "../src/combat-rules.js";
 import * as moves from "../src/moves.js";
 import { motionFrame } from "../src/motion.js";
 import * as effects from "../src/stage-effects.js";
+import * as controller from "../src/controller.js";
 const source =
   readFileSync(new URL("../src/combat.js", import.meta.url), "utf8")
     .replace(/^import[\s\S]*?;\n/gm, "")
@@ -75,6 +76,7 @@ async function setup(character = characters[0], mode = "training") {
     ...rules,
     ...moves,
     ...effects,
+    ...controller,
     queueMicrotask,
     console,
   });
@@ -160,12 +162,11 @@ for (const c of characters)
         face: 1,
       });
       Object.assign(o, {
+        ...rules.freshFighterState(),
         x: 435,
         y: 450,
         vy: 0,
         hp: 100,
-        attack: null,
-        stun: 0,
         guard: false,
       });
       h.scene.projectiles = [];
@@ -242,4 +243,139 @@ test('Pause is a HUD control outside every fighting-button cluster', async () =>
  pause.click();
  assert.ok(h.window.document.querySelector('.mvm-overlay'));
  h.control.destroy();
+});
+
+// --- Combo system -----------------------------------------------------------
+function duel(character = characters[0]) {
+  return setup(character, "duel").then((h) => {
+    h.scene.ai = () => ({});
+    const [p, o] = h.scene.fighters;
+    Object.assign(p, { x: 350, y: 450, vy: 0, face: 1, energy: 100 });
+    Object.assign(o, { x: 435, y: 450, vy: 0, hp: 100, face: -1 });
+    h.tap = (code) => {
+      h.key(code, "keydown");
+      h.key(code, "keyup");
+    };
+    h.until = (predicate, limit = 90) => {
+      let n = 0;
+      while (!predicate() && n++ < limit) h.step(1);
+      return predicate();
+    };
+    h.damage = (type, target = {}) =>
+      rules.hitOutcome(
+        { c: character, energy: 0, face: 1 },
+        { hp: 100, guard: false, ...target },
+        rules.createAttack({ c: character, energy: 100 }, type),
+      ).damage;
+    return h;
+  });
+}
+test("jab, cross and uppercut cancel into a true three-hit combo that launches and knocks down", async () => {
+  const h = await duel();
+  const [p, o] = h.scene.fighters;
+  const combo = h.window.document.querySelector('.mvm-combo[data-side="0"]');
+  h.tap("KeyJ");
+  h.step(1);
+  assert.equal(p.attack.type, "light");
+  h.tap("KeyK"); // buffered during the jab's startup
+  assert.ok(h.until(() => o.hp < 100));
+  const afterJab = 100 - h.damage("light");
+  assert.ok(Math.abs(o.hp - afterJab) < 1e-6);
+  assert.ok(h.until(() => p.attack?.type === "medium", 30), "cross cancels the landed jab");
+  assert.ok(o.stun > 0, "rival is still in hitstun when the cancel starts");
+  h.tap("KeyL");
+  assert.ok(h.until(() => o.hp < afterJab));
+  const afterCross = afterJab - h.damage("medium", { comboHits: 1 });
+  assert.ok(Math.abs(o.hp - afterCross) < 1e-6, "second hit is scaled to 90%");
+  assert.equal(p.combo, 2);
+  assert.ok(h.until(() => o.hp < afterCross));
+  assert.ok(Math.abs(o.hp - (afterCross - h.damage("heavy", { comboHits: 2 }))) < 1e-6, "third hit is scaled to 80%");
+  assert.equal(p.combo, 3);
+  assert.equal(o.launched, true, "an uppercut inside a combo launches");
+  h.step(1);
+  assert.equal(combo.textContent, "3 HIT COMBO");
+  assert.ok(h.until(() => o.down > 0, 120), "landing from the launch knocks the rival down");
+  const hpDown = o.hp;
+  Object.assign(p, { attack: null, cooldown: 0 });
+  h.tap("KeyJ");
+  h.step(30);
+  assert.equal(o.hp, hpDown, "a downed rival cannot be hit");
+  assert.ok(h.until(() => o.down <= 0, 120));
+  assert.equal(o.launched, false);
+  h.control.destroy();
+});
+test("guard holds through blockstun: a blocked string stays blocked, pushes back and never becomes a combo", async () => {
+  const h = await duel();
+  const [p, o] = h.scene.fighters;
+  h.scene.ai = () => ({ block: true });
+  h.step(1);
+  assert.equal(o.guard, true);
+  const startX = o.x;
+  h.tap("KeyJ");
+  h.step(1);
+  h.tap("KeyU"); // low kick cancel lands inside the jab's blockstun
+  assert.ok(h.until(() => o.hp < 100));
+  const blockedJab = h.damage("light", { guard: true, face: -1 });
+  assert.ok(Math.abs(o.hp - (100 - blockedJab)) < 1e-6);
+  assert.ok(o.blockstun > 0 && o.x > startX, "blockstun and pushback apply");
+  h.scene.ai = () => ({}); // the rival lets go of guard, yet blockstun still protects them
+  assert.ok(h.until(() => p.attack?.type === "kick", 30), "kick cancels the blocked jab");
+  const afterJab = o.hp;
+  assert.ok(h.until(() => o.hp < afterJab));
+  assert.ok(o.blockstun >= 0);
+  assert.ok(Math.abs(o.hp - (afterJab - h.damage("kick", { guard: true, face: -1 }))) < 1e-6, "follow-up inside blockstun is still blocked");
+  assert.equal(p.combo, 0);
+  assert.equal(h.window.document.querySelector('.mvm-combo[data-side="0"]').textContent, "");
+  Object.assign(o, { blockstun: 0.2, guard: true, stun: 0, attack: null });
+  h.step(1);
+  assert.equal(o.guard, true, "guard persists without input during blockstun");
+  assert.equal(rules.createAttack(o, "light"), null, "no attacks inside blockstun");
+  h.step(20);
+  assert.equal(o.guard, false, "guard drops once blockstun ends and no block is held");
+  h.control.destroy();
+});
+test("whiffed strikes cannot be cancelled but the buffered press still comes out after recovery", async () => {
+  const h = await duel();
+  const [p, o] = h.scene.fighters;
+  o.x = 800;
+  h.tap("KeyJ");
+  h.step(1);
+  h.tap("KeyK");
+  for (let i = 0; i < 19; i++) {
+    h.step(1);
+    assert.equal(p.attack?.type, "light", `frame ${i}: a whiff never cancels`);
+  }
+  assert.ok(h.until(() => p.attack?.type === "medium", 30), "buffered cross comes out after the jab recovers");
+  assert.equal(o.hp, 100);
+  h.control.destroy();
+});
+test("striking a rival during their startup is a counter hit with a callout", async () => {
+  const h = await duel();
+  const [p, o] = h.scene.fighters;
+  o.attack = rules.createAttack(o, "heavy");
+  h.tap("KeyJ");
+  assert.ok(h.until(() => o.hp < 100));
+  const expected = h.damage("light", { attack: { t: 0, start: 1 } });
+  assert.ok(Math.abs(o.hp - (100 - expected)) < 1e-6, "counter hits deal bonus damage");
+  assert.ok(expected > h.damage("light"));
+  assert.equal(o.attack, null, "the rival's move is interrupted");
+  const callout = h.window.document.querySelector(".mvm-hit-callout");
+  assert.equal(callout.textContent, "COUNTER!");
+  assert.ok(callout.classList.contains("visible"));
+  h.step(60);
+  assert.equal(callout.classList.contains("visible"), false);
+  h.control.destroy();
+});
+test("the power knocks down and a downed rival is left alone until they rise", async () => {
+  const h = await duel();
+  const [p, o] = h.scene.fighters;
+  h.tap("KeyQ");
+  assert.ok(h.until(() => o.hp < 100));
+  assert.equal(o.launched, true);
+  assert.equal(rules.canBeHit(o), false, "a knocked-down rival cannot be juggled");
+  assert.ok(h.until(() => o.down > 0, 120));
+  assert.equal(o.visualState, "down");
+  assert.equal(o.textureKey, "motion1");
+  assert.ok(h.until(() => o.down <= 0, 120));
+  h.control.destroy();
 });
