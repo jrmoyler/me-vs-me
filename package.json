@@ -16,7 +16,8 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "remotion": "^4.0.392",
-    "vite": "^7.1.0"
+    "vite": "^7.1.0",
+    "@sparticuz/chromium": "^140.0.0"
   },
   "devDependencies": {
     "happy-dom": "^20.14.5",
