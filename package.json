@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build && npm run render:promo",
-    "render:promo": "mkdir -p video/public/characters video/public/gameplay && cp public/assets/characters/{aether,binary,civic,gaia,glyph,hybrid,nexus,quilt,zenith}-combat.png video/public/characters/ && cp docs/qa/{browser-title,browser-neon-training,browser-ion-burst,browser-roundhouse,browser-crown-breaker,browser-uppercut,browser-stage-select,expansion-combat-peaks,expansion-motion-peaks,five-arenas}.jpg video/public/gameplay/ && remotion render video/src/index.ts Promo dist/me-vs-me-nine-fighters-30s.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p",
+    "render:promo": "node scripts/stage-promo.mjs && remotion render video/src/index.ts Promo dist/me-vs-me-nine-fighters-30s.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.mjs",
     "package:offline": "node scripts/package-offline.mjs"
