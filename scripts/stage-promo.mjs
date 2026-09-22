@@ -14,13 +14,13 @@ const shots = [
   'five-arenas',
 ];
 
-mkdirSync('video/public/characters', {recursive:true});
-mkdirSync('video/public/gameplay', {recursive:true});
+mkdirSync('public/characters', {recursive:true});
+mkdirSync('public/gameplay', {recursive:true});
 
 for (const id of fighters) {
-  cpSync(`public/assets/characters/${id}-combat.png`, `video/public/characters/${id}-combat.png`);
+  cpSync(`public/assets/characters/${id}-combat.png`, `public/characters/${id}-combat.png`);
 }
 for (const id of shots) {
-  cpSync(`docs/qa/${id}.jpg`, `video/public/gameplay/${id}.jpg`);
+  cpSync(`docs/qa/${id}.jpg`, `public/gameplay/${id}.jpg`);
 }
-console.log('Promo assets staged');
+console.log('Promo assets staged in root public directory');
