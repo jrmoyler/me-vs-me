@@ -32,9 +32,10 @@ test('first visit onboarding, all keyboard-selectable fighters, 5 arenas, duel a
   h.click('.modal-done');assert.equal(h.screen(),'selection');assert.equal(h.document.querySelectorAll('.roster-fighter').length,characters.length);
   assert.equal(h.window.localStorage.getItem('mvm-onboarded'),'true');
   h.key('ArrowRight');assert.equal(h.document.querySelector('.roster-fighter.selected').dataset.index,'1');h.key('Enter');
-  h.click('[data-action="mirror"]');h.key('Enter');assert.equal(h.screen(),'arena');assert.equal(h.document.querySelectorAll('.arena-option').length,5);
-  h.click('[data-action="arena"][data-index="4"]');h.key('Enter');assert.equal(h.screen(),'versus');await h.launch();
-  assert.equal(h.latest.player.id,characters[1].id);assert.equal(h.latest.opponent.id,characters[1].id);assert.equal(h.latest.arena.id,arenas[4].id);
+  h.click('[data-action="mirror"]');h.key('Enter');assert.equal(h.screen(),'arena');assert.equal(h.document.querySelectorAll('.arena-option').length,arenas.length);
+  assert.match(h.document.querySelector('.arena-coordinate').textContent,new RegExp(`STAGE 01 / ${arenas.length}`));
+  h.click(`[data-action="arena"][data-index="${arenas.length-1}"]`);h.key('Enter');assert.equal(h.screen(),'versus');await h.launch();
+  assert.equal(h.latest.player.id,characters[1].id);assert.equal(h.latest.opponent.id,characters[1].id);assert.equal(h.latest.arena.id,arenas.at(-1).id);
   h.end();assert.equal(h.screen(),'result');assert.equal(h.destroys,1);
   assert.equal(JSON.parse(h.window.localStorage.getItem('mvm-record')).wins,1);
   h.click('[data-action="rematch"]');await h.launch();assert.equal(h.latest.player.id,characters[1].id);

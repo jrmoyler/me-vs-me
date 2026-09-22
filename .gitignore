@@ -7,3 +7,6 @@ asset-sources/expansion/*-rejected*.png
 .vercel/
 .DS_Store
 __pycache__/
+
+# Raw arena generations (35 MB); job ids and prompts are recorded in docs/qa/arena-prompts.md
+asset-sources/arenas/
