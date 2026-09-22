@@ -1,0 +1,57 @@
+name: Render 30s Remotion Promo
+
+on:
+  push:
+    branches:
+      - promo/remotion-nine-fighters-30s
+    paths:
+      - 'video/**'
+      - '.github/workflows/render-nine-fighters-promo.yml'
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Stage real game assets
+        run: |
+          mkdir -p video/public/characters video/public/gameplay video/out
+          for f in aether binary civic gaia glyph hybrid nexus quilt zenith; do
+            cp "public/assets/characters/$f-combat.png" "video/public/characters/$f-combat.png"
+          done
+          cp docs/qa/browser-title.jpg video/public/gameplay/browser-title.jpg
+          cp docs/qa/browser-neon-training.jpg video/public/gameplay/browser-neon-training.jpg
+          cp docs/qa/browser-ion-burst.jpg video/public/gameplay/browser-ion-burst.jpg
+          cp docs/qa/browser-roundhouse.jpg video/public/gameplay/browser-roundhouse.jpg
+          cp docs/qa/browser-crown-breaker.jpg video/public/gameplay/browser-crown-breaker.jpg
+          cp docs/qa/browser-uppercut.jpg video/public/gameplay/browser-uppercut.jpg
+          cp docs/qa/browser-stage-select.jpg video/public/gameplay/browser-stage-select.jpg
+          cp docs/qa/expansion-combat-peaks.jpg video/public/gameplay/expansion-combat-peaks.jpg
+          cp docs/qa/expansion-motion-peaks.jpg video/public/gameplay/expansion-motion-peaks.jpg
+          cp docs/qa/five-arenas.jpg video/public/gameplay/five-arenas.jpg
+
+      - name: Install Remotion
+        working-directory: video
+        run: npm install
+
+      - name: Render MP4
+        working-directory: video
+        run: npm run render
+
+      - name: Verify duration
+        run: |
+          ffprobe -v error -show_entries format=duration -of default=nk=1:nw=1 video/out/me-vs-me-nine-fighters-30s.mp4
+
+      - name: Upload MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: me-vs-me-nine-fighters-30s
+          path: video/out/me-vs-me-nine-fighters-30s.mp4
+          if-no-files-found: error
