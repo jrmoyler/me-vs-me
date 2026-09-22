@@ -1,5 +1,6 @@
 import {spawnSync} from 'node:child_process';
 import {mkdirSync, writeFileSync} from 'node:fs';
+import chromium from '@sparticuz/chromium';
 
 mkdirSync('dist', {recursive:true});
 const log=[];
@@ -27,11 +28,25 @@ if (stage.status!==0) {
   process.exit(0);
 }
 
-const remotion=run('REMOTION RENDER','./node_modules/.bin/remotion',[
+let browserPath='';
+try {
+  browserPath=await chromium.executablePath();
+  log.push('\n=== CHROMIUM ===\n'+browserPath+'\n');
+} catch (error) {
+  log.push('\n=== CHROMIUM ERROR ===\n'+String(error)+'\n');
+}
+
+const args=[
   'render','video/src/index.ts','Promo','dist/me-vs-me-nine-fighters-30s.mp4',
   '--codec=h264','--crf=18','--pixel-format=yuv420p'
-]);
+];
+if (browserPath) args.push('--browser-executable='+browserPath);
 
+const remotion=run('REMOTION RENDER','./node_modules/.bin/remotion',args);
 writeFileSync('dist/render-log.txt',log.join(''));
 console.log(log.join(''));
+
+if (remotion.status===0) {
+  writeFileSync('dist/render-success.txt','rendered\n');
+}
 process.exit(0);
