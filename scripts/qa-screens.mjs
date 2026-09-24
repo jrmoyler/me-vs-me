@@ -61,6 +61,27 @@ const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 const report = [];
 await mkdir("docs/qa", { recursive: true });
+
+// Built-shell checks: the title offers Versus and the help modal documents the throw.
+{
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await context.newPage();
+  await page.addInitScript(() => localStorage.setItem("mvm-onboarded", "true"));
+  const problems = [];
+  try {
+    await page.goto(`http://127.0.0.1:${port}/`);
+    const versus = page.locator('.title-actions [data-mode="local"]');
+    if ((await versus.count()) !== 1) problems.push("Versus button missing from the title");
+    else if (!/VERSUS/.test(await versus.innerText())) problems.push("Versus button has no VERSUS label");
+    await page.click('[data-action="help"]');
+    const help = await page.locator(".help-modal").innerText();
+    if (!/SHIFT\+J/.test(help) || !/THROW/.test(help)) problems.push("THROW hint missing from the help modal");
+  } catch (error) {
+    problems.push(error.message.split("\n")[0]);
+  }
+  report.push({ name: "title-and-help", width: 1280, height: 800, problems });
+  await context.close();
+}
 for (const [name, width, height] of VIEWPORTS) {
   const context = await browser.newContext({
     viewport: { width, height },

@@ -34,7 +34,7 @@ export function startBonus({
   root.innerHTML = `<style>
   .mvm-bonus{min-height:100dvh;background:#10111f;color:#fff4cf;padding:clamp(12px,3vw,32px);font-family:monospace;display:grid;align-content:center;gap:14px;text-align:center}
   .mvm-bonus h1{font:900 clamp(24px,5vw,48px)/1 monospace;margin:0;color:#ffd257;text-shadow:3px 3px #b83c31}.mvm-bonus p{margin:0;line-height:1.5}
-  .mvm-bonus-stage{position:relative;height:clamp(190px,45vh,450px);overflow:hidden;background-position:center;background-size:cover;border:4px solid #ffd257;box-shadow:inset 0 0 80px #0009}
+  .mvm-bonus-stage{position:relative;height:clamp(190px,45vh,450px);overflow:hidden;background-position:center;background-size:cover;border:4px solid var(--arena-color,#ffd257);box-shadow:inset 0 0 80px #0009}
   .mvm-bonus-fighter{position:absolute;height:110%;aspect-ratio:1;bottom:-5%;left:2%;image-rendering:pixelated;background-size:400% 700%;background-position:0% 0%;background-repeat:no-repeat}
   .mvm-bonus-target{position:absolute;width:clamp(84px,17vw,190px);height:75%;right:18%;bottom:6%;background:linear-gradient(120deg,#f6ffff,#55d6e8 38%,#214c80 39%,#84edf5 65%,#164675 66%);clip-path:polygon(50% 0,95% 20%,100% 77%,50% 100%,0 77%,5% 20%);filter:drop-shadow(0 0 12px #72f4ff);display:grid;place-content:center;font-size:clamp(22px,4vw,42px);font-weight:bold;color:#09203f}
   .mvm-bonus-target[data-damaged=true]{background:repeating-linear-gradient(130deg,transparent 0 35px,#10111f 36px 41px),linear-gradient(110deg,#f6ffff,#55d6e8,#214c80)}
@@ -58,6 +58,11 @@ export function startBonus({
     .join("")}</div><button class="mvm-bonus-exit">SKIP BONUS →</button></div>`;
   container.replaceChildren(root);
   const stage = root.querySelector(".mvm-bonus-stage");
+  // The intermission borrows the upcoming arena's atmosphere id and colour.
+  if (arena?.id) {
+    stage.dataset.atmosphere = arena.id;
+    stage.style.setProperty("--arena-color", arena.color || "#ffd257");
+  }
   if (arena?.background)
     stage.style.backgroundImage = `url("${String(arena.background).replace(/["\\\n\r]/g, "")}")`;
   const fighter = root.querySelector(".mvm-bonus-fighter");

@@ -771,3 +771,25 @@ test("local versus: player two walks and jabs from arrows and numpad in the same
   assert.match(h.window.document.querySelector(".mvm-help").textContent, /P2 ← →/);
   h.control.destroy();
 });
+test("touch: GUARD held + LP tap throws through the on-screen controller", async () => {
+  const h = await duel();
+  const [p, o] = h.scene.fighters;
+  h.scene.ai = () => ({ block: true });
+  o.x = p.x + 66;
+  const doc = h.window.document;
+  const press = (control, type, id) => {
+    const Ctor = h.window.PointerEvent || h.window.MouseEvent;
+    const e = new Ctor(type, { bubbles: true, cancelable: true, pointerId: id });
+    if (e.pointerId !== id) Object.defineProperty(e, "pointerId", { value: id });
+    doc.querySelector(`.mvm-touch [data-control="${control}"]`).dispatchEvent(e);
+  };
+  press("block", "pointerdown", 1);
+  h.step(1);
+  assert.equal(p.guard, true);
+  press("light", "pointerdown", 2);
+  press("light", "pointerup", 2);
+  h.step(1);
+  assert.equal(p.attack?.type, "throw");
+  assert.ok(h.until(() => o.down > 0, 40));
+  h.control.destroy();
+});

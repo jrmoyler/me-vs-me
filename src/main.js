@@ -1,7 +1,7 @@
 import "./style.css";
 import { characters } from "./characters.js";
 import { arenas } from "./arenas.js";
-import { MOVES } from "./moves.js";
+import { MOVES, SYSTEM_MOVES, BINDABLE, kitFor, bindingsFor, keyLabel } from "./moves.js";
 import { startCombat } from "./combat.js";
 import { startBonus } from "./bonus.js";
 
@@ -55,6 +55,64 @@ const esc = (s) =>
       ],
   );
 const pad2 = (n) => String(n).padStart(2, "0");
+// Arcade: eight mixed-role reflections, then your own shadow. FULL CIRCLE faces all nineteen.
+const LADDER_SHORT = 8;
+const VICTORY_QUOTES = {
+  hataalii: "Every version of me started as this one.",
+  urban: "The night was quiet until you made a sound.",
+  gauntlet: "Charged, aimed and finished before you moved.",
+  tote: "I let you speak first; that was the mistake.",
+  vector: "Angles do not lie, and your footwork did.",
+  kinetic: "A green light means I never stop.",
+  corvette: "Plenty of miles left on this kick.",
+  curly: "You never saw the sweep because I never planned it.",
+  pixel: "Instinct is just a memory you forgot you had.",
+  tweed: "Manners are for after the fight.",
+  varsity: "Championship habits: grab, drop, repeat.",
+  hybrid: "Two disciplines, one outcome.",
+  civic: "Peace comes easier once you stop swinging.",
+  nexus: "Signal received; connection terminated.",
+  glyph: "That was my signature, so keep it.",
+  quilt: "Unruffled, and now you know why.",
+  binary: "Your pattern broke on the first input.",
+  aether: "I was already at the finish line.",
+  gaia: "The formula was stable; you were not.",
+  zenith: "I planned this three rounds ago.",
+};
+const quoteFor = (c) =>
+  VICTORY_QUOTES[c.id] || "The reflection never lies.";
+const isLocal = () => state.mode === "local";
+const isFinal = () =>
+  state.mode === "arcade" &&
+  state.ladder.length > 0 &&
+  state.stage === state.ladder.length - 1;
+function shuffle(list) {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+// Deal the remaining identities round-robin by role so the ladder mixes styles.
+function mixedOpponents(exclude = []) {
+  const groups = {};
+  for (const i of shuffle(characters.map((_, i) => i)))
+    if (i !== state.player && !exclude.includes(i))
+      (groups[kitFor(characters[i]).role] ||= []).push(i);
+  const roles = shuffle(Object.keys(groups));
+  const out = [];
+  while (roles.some((r) => groups[r].length))
+    for (const r of roles) if (groups[r].length) out.push(groups[r].shift());
+  return out;
+}
+function buildLadder() {
+  const cleared = state.ladder.slice(0, state.stage);
+  const total = settings.fullCircle ? characters.length - 1 : LADDER_SHORT;
+  const rest = mixedOpponents(cleared).slice(0, Math.max(0, total - cleared.length));
+  state.ladder = [...cleared, ...rest, state.player];
+  state.opponent = state.ladder[state.stage];
+}
 const COUNT_WORDS = ["ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN", "ELEVEN", "TWELVE"];
 const countWord = (n) => COUNT_WORDS[n] ?? String(n);
 const icon = (name) =>
@@ -112,7 +170,7 @@ function title() {
   setScreen("title");
   const lead = characters[0],
     second = characters[Math.min(5, characters.length - 1)];
-  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button></div></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>NO SECOND PLAYER REQUIRED</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
+  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="local">VERSUS / TWO PLAYERS <span>↗</span></button><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button></div></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>ONE PLAYER OR TWO / SAME CABINET</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
   bind();
 }
 function begin(mode) {
@@ -127,8 +185,12 @@ function begin(mode) {
     });
   } else selection();
 }
+function kitLine(c) {
+  const kit = kitFor(c);
+  return `<div class="kit-line"><span class="role-tag" data-role="${kit.role}">${kit.label}</span><span>${esc(kit.job)}</span><small>POWER CLASS · ${esc(kit.powerClass)}${kit.style ? ` / ${esc(kit.style)}` : ""}</small></div>`;
+}
 function fighterPreview(c, side) {
-  return `<section class="selection-fighter ${side}" style="--fighter-color:${esc(c.color || "#eb533d")}"><div class="fighter-index">${side === "left" ? "01 / YOU" : "02 / YOUR OTHER SIDE"}</div><div class="preview-watermark">${side === "left" ? "PLAYER" : "RIVAL"}</div><div class="fighter-floor"></div>${portrait(c)}<div class="fighter-bio"><span class="eyebrow">${esc(c.title || "ANOTHER SIDE OF YOU")}</span><h2>${esc(c.name)}</h2><p>${esc(c.description || "A different version. The same fighting spirit.")}</p><div class="fighter-stats">${[
+  return `<section class="selection-fighter ${side}" style="--fighter-color:${esc(c.color || "#eb533d")}"><div class="fighter-index">${side === "left" ? (isLocal() ? "01 / PLAYER ONE" : "01 / YOU") : isLocal() ? "02 / PLAYER TWO" : "02 / YOUR OTHER SIDE"}</div><div class="preview-watermark">${side === "left" ? "PLAYER" : isLocal() ? "P2" : "RIVAL"}</div><div class="fighter-floor"></div>${portrait(c)}<div class="fighter-bio"><span class="eyebrow">${esc(c.title || "ANOTHER SIDE OF YOU")}</span><h2>${esc(c.name)}</h2><p>${esc(c.description || "A different version. The same fighting spirit.")}</p><div class="fighter-stats">${[
     ["POWER", c.power],
     ["SPEED", c.speed],
     ["REACH", c.reach],
@@ -139,23 +201,55 @@ function fighterPreview(c, side) {
     )
     .join(
       "",
-    )}</div><div class="signature"><span>SIGNATURE</span><strong>${esc(c.move || "Inner conflict")}</strong></div></div></section>`;
+    )}</div><div class="signature"><span>SIGNATURE</span><strong>${esc(c.move || "Inner conflict")}</strong></div>${kitLine(c)}</div></section>`;
 }
 function selection() {
   setScreen("selection");
   const p = characters[state.player],
     o = characters[state.opponent];
-  app.innerHTML = `${chrome("CHOOSE YOUR SIDE")}<main class="selection-screen"><div class="screen-heading"><button class="text-button" data-action="home">← BACK</button><div><span class="eyebrow">${state.mode === "arcade" ? "ARCADE / FIGHT YOUR WAY THROUGH THE ROSTER" : state.mode === "training" ? "TRAINING / NO PRESSURE. FIND YOUR RHYTHM." : "QUICK DUEL / SETTLE IT IN THREE ROUNDS"}</span><h1>CHOOSE YOUR <em>${state.selecting === "player" ? "SELF." : "RIVAL."}</em></h1></div><span class="step-counter">01 <small>/ 03</small></span></div><div class="selection-stage">${fighterPreview(p, "left")}<div class="selection-vs"><span>VS</span><small>SAME SOUL.<br>DIFFERENT FIGHT.</small></div>${fighterPreview(o, "right")}</div><div class="roster-section">${state.mode !== "arcade" ? `<div class="selection-tabs" aria-label="Choose which fighter to edit"><button data-action="select-player" aria-pressed="${state.selecting === "player"}">1 · YOUR FIGHTER</button><button data-action="select-opponent" aria-pressed="${state.selecting === "opponent"}">2 · YOUR OPPONENT</button></div>` : ""}<div class="roster-caption"><span><b>${state.selecting === "player" ? "P1" : "CPU"}</b> ${state.selecting === "player" ? "SELECT YOUR FIGHTER" : "SELECT YOUR OPPONENT"}</span><span>ALL ${characters.length} VERSIONS UNLOCKED</span></div><div class="roster">${characters.map((c, i) => `<button class="roster-fighter ${state[state.selecting] === i ? "selected" : ""} ${state.player === i ? "p1-chosen" : ""}" data-action="fighter" data-index="${i}" style="--fighter-color:${esc(c.color || "#e95541")}" aria-label="Select ${esc(c.name)}" aria-pressed="${state[state.selecting] === i}"><span class="roster-num">${String(i + 1).padStart(2, "0")}</span>${portrait(c)}<strong>${esc(c.name)}</strong>${state[state.selecting] === i ? `<span class="selected-marker">${state.selecting === "player" ? "P1" : "CPU"}</span>` : ""}</button>`).join("")}</div><div class="selection-bottom"><div class="selection-hint"><span class="keycap">←</span><span class="keycap">→</span> CHOOSE <span class="keycap">↵</span> CONFIRM</div><div class="selection-actions"><button class="button outline" data-action="moves">MOVE LIST</button>${state.selecting === "opponent" ? '<button class="button outline" data-action="mirror">MIRROR MATCH</button><button class="text-button" data-action="select-player">CHANGE P1</button>' : ""}<button class="button primary" data-action="confirm-fighter">${state.selecting === "player" ? (state.mode === "arcade" ? "START ARCADE LADDER" : "NEXT: CHOOSE OPPONENT") : "CONFIRM RIVAL & CHOOSE STAGE"} <span>→</span></button></div></div></div></main>${footer("EVERY VERSION HAS SOMETHING TO PROVE.")}`;
+  const local = isLocal();
+  const second = local ? "P2" : "CPU";
+  const eyebrow =
+    state.mode === "arcade"
+      ? "ARCADE / FIGHT YOUR WAY THROUGH THE ROSTER"
+      : state.mode === "training"
+        ? "TRAINING / NO PRESSURE. FIND YOUR RHYTHM."
+        : local
+          ? "VERSUS / TWO PLAYERS · SAME CABINET"
+          : "QUICK DUEL / SETTLE IT IN THREE ROUNDS";
+  const heading =
+    state.selecting === "player"
+      ? "CHOOSE YOUR <em>SELF.</em>"
+      : local
+        ? "PLAYER <em>TWO.</em>"
+        : "CHOOSE YOUR <em>RIVAL.</em>";
+  const caption =
+    state.selecting === "player"
+      ? local
+        ? "PLAYER ONE SELECT YOUR FIGHTER"
+        : "SELECT YOUR FIGHTER"
+      : local
+        ? "PLAYER TWO SELECT YOUR FIGHTER"
+        : "SELECT YOUR OPPONENT";
+  const confirm =
+    state.selecting === "player"
+      ? state.mode === "arcade"
+        ? "START ARCADE LADDER"
+        : local
+          ? "NEXT: PLAYER TWO"
+          : "NEXT: CHOOSE OPPONENT"
+      : local
+        ? "CONFIRM PLAYER TWO & CHOOSE STAGE"
+        : "CONFIRM RIVAL & CHOOSE STAGE";
+  app.innerHTML = `${chrome(local ? "TWO PLAYERS. ONE CABINET." : "CHOOSE YOUR SIDE")}<main class="selection-screen"><div class="screen-heading"><button class="text-button" data-action="home">← BACK</button><div><span class="eyebrow">${eyebrow}</span><h1>${heading}</h1></div><span class="step-counter">01 <small>/ 03</small></span></div><div class="selection-stage">${fighterPreview(p, "left")}<div class="selection-vs"><span>VS</span><small>SAME SOUL.<br>DIFFERENT FIGHT.</small></div>${fighterPreview(o, "right")}</div><div class="roster-section">${state.mode !== "arcade" ? `<div class="selection-tabs" aria-label="Choose which fighter to edit"><button data-action="select-player" aria-pressed="${state.selecting === "player"}">${local ? "1 · PLAYER ONE" : "1 · YOUR FIGHTER"}</button><button data-action="select-opponent" aria-pressed="${state.selecting === "opponent"}">${local ? "2 · PLAYER TWO" : "2 · YOUR OPPONENT"}</button></div>` : ""}<div class="roster-caption"><span><b>${state.selecting === "player" ? "P1" : second}</b> ${caption}</span><span>ALL ${characters.length} VERSIONS UNLOCKED</span></div><div class="roster">${characters.map((c, i) => `<button class="roster-fighter ${state[state.selecting] === i ? "selected" : ""} ${state.player === i ? "p1-chosen" : ""}" data-action="fighter" data-index="${i}" style="--fighter-color:${esc(c.color || "#e95541")}" aria-label="Select ${esc(c.name)}, ${esc(kitFor(c).label.toLowerCase())}" aria-pressed="${state[state.selecting] === i}"><span class="roster-num">${String(i + 1).padStart(2, "0")}</span>${portrait(c)}<strong>${esc(c.name)}</strong><small class="role-tag" data-role="${kitFor(c).role}">${kitFor(c).label}</small>${state[state.selecting] === i ? `<span class="selected-marker">${state.selecting === "player" ? "P1" : second}</span>` : ""}</button>`).join("")}</div><div class="selection-bottom"><div class="selection-hint"><span class="keycap">←</span><span class="keycap">→</span> CHOOSE <span class="keycap">↵</span> CONFIRM</div><div class="selection-actions"><button class="button outline" data-action="moves">MOVE LIST</button>${state.selecting === "opponent" ? `<button class="button outline" data-action="mirror">MIRROR MATCH</button><button class="text-button" data-action="select-player">CHANGE P1</button>` : ""}<button class="button primary" data-action="confirm-fighter">${confirm} <span>→</span></button></div></div></div></main>${footer(local ? "PLAYER TWO: ARROWS + NUMPAD, OR A SECOND PAD." : "EVERY VERSION HAS SOMETHING TO PROVE.")}`;
   bind();
 }
 function confirmFighter() {
   if (state.selecting === "player") {
     if (state.mode === "arcade") {
       state.stage = 0;
-      state.ladder = characters
-        .map((_, i) => i)
-        .filter((i) => i !== state.player);
-      state.opponent = state.ladder[0];
+      state.ladder = [];
+      buildLadder();
       arenaSelection();
     } else {
       state.selecting = "opponent";
@@ -168,18 +262,22 @@ function confirmFighter() {
 function arenaSelection() {
   setScreen("arena");
   const a = arenas[state.arena];
-  app.innerHTML = `${chrome("PICK YOUR BATTLEGROUND")}<main class="arena-screen"><div class="screen-heading"><button class="text-button" data-action="back-fighters">← FIGHTERS</button><div><span class="eyebrow">${countWord(arenas.length)} STAGES. NO PLACE TO HIDE.</span><h1>WHERE IT <em>GOES DOWN.</em></h1></div><span class="step-counter">02 <small>/ 03</small></span></div><div class="arena-showcase" style="--arena-color:${esc(a.color || "#f05d46")};background-image:url('${esc(a.background)}')"><div class="arena-vignette"></div><span class="arena-coordinate">STAGE ${pad2(state.arena + 1)} / ${pad2(arenas.length)}<br>PRIVATE BATTLEGROUNDS</span><div class="arena-showcase-copy"><span class="eyebrow">${esc(a.subtitle || "THE NEXT CHAPTER")}</span><h2>${esc(a.name)}</h2></div><div class="arena-fighters">${portrait(characters[state.player])}<b>VS</b>${portrait(characters[state.opponent], "flipped")}</div></div><div class="arena-strip">${arenas.map((ar, i) => `<button class="arena-option ${i === state.arena ? "selected" : ""}" data-action="arena" data-index="${i}" style="background-image:url('${esc(ar.background)}')" aria-pressed="${i === state.arena}"><span>${pad2(i + 1)}</span><strong>${esc(ar.name)}</strong>${i === state.arena ? "<i>SELECTED</i>" : ""}</button>`).join("")}</div><div class="selection-bottom"><span class="mode-info">${state.mode === "arcade" ? `ARCADE · STAGE ${state.stage + 1} OF ${state.ladder.length}` : state.mode.toUpperCase()} <b> / </b>${settings.difficulty.toUpperCase()} CPU</span><button class="button primary" data-action="fight">LET'S SETTLE THIS <span>→</span></button></div></main>${footer("YOU CAN CHANGE THE SCENERY. NOT YOUR OPPONENT.")}`;
+  app.innerHTML = `${chrome("PICK YOUR BATTLEGROUND")}<main class="arena-screen"><div class="screen-heading"><button class="text-button" data-action="back-fighters">← FIGHTERS</button><div><span class="eyebrow">${countWord(arenas.length)} STAGES. NO PLACE TO HIDE.</span><h1>WHERE IT <em>GOES DOWN.</em></h1></div><span class="step-counter">02 <small>/ 03</small></span></div><div class="arena-showcase" style="--arena-color:${esc(a.color || "#f05d46")};background-image:url('${esc(a.background)}')"><div class="arena-vignette"></div><span class="arena-coordinate">STAGE ${pad2(state.arena + 1)} / ${pad2(arenas.length)}<br>PRIVATE BATTLEGROUNDS</span><div class="arena-showcase-copy"><span class="eyebrow">${esc(a.subtitle || "THE NEXT CHAPTER")}</span><h2>${esc(a.name)}</h2></div><div class="arena-fighters">${portrait(characters[state.player])}<b>VS</b>${portrait(characters[state.opponent], "flipped")}</div></div><div class="arena-strip">${arenas.map((ar, i) => `<button class="arena-option ${i === state.arena ? "selected" : ""}" data-action="arena" data-index="${i}" style="background-image:url('${esc(ar.background)}')" aria-pressed="${i === state.arena}"><span>${pad2(i + 1)}</span><strong>${esc(ar.name)}</strong>${i === state.arena ? "<i>SELECTED</i>" : ""}</button>`).join("")}</div><div class="selection-bottom"><span class="mode-info">${state.mode === "arcade" ? `ARCADE · STAGE ${state.stage + 1} OF ${state.ladder.length}` : isLocal() ? "VERSUS" : state.mode.toUpperCase()} <b> / </b>${isLocal() ? "TWO PLAYERS · SAME CABINET" : `${settings.difficulty.toUpperCase()} CPU`}</span>${state.mode === "arcade" && state.stage === 0 ? fullCircleToggle() : ""}<button class="button primary" data-action="fight">LET'S SETTLE THIS <span>→</span></button></div></main>${footer("YOU CAN CHANGE THE SCENERY. NOT YOUR OPPONENT.")}`;
   bind();
   // The phone strip scrolls sideways; keep the chosen stage in view after each render.
   app
     .querySelector(".arena-option.selected")
     ?.scrollIntoView?.({ inline: "center", block: "nearest" });
 }
+function fullCircleToggle() {
+  return `<button class="toggle full-circle ${settings.fullCircle ? "active" : ""}" data-action="full-circle" aria-pressed="${Boolean(settings.fullCircle)}">FULL CIRCLE · ${settings.fullCircle ? `ALL ${characters.length - 1}` : `${LADDER_SHORT} + SHADOW`}</button>`;
+}
 function nextChallenger() {
   const completed = state.stage + 1;
   state.stage++;
   state.opponent = state.ladder[state.stage];
   state.arena = (state.arena + 1) % arenas.length;
+  // A destruction bonus follows every third win before the shadow final.
   if (completed % 3 !== 0) {
     arcadeRoute();
     return;
@@ -219,7 +317,7 @@ function beginContinueCountdown() {
 }
 function arcadeRoute() {
   setScreen("route");
-  app.innerHTML = `${chrome("THE ROAD TO SELF MASTERY")}<main class="route-screen"><span class="eyebrow">ARCADE JOURNEY · CHALLENGER ${state.stage + 1} OF ${state.ladder.length}</span><h1>THE NEXT<br><em>REFLECTION.</em></h1><div class="route-locations">${arenas.map((arena, index) => `<div class="route-location ${index === state.arena ? "current" : ""}" style="background-image:url('${esc(arena.background)}')"><span>${pad2(index + 1)}</span><strong>${esc(arena.name)}</strong>${index === state.arena ? "<b>NEXT DESTINATION</b>" : ""}</div>`).join("")}</div><ol class="route-roster">${state.ladder.map((id, index) => `<li class="${index < state.stage ? "cleared" : index === state.stage ? "current" : ""}">${portrait(characters[id])}<span>${esc(characters[id].name)}</span><b>${index < state.stage ? "DEFEATED" : index === state.stage ? "NEXT" : "WAITING"}</b></li>`).join("")}</ol><button class="button primary" data-action="fight">FACE ${esc(characters[state.opponent].name)} <span>→</span></button></main>${footer(`${characters.length - 1} REFLECTIONS. ONE CHAMPION.`)}`;
+  app.innerHTML = `${chrome("THE ROAD TO SELF MASTERY")}<main class="route-screen"><span class="eyebrow">ARCADE JOURNEY · CHALLENGER ${state.stage + 1} OF ${state.ladder.length}${isFinal() ? " · FINAL" : ""}</span><h1>${isFinal() ? "YOUR<br><em>SHADOW.</em>" : "THE NEXT<br><em>REFLECTION.</em>"}</h1>${fullCircleToggle()}<div class="route-locations">${arenas.map((arena, index) => `<div class="route-location ${index === state.arena ? "current" : ""}" style="background-image:url('${esc(arena.background)}')"><span>${pad2(index + 1)}</span><strong>${esc(arena.name)}</strong>${index === state.arena ? "<b>NEXT DESTINATION</b>" : ""}</div>`).join("")}</div><ol class="route-roster">${state.ladder.map((id, index) => `<li class="${index < state.stage ? "cleared" : index === state.stage ? "current" : ""}${index === state.ladder.length - 1 ? " shadow" : ""}">${portrait(characters[id])}<span>${index === state.ladder.length - 1 ? "SHADOW " : ""}${esc(characters[id].name)}</span><b>${index < state.stage ? "DEFEATED" : index === state.stage ? "NEXT" : "WAITING"}</b></li>`).join("")}</ol><button class="button primary" data-action="fight">FACE ${isFinal() ? "YOUR SHADOW" : esc(characters[state.opponent].name)} <span>→</span></button></main>${footer(`${state.ladder.length - 1} REFLECTIONS. ONE SHADOW. ONE CHAMPION.`)}`;
   bind();
 }
 async function fight() {
@@ -227,7 +325,11 @@ async function fight() {
   const p = characters[state.player],
     o = characters[state.opponent],
     a = arenas[state.arena];
-  app.innerHTML = `<main class="versus-screen"><div class="versus-top"><span>ME VS ME / ${state.mode.toUpperCase()}</span><span>${esc(a.name)}</span></div><div class="versus-panels"><div class="versus-player" style="--fighter-color:${esc(p.color)}">${portrait(p)}<div><small>PLAYER ONE</small><h2>${esc(p.name)}</h2></div></div><strong class="versus-mark">VS</strong><div class="versus-player rival" style="--fighter-color:${esc(o.color)}">${portrait(o)}<div><small>YOUR OTHER SIDE</small><h2>${esc(o.name)}</h2></div></div></div><div class="versus-bottom"><span>BEST OF THREE</span><span class="blink">GET READY TO MEET YOURSELF</span><span>${settings.difficulty.toUpperCase()}</span></div></main>`;
+  const local = isLocal(),
+    shadow = isFinal();
+  const top = shadow ? "YOUR SHADOW" : `ME VS ME / ${local ? "VERSUS" : state.mode.toUpperCase()}`;
+  const rivalLabel = local ? "PLAYER TWO" : shadow ? "YOUR SHADOW" : "YOUR OTHER SIDE";
+  app.innerHTML = `<main class="versus-screen${shadow ? " shadow-final" : ""}"><div class="versus-top"><span>${top}</span><span>${esc(a.name)}</span></div><div class="versus-panels"><div class="versus-player" style="--fighter-color:${esc(p.color)}">${portrait(p)}<div><small>PLAYER ONE</small><h2>${esc(p.name)}</h2></div></div><strong class="versus-mark">VS</strong><div class="versus-player rival" style="--fighter-color:${esc(o.color)}">${portrait(o, shadow ? "shadow-art" : "")}<div><small>${rivalLabel}</small><h2>${shadow ? "SHADOW " : ""}${esc(o.name)}</h2></div></div></div><div class="versus-bottom"><span>BEST OF THREE</span><span class="blink">${shadow ? "THE LAST REFLECTION IS YOU" : "GET READY TO MEET YOURSELF"}</span><span>${local ? "SAME CABINET" : settings.difficulty.toUpperCase()}</span></div></main>`;
   transitionTimer = setTimeout(
     launchCombat,
     settings.reducedMotion ? 250 : 1900,
@@ -241,7 +343,13 @@ async function launchCombat() {
     combat = await startCombat({
       container: document.querySelector("#combat-host"),
       player: characters[state.player],
-      opponent: characters[state.opponent],
+      opponent: isFinal()
+        ? {
+            ...characters[state.opponent],
+            name: `SHADOW ${characters[state.opponent].name}`,
+            shadow: true,
+          }
+        : characters[state.opponent],
       arena: arenas[state.arena],
       difficulty: settings.difficulty,
       mode: state.mode,
@@ -264,7 +372,8 @@ function result(data) {
   combat?.destroy();
   combat = null;
   const won = data.winner === "player";
-  if (state.mode !== "training") {
+  const local = isLocal();
+  if (state.mode !== "training" && !local) {
     record.matches++;
     record.wins += won ? 1 : 0;
     record.streak = won ? record.streak + 1 : 0;
@@ -274,7 +383,28 @@ function result(data) {
   setScreen("result");
   const complete =
     state.mode === "arcade" && won && state.stage >= state.ladder.length - 1;
-  app.innerHTML = `${chrome("THE REFLECTION NEVER LIES")}<main class="result-screen ${won ? "victory" : "defeat"}"><div class="result-art">${portrait(characters[won ? state.player : state.opponent])}<div class="result-art-floor"></div></div><div class="result-copy"><span class="eyebrow">${complete ? "ARCADE COMPLETE · EVERY SELF DEFEATED" : state.mode === "training" ? "TRAINING COMPLETE" : won ? "YOU WON THE FIGHT." : "YOUR OTHER SIDE HAD THE EDGE."}</span><h1>${complete ? "KNOW<br>THYSELF." : won ? "SELF<br>MASTERY." : "MEET YOUR<br>MATCH."}</h1><div class="result-score"><b>${data.playerRounds ?? (won ? 2 : 0)}</b><span>ROUNDS</span><b>${data.opponentRounds ?? (won ? 0 : 2)}</b></div><p>${complete ? `${state.ladder.length} reflections faced. Every version defeated. You have come full circle — the strongest self is the one that keeps growing.` : won ? "One version stronger. The next version is waiting." : "Every loss is a lesson from yourself. Run it back."}</p>${complete ? `<div class="champion-seal">SELF MASTERED <span>${state.ladder.length} / ${state.ladder.length} REFLECTIONS DEFEATED</span></div>` : ""}${state.mode === "arcade" && !won ? '<div class="continue-prompt">CONTINUE? <b class="continue-seconds" role="timer">10</b><span>Run it back before time runs out.</span></div>' : ""}<div class="result-actions">${state.mode === "arcade" && won && !complete ? '<button class="button primary" data-action="next-stage">NEXT CHALLENGER <span>→</span></button>' : '<button class="button primary" data-action="rematch">RUN IT BACK <span>↻</span></button>'}<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button></div><div class="match-breakdown"><span><b>${data.stats?.hits ?? 0}</b> STRIKES LANDED</span><span><b>${data.stats?.specials ?? 0}</b> POWERS USED</span><span><b>${data.stats?.damageDealt ?? 0}</b> DAMAGE DEALT</span><span><b>${data.stats?.maxCombo ?? 0}</b> BEST COMBO</span></div><div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> FIGHTS</span><span><b>${record.best}</b> BEST STREAK</span></div></div></main>${footer("THE WORK ON YOURSELF IS NEVER FINISHED.")}`;
+  const reflections = state.ladder.length - 1;
+  const winner = characters[won ? state.player : state.opponent];
+  const quote = `<p class="victory-quote">“${esc(quoteFor(winner))}” <span>— ${esc(winner.name)}</span></p>`;
+  const eyebrow = complete
+    ? `ARCADE COMPLETE · ${reflections} REFLECTIONS AND YOUR SHADOW`
+    : state.mode === "training"
+      ? "TRAINING COMPLETE"
+      : local
+        ? won
+          ? "PLAYER ONE WINS."
+          : "PLAYER TWO WINS."
+        : won
+          ? "YOU WON THE FIGHT."
+          : "YOUR OTHER SIDE HAD THE EDGE.";
+  const story = complete
+    ? `${reflections} reflections faced, then your own shadow. Every version defeated. You have come full circle — the strongest self is the one that keeps growing.`
+    : local
+      ? "Same cabinet, same soul. Run it back or change sides."
+      : won
+        ? "One version stronger. The next version is waiting."
+        : "Every loss is a lesson from yourself. Run it back.";
+  app.innerHTML = `${chrome("THE REFLECTION NEVER LIES")}<main class="result-screen ${won ? "victory" : "defeat"}"><div class="result-art">${portrait(winner)}<div class="result-art-floor"></div></div><div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${complete ? "KNOW<br>THYSELF." : won ? "SELF<br>MASTERY." : "MEET YOUR<br>MATCH."}</h1><div class="result-score"><b>${data.playerRounds ?? (won ? 2 : 0)}</b><span>ROUNDS</span><b>${data.opponentRounds ?? (won ? 0 : 2)}</b></div>${quote}<p>${story}</p>${complete ? `<div class="champion-seal">SELF MASTERED <span>${reflections} / ${reflections} REFLECTIONS · SHADOW DEFEATED</span></div>` : ""}${state.mode === "arcade" && !won ? '<div class="continue-prompt">CONTINUE? <b class="continue-seconds" role="timer">10</b><span>Run it back before time runs out.</span></div>' : ""}<div class="result-actions">${state.mode === "arcade" && won && !complete ? '<button class="button primary" data-action="next-stage">NEXT CHALLENGER <span>→</span></button>' : '<button class="button primary" data-action="rematch">RUN IT BACK <span>↻</span></button>'}<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button></div><div class="match-breakdown"><span><b>${data.stats?.hits ?? 0}</b> STRIKES LANDED</span><span><b>${data.stats?.specials ?? 0}</b> POWERS USED</span><span><b>${data.stats?.damageDealt ?? 0}</b> DAMAGE DEALT</span><span><b>${data.stats?.maxCombo ?? 0}</b> BEST COMBO</span></div><div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> FIGHTS</span><span><b>${record.best}</b> BEST STREAK</span></div></div></main>${footer("THE WORK ON YOURSELF IS NEVER FINISHED.")}`;
   bind();
   if (state.mode === "arcade" && !won) beginContinueCountdown();
 }
@@ -328,14 +458,14 @@ function modal(content, cls = "", onClose) {
 }
 function showMoves(character) {
   const layer = modal(
-    `<span class="eyebrow">FIGHTER MANUAL / ${esc(character.name)}</span><h2>SEVEN WAYS<br><em>TO STRIKE.</em></h2><p class="modal-intro">Six normal attacks and ${esc(character.move)}. Tap once per strike. When a strike lands, chain into a stronger strike of the same family (LP→MP→HP, LK→MK→HK), a punch into a kick, or any hit into your power.</p><div class="move-gallery">${MOVES.map((m) => `<article class="move-card" style="--move-row:${(m.row / 6) * 100}%;--move-sheet:url('${esc(character.combatSheet)}');--fighter-color:${esc(character.color)}"><div class="move-sprite" role="img" aria-label="${esc(m.type === "special" ? character.move : m.label)} animation"></div><div><kbd>${m.key}</kbd><small>${m.button}</small><h3>${esc(m.type === "special" ? character.move : m.label)}</h3><p>${esc(m.hint)}</p></div></article>`).join("")}</div><p class="help-tip">POWER: Q / right trigger / touch POWER. Costs 35 meter. Training keeps your meter full.</p><button class="button primary modal-done">BACK TO FIGHTER <span>→</span></button>`,
+    `<span class="eyebrow">FIGHTER MANUAL / ${esc(character.name)}</span><h2>SEVEN WAYS<br><em>TO STRIKE.</em></h2>${kitLine(character)}<p class="modal-intro">Six normal attacks and ${esc(character.move)}. Tap once per strike. When a strike lands, chain into a stronger strike of the same family (LP→MP→HP, LK→MK→HK), a punch into a kick, or any hit into your power.</p><div class="move-gallery">${MOVES.map((m) => `<article class="move-card" style="--move-row:${(m.row / 6) * 100}%;--move-sheet:url('${esc(character.combatSheet)}');--fighter-color:${esc(character.color)}"><div class="move-sprite" role="img" aria-label="${esc(m.type === "special" ? character.move : m.label)} animation"></div><div><kbd>${m.key}</kbd><small>${m.button}</small><h3>${esc(m.type === "special" ? character.move : m.label)}</h3><p>${esc(m.hint)}</p></div></article>`).join("")}</div><div class="system-moves" aria-label="Defensive system">${SYSTEM_MOVES.map((m) => `<div class="system-move"><b class="role-tag">${m.tag}</b><strong>${esc(m.label)}</strong><kbd>${esc(m.key)}</kbd><small>${esc(m.button)}</small><p>${esc(m.hint)}</p></div>`).join("")}</div><p class="help-tip">POWER: Q / right trigger / touch POWER. Costs 35 meter. Training keeps your meter full.</p><button class="button primary modal-done">BACK TO FIGHTER <span>→</span></button>`,
     "moves-modal",
   );
   layer.querySelector(".modal-done").onclick = () => layer.dismiss();
 }
 function showHelp(onDone) {
   const layer = modal(
-    `<span class="eyebrow">BEFORE YOU FACE YOURSELF</span><h2>LEARN THE<br><em>HARD WAY.</em></h2><p class="modal-intro">Two rounds to win. One rival: another you. Move in, find your opening, and make it count.</p><div class="control-grid"><div><span class="keycap">A</span><span class="keycap">D</span><p>MOVE <small>left / right</small></p></div><div><span class="keycap">W</span><p>JUMP <small>air movement</small></p></div><div><span class="keycap">S</span><p>CROUCH <small>stay low</small></p></div><div><span class="keycap">J K L</span><p>PUNCHES <small>light / medium / heavy</small></p></div><div><span class="keycap">U I O</span><p>KICKS <small>light / medium / heavy</small></p></div><div><span class="keycap">Q</span><p>POWER <small>35 meter · signature move</small></p></div><div><span class="keycap">SHIFT</span><p>BLOCK <small>hold to defend</small></p></div><div><span class="keycap">ESC</span><p>PAUSE <small>take a breath</small></p></div></div><div class="help-tip"><b>COMBOS.</b> Land LP→MP→HP or LK→MK→HK back to back and cancel any landed hit into POWER. A heavy inside a combo launches; POWER knocks down. Guard holds through the whole string.</div><div class="help-tip"><b>ON YOUR PHONE?</b> Slide the left pad to walk, jump and crouch. Tap the six strike keys, hold GUARD, and hit POWER when it glows. Works in portrait and landscape.</div><button class="button primary modal-done">${onDone ? "I’M READY. LET’S FIGHT." : "GOT IT."} <span>→</span></button>`,
+    `<span class="eyebrow">BEFORE YOU FACE YOURSELF</span><h2>LEARN THE<br><em>HARD WAY.</em></h2><p class="modal-intro">Two rounds to win. One rival: another you. Move in, find your opening, and make it count.</p><div class="control-grid"><div><span class="keycap">A</span><span class="keycap">D</span><p>MOVE <small>left / right</small></p></div><div><span class="keycap">W</span><p>JUMP <small>air movement</small></p></div><div><span class="keycap">S</span><p>CROUCH <small>stay low</small></p></div><div><span class="keycap">J K L</span><p>PUNCHES <small>light / medium / heavy</small></p></div><div><span class="keycap">U I O</span><p>KICKS <small>light / medium / heavy</small></p></div><div><span class="keycap">Q</span><p>POWER <small>35 meter · signature move</small></p></div><div><span class="keycap">SHIFT</span><p>BLOCK <small>hold to defend · with S to block low</small></p></div><div><span class="keycap">SHIFT+J</span><p>THROW <small>GUARD + LP · beats any guard</small></p></div><div><span class="keycap">ESC</span><p>PAUSE <small>take a breath</small></p></div></div><div class="help-tip"><b>COMBOS.</b> Land LP→MP→HP or LK→MK→HK back to back and cancel any landed hit into POWER. A heavy inside a combo launches; POWER knocks down. Guard holds through the whole string.</div><div class="help-tip throw-tip"><b>THROW.</b> Shift+J (GUARD+LP on touch, left trigger + A on a pad) grabs a guarding rival up close. It beats standing and crouching guard, loses to a jump, a backstep or a faster jab, and a whiff is punishable.</div><div class="help-tip"><b>HIGH / LOW.</b> Crouching LK (S+U) is a low: block it crouching. The roundhouse and every jumping attack are overheads: block them standing.</div><div class="help-tip"><b>AIR &amp; WAKEUP.</b> Jump and press LP, MP or LK for an air attack; landing ends it. When knocked down, the last moment before you rise accepts GUARD, a jump, or a reversal (LP, LK, THROW, POWER).</div><div class="help-tip"><b>VERSUS.</b> Two players share one cabinet: player two uses the arrows, numpad 1–6, numpad 0 for POWER and Space to guard, or a second pad. The on-screen pad is always player one.</div><div class="help-tip"><b>ON YOUR PHONE?</b> Slide the left pad to walk, jump and crouch. Tap the six strike keys, hold GUARD, and hit POWER when it glows. Works in portrait and landscape.</div><button class="button primary modal-done">${onDone ? "I’M READY. LET’S FIGHT." : "GOT IT."} <span>→</span></button>`,
     "help-modal",
     onDone,
   );
@@ -346,10 +476,11 @@ function showHelp(onDone) {
 }
 function showSettings() {
   const layer = modal(
-    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div><div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
+    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
     "",
     refresh,
   );
+  bindInputPanel(layer);
   layer.querySelectorAll("[data-setting]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -370,6 +501,69 @@ function showSettings() {
   layer.querySelector(".modal-done").onclick = () => {
     layer.dismiss();
   };
+}
+function padStatus() {
+  let pads = [];
+  try {
+    pads = [...(window.navigator.getGamepads?.() || [])];
+  } catch {}
+  return [0, 1]
+    .map((i) => `PAD ${i + 1} ${pads[i] ? "READY" : "—"}`)
+    .join(" · ");
+}
+function inputPanel() {
+  const keys = bindingsFor(settings.keys);
+  return `<div class="input-panel"><strong>INPUT</strong><small>Click a key, then press the new one. Esc cancels. Stored on this device.</small><table class="input-table"><thead><tr><th>ACTION</th><th>PLAYER 1</th><th>PLAYER 2</th></tr></thead><tbody>${BINDABLE.map(([control, label]) => `<tr><th>${label}</th>${["p1", "p2"].map((side) => `<td><button class="keycap" data-bind="${side}:${control}" aria-label="${side === "p1" ? "Player one" : "Player two"} ${label}: ${keyLabel(keys[side][control])}">${keyLabel(keys[side][control])}</button></td>`).join("")}</tr>`).join("")}</tbody></table><div class="input-meta"><span class="pad-status">${padStatus()}</span><button class="text-button" data-reset-keys>RESET KEYS</button></div><small>Pads: A/B/X/Y and bumpers strike, left trigger guards (plus A to throw), right trigger is POWER, Start pauses.</small></div>`;
+}
+function bindInputPanel(layer) {
+  let listening = null;
+  const redraw = () => {
+    const keys = bindingsFor(settings.keys);
+    layer.querySelectorAll("[data-bind]").forEach((b) => {
+      const [side, control] = b.dataset.bind.split(":");
+      b.textContent = keyLabel(keys[side][control]);
+      b.classList.toggle("listening", b.dataset.bind === listening);
+      if (b.dataset.bind === listening) b.textContent = "PRESS A KEY";
+    });
+    const status = layer.querySelector(".pad-status");
+    if (status) status.textContent = padStatus();
+  };
+  layer.querySelectorAll("[data-bind]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        listening = listening === b.dataset.bind ? null : b.dataset.bind;
+        redraw();
+      }),
+  );
+  layer.querySelector("[data-reset-keys]").onclick = () => {
+    delete settings.keys;
+    listening = null;
+    applySettings();
+    redraw();
+  };
+  layer.addEventListener(
+    "keydown",
+    (e) => {
+      if (!listening || e.key === "Tab") return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.code !== "Escape" && e.key !== "Escape" && e.code) {
+        const [side, control] = listening.split(":");
+        const keys = bindingsFor(settings.keys);
+        const previous = keys[side][control];
+        // A key belongs to one action: the old owner takes over the replaced key.
+        for (const s of ["p1", "p2"])
+          for (const [c, code] of Object.entries(keys[s]))
+            if (code === e.code) keys[s][c] = previous;
+        keys[side][control] = e.code;
+        settings.keys = keys;
+        applySettings();
+      }
+      listening = null;
+      redraw();
+    },
+    true,
+  );
 }
 function updateSettingsModal(layer) {
   layer.querySelectorAll("[data-setting]").forEach((b) => {
@@ -484,6 +678,13 @@ function bind() {
           break;
         case "next-stage":
           nextChallenger();
+          break;
+        case "full-circle":
+          settings.fullCircle = !settings.fullCircle;
+          applySettings();
+          buildLadder();
+          if (state.screen === "route") arcadeRoute();
+          else arenaSelection();
           break;
       }
     }),

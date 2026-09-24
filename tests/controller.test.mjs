@@ -108,3 +108,22 @@ test("power readiness, release and destroy", () => {
   h.pointer(h.dpad, "pointerdown", { x: 60, y: 0 });
   assert.equal(h.events.length, 6, "destroyed controllers emit nothing");
 });
+
+test("holding GUARD turns the LP key into the throw chord without moving any target", () => {
+  const h = setup();
+  const lp = h.button("light");
+  assert.equal(lp.getAttribute("aria-label"), "Light punch");
+  h.pointer(h.button("block"), "pointerdown", { id: 4 });
+  assert.equal(h.root.dataset.guard, "true");
+  assert.equal(lp.getAttribute("aria-label"), "Throw (guard held)");
+  h.pointer(lp, "pointerdown", { id: 5 });
+  assert.deepEqual(h.events, ["block:down", "light:down"], "guard stays held while LP taps");
+  h.pointer(lp, "pointerup", { id: 5 });
+  h.pointer(h.button("block"), "pointerup", { id: 4 });
+  assert.equal(h.root.dataset.guard, "false");
+  assert.equal(lp.getAttribute("aria-label"), "Light punch");
+  h.pointer(h.button("block"), "pointerdown", { id: 6 });
+  h.controller.release();
+  assert.equal(h.root.dataset.guard, "false", "release clears the chord");
+  h.controller.destroy();
+});
