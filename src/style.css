@@ -2540,3 +2540,18 @@ button:focus-visible {
   .selection-tabs { gap:8px; }
   .selection-tabs button { font-size:10px; }
 }
+
+/* Kits, versus, arcade shadow, input panel. */
+.role-tag{display:inline-block;padding:2px 6px;border:1px solid currentColor;font:700 9px monospace;letter-spacing:.12em;color:#f5d27c}
+.role-tag[data-role=zoner]{color:#7cecde}.role-tag[data-role=rushdown]{color:#ff8a6b}.role-tag[data-role=counter]{color:#b9a6ff}.role-tag[data-role=grappler-lite]{color:#ff8fb1}.role-tag[data-role=balanced]{color:#d7dde6}
+.roster-fighter .role-tag{position:absolute;left:6px;top:22px;font-size:7px;padding:1px 4px;background:#0d1117d9;pointer-events:none}
+.kit-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:12px;font:11px monospace;color:#d8dde6}.kit-line small{flex-basis:100%;color:#abb4c2;font-size:10px;letter-spacing:.08em}
+.system-moves{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:0 0 20px}.system-move{border:1px solid #ffffff20;background:#080c12;padding:10px 12px;font:11px/1.5 monospace;color:#aeb8c8}.system-move strong{display:block;margin:6px 0 2px;color:#f4ecd8;font-size:13px}.system-move kbd{float:right;padding:2px 6px;border:1px solid #ffffff50;color:#f5d27c}.system-move small{color:#abb4c2}.system-move p{margin:4px 0 0}
+.victory-quote{font:italic 15px/1.5 Georgia,serif;color:#f4ecd8;margin:14px 0 4px}.victory-quote span{font:700 10px monospace;font-style:normal;color:#abb4c2;letter-spacing:.1em}
+.full-circle{min-height:44px;padding:8px 14px;margin:0 12px;font:700 10px monospace;letter-spacing:.1em}.route-screen .full-circle{margin:6px 0 14px}
+.route-roster li.shadow img,.shadow-art{filter:grayscale(.6) brightness(.55) drop-shadow(0 0 14px #9186d6)}
+.input-panel{margin:18px 0;border-top:1px solid #ffffff25;padding-top:14px}.input-panel>strong{display:block;font:700 12px monospace;letter-spacing:.12em}.input-panel small{display:block;color:#abb4c2;font:10px/1.5 monospace;margin:4px 0}
+.input-table{width:100%;border-collapse:collapse;margin:8px 0;font:10px monospace}.input-table th{text-align:left;color:#abb4c2;padding:3px 4px;font-weight:700}.input-table td{padding:2px 4px}
+.input-table .keycap{min-width:64px;min-height:32px;padding:4px 8px;cursor:pointer;font:700 10px monospace}.input-table .keycap.listening{border-color:#ffd257;color:#ffd257}
+.input-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;font:10px monospace;color:#d8dde6}
+@media(max-width:700px){.system-moves{grid-template-columns:1fr}.input-table .keycap{min-width:48px}}

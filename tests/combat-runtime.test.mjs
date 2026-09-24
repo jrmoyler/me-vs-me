@@ -38,10 +38,11 @@ function art(x, y) {
   g.proxy = g;
   return g;
 }
-async function setup(character = characters[0], mode = "training") {
+async function setup(character = characters[0], mode = "training", opts = {}) {
   const window = new Window({ url: "http://localhost" });
   window.document.body.innerHTML = '<div id="host"></div>';
   let scene;
+  const shakes = [];
   const Phaser = {
     Scene: class {},
     Math: { Clamp: (x, min, max) => Math.max(min, Math.min(max, x)) },
@@ -57,7 +58,7 @@ async function setup(character = characters[0], mode = "training") {
           ellipse: art,
           graphics: art,
         };
-        scene.cameras = { main: { shake() {} } };
+        scene.cameras = { main: { shake: (...args) => shakes.push(args) } };
         scene.time = { delayedCall() {} };
         scene.create();
         config.callbacks?.postBoot();
@@ -84,10 +85,11 @@ async function setup(character = characters[0], mode = "training") {
   const control = await context.startCombat({
     container: window.document.querySelector("#host"),
     player: character,
-    opponent: characters[1],
+    opponent: opts.opponent ?? characters[1],
     arena: arenas[0],
     mode,
-    settings: { sound: false, reducedMotion: true },
+    difficulty: opts.difficulty ?? "normal",
+    settings: { sound: false, reducedMotion: true, ...opts.settings },
   });
   scene.phase = "fight";
   scene.fighters[0].energy = 100;
@@ -100,6 +102,7 @@ async function setup(character = characters[0], mode = "training") {
     control,
     window,
     key,
+    shakes,
     step(n = 1) {
       for (let i = 0; i < n; i++) scene.update(0, 16);
     },
@@ -246,8 +249,8 @@ test('Pause is a HUD control outside every fighting-button cluster', async () =>
 });
 
 // --- Combo system -----------------------------------------------------------
-function duel(character = characters[0]) {
-  return setup(character, "duel").then((h) => {
+function duel(character = characters[0], opts = {}) {
+  return setup(character, "duel", opts).then((h) => {
     h.scene.ai = () => ({});
     const [p, o] = h.scene.fighters;
     Object.assign(p, { x: 350, y: 450, vy: 0, face: 1, energy: 100 });
@@ -341,7 +344,10 @@ test("whiffed strikes cannot be cancelled but the buffered press still comes out
   h.tap("KeyJ");
   h.step(1);
   h.tap("KeyK");
-  for (let i = 0; i < 19; i++) {
+  // Every frame of the whiffed jab's remaining duration (rushdown kits recover sooner).
+  const frames = Math.floor((p.attack.duration - p.attack.t) / 0.016) - 1;
+  assert.ok(frames >= 17);
+  for (let i = 0; i < frames; i++) {
     h.step(1);
     assert.equal(p.attack?.type, "light", `frame ${i}: a whiff never cancels`);
   }
@@ -377,5 +383,413 @@ test("the power knocks down and a downed rival is left alone until they rise", a
   assert.equal(o.visualState, "down");
   assert.equal(o.textureKey, "motion1");
   assert.ok(h.until(() => o.down <= 0, 120));
+  h.control.destroy();
+});
+
+// --- Defense answers ------------------------------------------------------------
+const hold = (h, code) => h.key(code, "keydown");
+const release = (h, code) => h.key(code, "keyup");
+function training(character = characters[0], opts = {}) {
+  return setup(character, "training", opts).then((h) => {
+    const [p, o] = h.scene.fighters;
+    Object.assign(p, { x: 350, y: 450, vy: 0, face: 1 });
+    Object.assign(o, { x: 435, y: 450, vy: 0, face: -1 });
+    h.tap = (code) => {
+      h.key(code, "keydown");
+      h.key(code, "keyup");
+    };
+    h.until = (predicate, limit = 120) => {
+      let n = 0;
+      while (!predicate() && n++ < limit) h.step(1);
+      return predicate();
+    };
+    h.button = (name) => h.window.document.querySelector(`[data-training="${name}"]`);
+    return h;
+  });
+}
+for (const guard of [{ block: true }, { block: true, crouch: true }])
+  test(`GUARD+LP throws a ${guard.crouch ? "crouching" : "standing"} guard into a hard knockdown`, async () => {
+    const h = await duel();
+    const [p, o] = h.scene.fighters;
+    h.scene.ai = () => guard;
+    o.x = p.x + 66;
+    h.step(1);
+    assert.equal(o.guard, true);
+    hold(h, "ShiftLeft");
+    h.tap("KeyJ");
+    h.step(1);
+    assert.equal(p.attack.type, "throw", "Shift+J is the throw chord");
+    assert.ok(h.until(() => o.down > 0, 40), "the throw floors a guarding rival");
+    assert.equal(o.hp, 100 - 12);
+    assert.equal(o.launched, false, "hard knockdown, no juggle");
+    assert.equal(p.combo, 0);
+    assert.equal(h.window.document.querySelector(".mvm-hit-callout").textContent, "THROW!");
+    assert.ok(Math.abs(h.scene.hitstop - 0.1) < 0.02 || h.scene.hitstop <= 0.1);
+    h.control.destroy();
+  });
+test("a whiffed throw is a long, punishable commitment; a faster jab beats throw startup", async () => {
+  const h = await duel();
+  const [p, o] = h.scene.fighters;
+  o.x = p.x + 140;
+  hold(h, "ShiftLeft");
+  h.tap("KeyJ");
+  h.step(1);
+  release(h, "ShiftLeft");
+  assert.equal(p.attack.type, "throw");
+  h.step(30);
+  assert.equal(o.hp, 100, "out of range");
+  assert.equal(p.attack?.type, "throw", "still recovering 0.48 s later");
+  assert.ok(h.until(() => !p.attack, 30));
+  // Both press at once: the jab is active before the throw grabs.
+  o.x = p.x + 66;
+  Object.assign(p, { cooldown: 0 });
+  let once = true;
+  h.scene.ai = () => (once ? ((once = false), { light: true }) : {});
+  hold(h, "ShiftLeft");
+  h.tap("KeyJ");
+  assert.ok(h.until(() => p.hp < 100, 30), "the jab lands first");
+  assert.equal(p.attack, null, "the throw was interrupted");
+  assert.equal(o.hp, 100);
+  h.control.destroy();
+});
+test("crouching LK is a low: it beats standing guard and is stopped by crouching guard; roundhouse is the reverse", async () => {
+  const h = await training();
+  const [p, o] = h.scene.fighters;
+  h.button("guard").click();
+  assert.equal(h.scene.training.dummy, "guard");
+  hold(h, "KeyS");
+  h.step(1);
+  h.tap("KeyU");
+  h.step(1);
+  assert.equal(p.attack.height, "low");
+  assert.ok(h.until(() => o.hp < 100, 40));
+  assert.ok(o.stun > 0 && o.blockstun === 0, "a standing guard fails a low");
+  release(h, "KeyS");
+  h.until(() => !p.attack && o.stun <= 0, 60);
+  h.button("guard").click();
+  assert.equal(h.scene.training.dummy, "crouch");
+  Object.assign(o, { hp: 100, x: 435 });
+  hold(h, "KeyS");
+  h.step(2);
+  h.tap("KeyU");
+  assert.ok(h.until(() => o.hp < 100, 40));
+  assert.ok(o.blockstun > 0 && o.stun === 0, "crouching guard blocks the low");
+  release(h, "KeyS");
+  h.until(() => !p.attack && o.blockstun <= 0, 60);
+  Object.assign(o, { hp: 100, x: 435 });
+  h.step(2);
+  h.tap("KeyO");
+  assert.ok(h.until(() => o.hp < 100, 60));
+  assert.ok(o.stun > 0, "roundhouse is an overhead: crouching guard fails");
+  h.control.destroy();
+});
+test("jumping jab lands in training, heavy normals refuse to start in the air, landing ends the air normal", async () => {
+  const h = await training();
+  const [p, o] = h.scene.fighters;
+  o.x = 410;
+  hold(h, "KeyW");
+  h.step(2);
+  release(h, "KeyW");
+  assert.ok(p.y < 449);
+  h.tap("KeyL");
+  h.step(1);
+  assert.equal(p.attack, null, "no uppercut in the air");
+  h.until(() => p.vy > 0, 40);
+  h.tap("KeyJ");
+  h.step(1);
+  assert.equal(p.attack?.type, "light");
+  assert.equal(p.attack.air, true);
+  assert.equal(p.attack.height, "overhead");
+  assert.ok(h.until(() => o.hp < 100, 40), "the jumping jab connects");
+  assert.ok(o.stun <= rules.AIR_HITSTUN + 1e-9);
+  assert.ok(h.until(() => p.y >= 450, 60));
+  assert.equal(p.attack, null, "landing ends the attack");
+  assert.ok(p.cooldown > 0 && p.cooldown <= rules.AIR_LAND_COOLDOWN);
+  h.control.destroy();
+});
+test("wakeup: the knockdown is inert until its last moment, then guard, jump or a reversal comes out", async () => {
+  const h = await duel();
+  const [p] = h.scene.fighters;
+  p.down = 0.6;
+  hold(h, "ShiftLeft");
+  h.step(2);
+  assert.ok(p.down > 0.5, "early knockdown ignores guard");
+  h.until(() => p.down <= rules.WAKEUP_WINDOW, 60);
+  h.step(1);
+  assert.equal(p.down, 0);
+  assert.equal(p.guard, true, "wake block");
+  assert.equal(h.scene.tally.wakeup0, 1);
+  release(h, "ShiftLeft");
+  h.step(2);
+  p.down = 0.1;
+  h.tap("KeyU");
+  h.step(1);
+  assert.equal(p.attack?.type, "kick", "reversal low kick");
+  Object.assign(p, { attack: null, cooldown: 0, down: 0.1 });
+  hold(h, "KeyW");
+  h.step(1);
+  release(h, "KeyW");
+  assert.ok(p.vy < 0, "wake jump");
+  h.control.destroy();
+});
+
+// --- CPU personality --------------------------------------------------------------
+function bout(difficulty, opts = {}) {
+  return setup(opts.character ?? characters[0], "duel", {
+    difficulty,
+    opponent: opts.opponent ?? characters[1],
+  }).then((h) => {
+    h.scene.rng = rules.seededRandom(opts.seed ?? 7);
+    const [p, o] = h.scene.fighters;
+    Object.assign(p, { x: 350, face: 1, energy: 35 });
+    Object.assign(o, { x: 416, face: -1, energy: 35 });
+    return h;
+  });
+}
+test("hard CPU throws a turtling player", async () => {
+  const h = await bout("hard");
+  const [p] = h.scene.fighters;
+  hold(h, "ShiftLeft");
+  let thrown = false;
+  for (let i = 0; i < 240 && !thrown; i++) {
+    h.step(1);
+    p.hp = 100;
+    thrown = (h.scene.tally.throw1 || 0) > 0;
+  }
+  assert.ok(thrown, "a held guard eventually eats a throw");
+  h.control.destroy();
+});
+test("hard CPU anti-airs a jumping player across a seeded 8 second bout", async () => {
+  const h = await bout("hard", { seed: 11 });
+  const [p, o] = h.scene.fighters;
+  for (let i = 0; i < 500; i++) {
+    // Keep jumping in from about 200 px out.
+    if (p.y >= 450 && p.down <= 0 && p.stun <= 0 && !p.launched) {
+      Object.assign(p, { x: Math.max(80, o.x - 200) });
+      hold(h, "KeyW");
+      hold(h, "KeyD");
+    } else release(h, "KeyW");
+    h.step(1);
+    p.hp = o.hp = 100;
+  }
+  assert.ok((h.scene.tally.antiair1 || 0) >= 1, JSON.stringify(h.scene.tally));
+  h.control.destroy();
+});
+test("easy CPU never cancels across a seeded 8 second bout; normal does", async () => {
+  for (const [difficulty, expectCancels] of [["easy", false], ["normal", true]]) {
+    let cancels = 0, attacks = 0;
+    for (const seed of [3, 5, 9]) {
+      const h = await bout(difficulty, { seed });
+      const [p, o] = h.scene.fighters;
+      for (let i = 0; i < 500; i++) {
+        h.step(1);
+        Object.assign(p, { hp: 100, x: Math.min(p.x, o.x - 70) });
+        o.hp = 100;
+      }
+      cancels += h.scene.tally.cancel1 || 0;
+      attacks += (h.scene.tally.hit1 || 0) + (h.scene.tally.block1 || 0);
+      h.control.destroy();
+    }
+    assert.ok(attacks > 3, `${difficulty} CPU attacks`);
+    if (expectCancels) assert.ok(cancels > 0, "normal CPU uses cancels");
+    else assert.equal(cancels, 0, "easy CPU never cancels");
+  }
+});
+
+// --- Training lab -------------------------------------------------------------------
+test("trial: the scripted jab, cross, uppercut, POWER chain passes for every fighter", async () => {
+  for (const c of characters) {
+    const h = await training(c);
+    const [p, o] = h.scene.fighters;
+    h.button("trial").click();
+    assert.equal(h.button("trial").getAttribute("aria-pressed"), "true");
+    h.tap("KeyJ");
+    h.step(1);
+    h.tap("KeyK");
+    assert.ok(h.until(() => p.attack?.type === "medium"), `${c.id}: cross`);
+    h.tap("KeyL");
+    assert.ok(h.until(() => p.attack?.type === "heavy"), `${c.id}: uppercut`);
+    h.tap("KeyQ");
+    assert.ok(h.until(() => p.attack?.type === "special"), `${c.id}: power`);
+    assert.ok(h.until(() => h.scene.training.trial.status !== "active", 200), `${c.id}: resolves`);
+    assert.equal(h.scene.training.trial.status, "pass", c.id);
+    assert.equal(o.comboHits, 4);
+    h.step(1);
+    assert.match(h.window.document.querySelector(".mvm-trial-hint").textContent, /PASS/);
+    assert.match(h.window.document.querySelector(".mvm-training-readout").textContent, /TRIAL PASS/);
+    h.control.destroy();
+  }
+});
+test("trial: three dropped combos fail it, and RESET clears the trial and the dummy recording", async () => {
+  const h = await training();
+  const [p, o] = h.scene.fighters;
+  h.button("trial").click();
+  for (let n = 0; n < 3; n++) {
+    Object.assign(o, { x: p.x + 85 });
+    h.tap("KeyJ");
+    assert.ok(h.until(() => h.scene.training.trial.step === 1, 40));
+    assert.ok(h.until(() => h.scene.training.trial.drops === n + 1, 90), `drop ${n + 1}`);
+    h.until(() => !p.attack && o.stun <= 0, 60);
+  }
+  assert.equal(h.scene.training.trial.status, "fail");
+  h.step(1);
+  assert.match(h.window.document.querySelector(".mvm-trial-hint").textContent, /FAIL/);
+  h.scene.training.recording.push({ block: true });
+  h.button("reset").click();
+  assert.deepEqual(h.scene.training.trial, moves.freshTrial());
+  assert.equal(h.scene.training.recording.length, 0);
+  assert.equal(o.hp, 100);
+  h.control.destroy();
+});
+test("dummy modes cycle; RECORD captures 4 s of P1-driven dummy input at 30 Hz and PLAY loops a guard hold", async () => {
+  const h = await training();
+  const [p, o] = h.scene.fighters;
+  const labels = [];
+  for (let i = 0; i < 5; i++) {
+    h.button("guard").click();
+    labels.push(h.button("guard").textContent.replace(" ●", ""));
+  }
+  assert.deepEqual(labels, ["DUMMY: GUARD", "DUMMY: CROUCH GUARD", "DUMMY: RECORD", "DUMMY: PLAY", "DUMMY: OPEN"]);
+  h.button("guard").click();
+  h.button("guard").click();
+  h.button("guard").click();
+  assert.equal(h.scene.training.dummy, "record");
+  const px = p.x;
+  hold(h, "ShiftLeft");
+  h.step(10);
+  assert.equal(o.guard, true, "P1's guard drives the dummy while recording");
+  assert.equal(p.guard, false);
+  assert.equal(p.x, px);
+  h.step(250);
+  release(h, "ShiftLeft");
+  assert.equal(h.scene.training.dummy, "play", "recording ends after four seconds");
+  assert.equal(h.scene.training.recording.length, 120);
+  let guarded = 0;
+  for (let i = 0; i < 300; i++) {
+    h.step(1);
+    if (o.guard) guarded++;
+  }
+  assert.ok(guarded > 290, `playback repeats the guard hold across loops (${guarded}/300)`);
+  h.control.destroy();
+});
+test("DATA prints the live move's frame data and height tags", async () => {
+  const h = await training();
+  const data = h.window.document.querySelector(".mvm-data");
+  h.step(1);
+  assert.equal(data.textContent, "");
+  h.button("data").click();
+  hold(h, "KeyS");
+  h.step(1);
+  h.tap("KeyU");
+  h.step(3);
+  assert.match(data.textContent, /STARTUP \d+ · ACTIVE \d+ · RECOVERY \d+ · HITSTUN \d+ · BLOCKSTUN \d+ MS · LOW/);
+  release(h, "KeyS");
+  h.until(() => !h.scene.fighters[0].attack, 60);
+  h.step(6);
+  hold(h, "ShiftLeft");
+  h.tap("KeyJ");
+  h.step(2);
+  assert.match(data.textContent, /THROW/);
+  h.control.destroy();
+});
+
+// --- Impact ------------------------------------------------------------------------------
+test("hitstop follows weight, blocks freeze for 60%, reduced motion skips shake and flash but keeps hitstop", async () => {
+  for (const reducedMotion of [false, true]) {
+    const h = await duel(characters[1], { settings: { reducedMotion } });
+    const [p, o] = h.scene.fighters;
+    const expected = { light: 0.04, medium: 0.06, heavy: 0.09, kick: 0.04, mediumKick: 0.06, heavyKick: 0.09, special: 0.12 };
+    for (const [type, stop] of Object.entries(expected)) {
+      Object.assign(o, { ...rules.freshFighterState(), x: 435, y: 450, vy: 0, hp: 100, guard: false });
+      Object.assign(p, { attack: null, cooldown: 0, energy: 100, x: 350, face: 1 });
+      h.scene.hitstop = 0;
+      h.scene.attack(p, type);
+      assert.ok(h.until(() => o.hp < 100), type);
+      assert.ok(Math.abs(h.scene.hitstop - stop) < 1e-9, `${type} hitstop ${h.scene.hitstop}`);
+      assert.equal(o.flash, reducedMotion ? 0 : 1, "clean hits flash unless motion is reduced");
+      h.until(() => h.scene.hitstop <= 0 && !p.attack, 120);
+      assert.equal(o.flash, 0, "the flash lasts one render tick");
+    }
+    // Blocked: 60% hitstop, no flash, a smaller shake.
+    h.scene.ai = () => ({ block: true });
+    Object.assign(o, { ...rules.freshFighterState(), x: 435, hp: 100 });
+    h.step(2);
+    const shakes = h.shakes.length;
+    Object.assign(p, { attack: null, cooldown: 0 });
+    h.scene.attack(p, "heavy");
+    assert.ok(h.until(() => o.hp < 100));
+    assert.ok(o.blockstun > 0);
+    assert.ok(Math.abs(h.scene.hitstop - 0.09 * 0.6) < 1e-9);
+    assert.equal(o.flash, 0, "the block path never sets the hit flash");
+    if (reducedMotion) assert.equal(h.shakes.length, 0, "reduced motion never enqueues a shake");
+    else {
+      assert.equal(h.shakes.length, shakes + 1);
+      assert.ok(h.shakes.at(-1)[0] < h.shakes[2][0], "block shake is smaller than a heavy hit");
+    }
+    h.control.destroy();
+  }
+});
+test("tick budget: three seconds of POWER spam keeps sparks and projectiles bounded", async () => {
+  const h = await setup(characters[2], "duel", { opponent: characters[8] });
+  const [p, o] = h.scene.fighters;
+  h.scene.ai = () => ({ special: true, light: true });
+  let maxSparks = 0, maxShots = 0;
+  for (let i = 0; i < 180; i++) {
+    p.energy = o.energy = 100;
+    p.hp = o.hp = 100;
+    h.key("KeyQ", "keydown");
+    h.key("KeyQ", "keyup");
+    h.scene.update(0, 16.7);
+    maxSparks = Math.max(maxSparks, h.scene.sparks.length);
+    maxShots = Math.max(maxShots, h.scene.projectiles.length);
+  }
+  assert.ok(maxShots >= 1, "projectiles were fired");
+  assert.ok(maxSparks <= rules.SPARK_CAP, `sparks ${maxSparks}`);
+  assert.ok(maxShots <= rules.PROJECTILE_CAP, `projectiles ${maxShots}`);
+  assert.ok(h.scene.log.length <= 64);
+  h.control.destroy();
+});
+
+// --- Versus ------------------------------------------------------------------------------
+test("local versus: player two walks and jabs from arrows and numpad in the same match", async () => {
+  const h = await setup(characters[0], "local");
+  const [p, o] = h.scene.fighters;
+  Object.assign(p, { x: 350 });
+  Object.assign(o, { x: 520 });
+  hold(h, "ArrowLeft");
+  h.step(20);
+  release(h, "ArrowLeft");
+  assert.ok(o.x < 520, "P2 walks");
+  assert.equal(p.x, 350);
+  h.key("Numpad1", "keydown");
+  h.key("Numpad1", "keyup");
+  h.step(1);
+  assert.equal(o.attack?.type, "light", "P2 jabs");
+  for (let i = 0; i < 30 && p.hp >= 100; i++) h.step(1);
+  assert.ok(p.hp < 100, "the jab lands on player one");
+  assert.match(h.window.document.querySelector(".mvm-local-hint").textContent, /PLAYER ONE/);
+  assert.match(h.window.document.querySelector(".mvm-help").textContent, /P2 ← →/);
+  h.control.destroy();
+});
+test("touch: GUARD held + LP tap throws through the on-screen controller", async () => {
+  const h = await duel();
+  const [p, o] = h.scene.fighters;
+  h.scene.ai = () => ({ block: true });
+  o.x = p.x + 66;
+  const doc = h.window.document;
+  const press = (control, type, id) => {
+    const Ctor = h.window.PointerEvent || h.window.MouseEvent;
+    const e = new Ctor(type, { bubbles: true, cancelable: true, pointerId: id });
+    if (e.pointerId !== id) Object.defineProperty(e, "pointerId", { value: id });
+    doc.querySelector(`.mvm-touch [data-control="${control}"]`).dispatchEvent(e);
+  };
+  press("block", "pointerdown", 1);
+  h.step(1);
+  assert.equal(p.guard, true);
+  press("light", "pointerdown", 2);
+  press("light", "pointerup", 2);
+  h.step(1);
+  assert.equal(p.attack?.type, "throw");
+  assert.ok(h.until(() => o.down > 0, 40));
   h.control.destroy();
 });

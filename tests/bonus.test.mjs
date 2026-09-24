@@ -35,7 +35,7 @@ function setup() {
       portrait: "/jr.png",
       combatSheet: "/jr-combat.png",
     },
-    arena: { background: "/arena.png" },
+    arena: { id: "neon-test", color: "#123456", background: "/arena.png" },
     settings: { reducedMotion: true },
     onEnd: (r) => {
       result = r;
@@ -134,5 +134,13 @@ test("bonus attacks select six different rows of the fighter combat atlas", () =
     assert.equal(fighter.style.backgroundPosition, "0% 0%");
   }
   assert.equal(rows.size, 6);
+  h.game.destroy();
+});
+
+test("bonus stage takes the upcoming arena's atmosphere id and colour", () => {
+  const h = setup();
+  const stage = h.document.querySelector(".mvm-bonus-stage");
+  assert.equal(stage.dataset.atmosphere, "neon-test");
+  assert.equal(stage.style.getPropertyValue("--arena-color"), "#123456");
   h.game.destroy();
 });

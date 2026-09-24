@@ -30,6 +30,8 @@ export const CONTROLLER_CSS = `
 .mvm-touch button:hover{filter:none}
 .mvm-touch button.held{transform:translateY(3px);border-bottom-width:1px;background:var(--gold);color:#101319;box-shadow:0 1px 0 #06080c}
 .mvm-touch button:focus-visible{outline:2px solid #ffe877;outline-offset:3px}
+.mvm-touch button[data-control="light"]{position:relative}
+.mvm-touch[data-guard="true"] button[data-control="light"]:after{content:"THROW";position:absolute;left:50%;bottom:12%;translate:-50% 0;font-size:.62em;letter-spacing:.06em;color:var(--gold);pointer-events:none}
 .mvm-macro{display:flex;gap:8px;width:100%}
 .mvm-macro button{flex:1;height:max(46px,calc(var(--btn)*.78));border-radius:6px;letter-spacing:.14em}
 .mvm-power[data-ready="true"]{background:var(--red);color:#101319;border-color:#ff9c8c;box-shadow:0 4px 0 #06080c,0 0 18px #ee594366;animation:mvm-power-glow 1.2s ease-in-out infinite alternate}
@@ -83,8 +85,15 @@ export function createTouchController({
     listeners.push(() => target.removeEventListener(event, callback));
   };
   const holds = {};
+  // GUARD held + LP tap is the throw chord; the LP key labels it while guarding.
+  const lightButton = root.querySelector('[data-control="light"]');
+  function chord(guarding) {
+    root.dataset.guard = String(guarding);
+    lightButton.setAttribute("aria-label", guarding ? "Throw (guard held)" : "Light punch");
+  }
   function emit(control, down) {
     holds[control] = (holds[control] || 0) + (down ? 1 : -1);
+    if (control === "block") chord(holds.block > 0);
     if (down && holds[control] === 1) {
       onChange?.(control, true);
       onPress?.(control);
@@ -180,6 +189,7 @@ export function createTouchController({
         holds[control] = 0;
         onChange?.(control, false);
       }
+    chord(false);
   }
   return {
     element: root,
