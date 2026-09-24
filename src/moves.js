@@ -294,3 +294,208 @@ export function moveName(character, type) {
     ? character.move
     : MOVES.find((m) => m.type === type)?.label || "Ready";
 }
+
+// --- Defensive system moves -------------------------------------------------
+// Not atlas rows: the throw reuses the jab row, the rest are properties of the six normals.
+export const SYSTEM_MOVES = [
+  {
+    type: "throw",
+    label: "Throw",
+    button: "GUARD+LP",
+    key: "SHIFT+J",
+    tag: "THROW",
+    hint: "Close range. Beats standing and crouching guard. Whiffs are punishable.",
+  },
+  {
+    type: "kick",
+    label: "Crouching low kick",
+    button: "↓+LK",
+    key: "S+U",
+    tag: "LOW",
+    hint: "Must be blocked crouching. Standing guard fails.",
+  },
+  {
+    type: "heavyKick",
+    label: "Roundhouse",
+    button: "HK",
+    key: "O",
+    tag: "OVERHEAD",
+    hint: "Must be blocked standing, as must every jumping attack.",
+  },
+  {
+    type: "air",
+    label: "Jumping LP / MP / LK",
+    button: "↑ then LP·MP·LK",
+    key: "W then J·K·U",
+    tag: "AIR",
+    hint: "Landing ends the attack. Jump-ins do not combo.",
+  },
+  {
+    type: "wakeup",
+    label: "Wakeup",
+    button: "GUARD · ↑ · LP · LK · THROW · POWER",
+    key: "late in knockdown",
+    tag: "WAKEUP",
+    hint: "In the last moment of a knockdown, block, jump or reverse.",
+  },
+];
+
+// --- Per-fighter kits derived from each POWER profile -------------------------
+export const ROLES = {
+  zoner: { label: "ZONER", job: "projectile zoning" },
+  rushdown: { label: "RUSHDOWN", job: "command dash pressure" },
+  counter: { label: "COUNTER", job: "counter hit specialist" },
+  "grappler-lite": { label: "GRAPPLER", job: "close-range throws" },
+  balanced: { label: "BALANCED", job: "long-range footsies" },
+};
+export const KITS = {
+  gauntlet: "zoner",
+  pixel: "zoner",
+  nexus: "zoner",
+  zenith: "zoner",
+  kinetic: "rushdown",
+  hataalii: "rushdown",
+  corvette: "rushdown",
+  tweed: "rushdown",
+  glyph: "rushdown",
+  tote: "counter",
+  civic: "counter",
+  quilt: "counter",
+  varsity: "grappler-lite",
+  curly: "balanced",
+  binary: "balanced",
+  urban: "balanced",
+  vector: "balanced",
+  aether: "balanced",
+  hybrid: "balanced",
+  gaia: "balanced",
+};
+// Data-only modifiers; combat-rules clamps them so the cancel tree still holds.
+export const KIT_MODS = {
+  zoner: { powerBlockPush: 18, airLightReach: 8 },
+  rushdown: { throwReach: 12, jabRecovery: -0.02 },
+  counter: { punishCounter: true, powerStart: 0.04, powerDamage: 2 },
+  "grappler-lite": { throwDamage: 16, throwReach: 18, wakeup: 0.04 },
+  balanced: {},
+};
+const POWER_CLASS = ["SWEEP", "COMMAND DASH", "RISING LAUNCHER", "PROJECTILE"];
+export function kitFor(character) {
+  const id = character?.id;
+  const role = KITS[id] || "balanced";
+  const power = POWERS[id];
+  const powerClass = power ? POWER_CLASS[power.variant] : "SIGNATURE";
+  // The job line comes from the POWER profile: projectile, dash, launcher or sweep.
+  const job =
+    role === "counter" || role === "grappler-lite" || role === "zoner"
+      ? ROLES[role].job
+      : power?.variant === 1
+        ? "command dash"
+        : power?.variant === 2
+          ? "rising launcher pressure"
+          : ROLES[role].job;
+  return {
+    role,
+    label: ROLES[role].label,
+    job,
+    powerClass,
+    style: power?.style?.toUpperCase() ?? "",
+    mods: KIT_MODS[role],
+  };
+}
+
+// --- Training trial -----------------------------------------------------------
+export const TRIAL_SEQUENCE = ["light", "medium", "heavy", "special"];
+export const TRIAL_DROPS = 3;
+export const freshTrial = () => ({ step: 0, drops: 0, status: "active" });
+// Each landed player hit advances or drops the trial; comboHits is the live count.
+export function trialHit(trial, type, comboHits, blocked = false) {
+  if (!trial || trial.status !== "active") return trial;
+  if (!blocked && type === TRIAL_SEQUENCE[trial.step] && comboHits === trial.step + 1) {
+    trial.step++;
+    if (trial.step === TRIAL_SEQUENCE.length) trial.status = "pass";
+    return trial;
+  }
+  if (trial.step > 0) trialDrop(trial);
+  if (trial.status === "active" && !blocked && type === TRIAL_SEQUENCE[0] && comboHits === 1)
+    trial.step = 1;
+  return trial;
+}
+// The combo ended (the dummy recovered or was knocked down) before the POWER landed.
+export function trialDrop(trial) {
+  if (!trial || trial.status !== "active" || trial.step === 0) return trial;
+  trial.step = 0;
+  trial.drops++;
+  if (trial.drops >= TRIAL_DROPS) trial.status = "fail";
+  return trial;
+}
+
+// --- Keyboard bindings ----------------------------------------------------------
+export const BINDABLE = [
+  ["left", "Left"],
+  ["right", "Right"],
+  ["jump", "Jump"],
+  ["crouch", "Crouch"],
+  ["light", "LP"],
+  ["medium", "MP"],
+  ["heavy", "HP"],
+  ["kick", "LK"],
+  ["mediumKick", "MK"],
+  ["heavyKick", "HK"],
+  ["special", "POWER"],
+  ["block", "GUARD"],
+];
+export const DEFAULT_KEYS = Object.freeze({
+  p1: {
+    left: "KeyA",
+    right: "KeyD",
+    jump: "KeyW",
+    crouch: "KeyS",
+    light: "KeyJ",
+    medium: "KeyK",
+    heavy: "KeyL",
+    kick: "KeyU",
+    mediumKick: "KeyI",
+    heavyKick: "KeyO",
+    special: "KeyQ",
+    block: "ShiftLeft",
+  },
+  p2: {
+    left: "ArrowLeft",
+    right: "ArrowRight",
+    jump: "ArrowUp",
+    crouch: "ArrowDown",
+    light: "Numpad1",
+    medium: "Numpad2",
+    heavy: "Numpad3",
+    kick: "Numpad4",
+    mediumKick: "Numpad5",
+    heavyKick: "Numpad6",
+    special: "Numpad0",
+    block: "Space",
+  },
+});
+export function bindingsFor(custom = {}) {
+  return {
+    p1: { ...DEFAULT_KEYS.p1, ...(custom?.p1 || {}) },
+    p2: { ...DEFAULT_KEYS.p2, ...(custom?.p2 || {}) },
+  };
+}
+// code -> [player index, control]; ShiftRight stays a second P1 guard unless rebound.
+export function buildKeyMap(custom) {
+  const b = bindingsFor(custom);
+  const map = {};
+  if (!Object.values(b.p1).includes("ShiftRight") && !Object.values(b.p2).includes("ShiftRight"))
+    map.ShiftRight = [0, "block"];
+  for (const [i, side] of [b.p1, b.p2].entries())
+    for (const [control, code] of Object.entries(side)) if (code) map[code] = [i, control];
+  return map;
+}
+export const keyLabel = (code = "") =>
+  code
+    .replace(/^Key/, "")
+    .replace(/^Digit/, "")
+    .replace(/^Numpad/, "NUM ")
+    .replace(/^Arrow(.*)$/, (_, d) => ({ Left: "←", Right: "→", Up: "↑", Down: "↓" })[d])
+    .replace(/^(Shift|Control|Alt)(Left|Right)$/, "$1")
+    .replace(/^Space$/, "SPACE")
+    .toUpperCase();

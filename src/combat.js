@@ -1,6 +1,19 @@
 import Phaser from "phaser";
 import { motionFrame } from "./motion.js";
-import { MOVES, moveFrame, moveName, movePhase } from "./moves.js";
+import {
+  MOVES,
+  moveFrame,
+  moveName,
+  movePhase,
+  kitFor,
+  TRIAL_SEQUENCE,
+  freshTrial,
+  trialHit,
+  trialDrop,
+  buildKeyMap,
+  bindingsFor,
+  keyLabel,
+} from "./moves.js";
 import { paintAtmosphere, paintPower } from "./stage-effects.js";
 import {
   SPECIAL_COST,
@@ -14,11 +27,24 @@ import {
   inMeleeRange,
   hitOutcome,
   roundOutcome,
+  AI_PROFILES,
+  AIR_LAND_COOLDOWN,
+  ANTI_AIR_RANGE,
+  CANCEL_ROUTE,
+  PUNISH_WINDOW,
+  PROJECTILE_CAP,
+  SPARK_CAP,
+  WAKEUP_REVERSALS,
+  hitstopFor,
+  impactPulse,
+  throwRange,
+  wakeupWindow,
 } from "./combat-rules.js";
 import { createTouchController } from "./controller.js";
 
 const CSS = `
-.mvm-combat{position:relative;width:100%;height:100%;min-height:300px;background:#080914;overflow:hidden;isolation:isolate}.mvm-combat canvas{display:block;width:100%;height:100%;object-fit:contain}.mvm-hud{position:absolute;inset:16px 3% auto;display:grid;grid-template-columns:1fr 72px 1fr;gap:14px;pointer-events:none;font-family:inherit;color:white;text-shadow:0 2px #000}.mvm-hud-name{font-size:clamp(10px,1.7vw,19px);font-weight:900;letter-spacing:.07em;margin-bottom:5px;text-transform:uppercase}.mvm-hud-right{text-align:right}.mvm-health{height:20px;border:3px solid #f6e0a0;background:#542a37;box-shadow:0 3px #000}.mvm-health>i{display:block;height:100%;background:linear-gradient(#fff292,#edb42a);transition:width .12s}.mvm-hud-right .mvm-health>i{margin-left:auto}.mvm-energy{height:5px;background:#27293c;margin-top:5px}.mvm-energy>i{display:block;height:100%;background:#7cecde;transition:width .1s}.mvm-rounds{font-size:15px;color:#ffd96b;letter-spacing:6px;margin-top:3px}.mvm-clock{font-size:36px;text-align:center;font-weight:950;color:#ffdf74;line-height:1}.mvm-clock small{display:block;font-size:9px;color:white;letter-spacing:2px;margin-bottom:4px}.mvm-pause-button{position:absolute;right:12px;bottom:13px;z-index:4;border:1px solid #ffffff55;background:#111827cc;color:white;padding:8px 12px;cursor:pointer}.mvm-message{position:absolute;inset:39% 0 auto;text-align:center;pointer-events:none;color:#ffe6a2;font-size:clamp(24px,5vw,64px);font-weight:950;font-style:italic;text-shadow:4px 4px #421849,-2px -2px #090915;letter-spacing:.06em}.mvm-overlay{position:absolute;inset:0;background:#090a17df;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;z-index:10;color:white;backdrop-filter:blur(8px)}.mvm-overlay h2{font-size:40px;margin:0}.mvm-overlay button{padding:14px 35px;min-width:220px;background:#edbb57;color:#171121;border:0;font:700 15px inherit;cursor:pointer}.mvm-overlay button:last-child{background:#252638;color:white}.mvm-help{position:absolute;left:16px;bottom:14px;color:#ffffff88;font-size:10px;letter-spacing:1px;pointer-events:none}.mvm-combat[data-touch="true"] .mvm-help{display:none}@media(max-width:600px){.mvm-hud{inset:10px 3% auto;gap:8px;grid-template-columns:1fr 48px 1fr}.mvm-health{height:14px;border-width:2px}.mvm-clock{font-size:26px}.mvm-rounds{font-size:11px}}
+.mvm-combat{position:relative;width:100%;height:100%;min-height:300px;background:#080914;overflow:hidden;isolation:isolate}.mvm-combat canvas{display:block;width:100%;height:100%;object-fit:contain}.mvm-hud{position:absolute;inset:16px 3% auto;display:grid;grid-template-columns:1fr 72px 1fr;gap:14px;pointer-events:none;font-family:inherit;color:white;text-shadow:0 2px #000}.mvm-hud-name{font-size:clamp(10px,1.7vw,19px);font-weight:900;letter-spacing:.07em;margin-bottom:5px;text-transform:uppercase}.mvm-hud-right{text-align:right}.mvm-health{height:20px;border:3px solid #f6e0a0;background:#542a37;box-shadow:0 3px #000}.mvm-health>i{display:block;height:100%;background:linear-gradient(#fff292,#edb42a);transition:width .12s}.mvm-hud-right .mvm-health>i{margin-left:auto}.mvm-energy{height:5px;background:#27293c;margin-top:5px}.mvm-energy>i{display:block;height:100%;background:#7cecde;transition:width .1s}.mvm-rounds{font-size:15px;color:#ffd96b;letter-spacing:6px;margin-top:3px}.mvm-clock{font-size:36px;text-align:center;font-weight:950;color:#ffdf74;line-height:1}.mvm-clock small{display:block;font-size:9px;color:white;letter-spacing:2px;margin-bottom:4px}.mvm-pause-button{position:absolute;right:12px;bottom:13px;z-index:4;border:1px solid #ffffff55;background:#111827cc;color:white;padding:8px 12px;cursor:pointer}.mvm-message{position:absolute;inset:39% 0 auto;text-align:center;pointer-events:none;color:#ffe6a2;font-size:clamp(24px,5vw,64px);font-weight:950;font-style:italic;text-shadow:4px 4px #421849,-2px -2px #090915;letter-spacing:.06em}.mvm-overlay{position:absolute;inset:0;background:#090a17df;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;z-index:10;color:white;backdrop-filter:blur(8px)}.mvm-overlay h2{font-size:40px;margin:0}.mvm-overlay button{padding:14px 35px;min-width:220px;background:#edbb57;color:#171121;border:0;font:700 15px inherit;cursor:pointer}.mvm-overlay button:last-child{background:#252638;color:white}.mvm-help{position:absolute;left:16px;bottom:14px;color:#ffffff88;font-size:10px;letter-spacing:1px;pointer-events:none}.mvm-combat[data-touch="true"] .mvm-help{display:none}.mvm-local-hint{display:none;position:absolute;left:50%;top:96px;transform:translateX(-50%);max-width:92%;padding:6px 10px;background:#070b13df;color:#e5d6b1;font:9px monospace;letter-spacing:1px;text-align:center;pointer-events:none;z-index:4}.mvm-combat[data-touch="true"] .mvm-local-hint{display:block}.mvm-trial-hint,.mvm-data{position:absolute;left:50%;transform:translateX(-50%);padding:6px 12px;background:#070b13ef;border:1px solid #e8d7ac55;color:#ffe395;font:10px monospace;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;pointer-events:none;z-index:4}.mvm-trial-hint{top:22%}.mvm-trial-hint[data-status="pass"]{color:#7cecde;border-color:#7cecde}.mvm-trial-hint[data-status="fail"]{color:#ff8fb1;border-color:#ff8fb1}.mvm-data{bottom:96px;color:#cfe6ff}.mvm-trial-hint:empty,.mvm-data:empty{display:none}.mvm-training-tools{flex-wrap:wrap;max-width:94%}.mvm-combo[data-pop="a"]{animation:mvm-pop-a .18s ease-out}.mvm-combo[data-pop="b"]{animation:mvm-pop-b .18s ease-out}@keyframes mvm-pop-a{from{transform:scale(1.35)}to{transform:scale(1)}}@keyframes mvm-pop-b{from{transform:scale(1.35)}to{transform:scale(1)}}.reduced-motion .mvm-combo{animation:none!important}@media(prefers-reduced-motion:reduce){.mvm-combo{animation:none!important}}
+@media(max-width:600px){.mvm-hud{inset:10px 3% auto;gap:8px;grid-template-columns:1fr 48px 1fr}.mvm-health{height:14px;border-width:2px}.mvm-clock{font-size:26px}.mvm-rounds{font-size:11px}}
 `;
 
 export async function startCombat({
@@ -35,6 +61,12 @@ export async function startCombat({
   onMoves,
 }) {
   if (!container) throw new Error("Combat needs a container");
+  const bindings = bindingsFor(settings.keys);
+  const keyMap = buildKeyMap(settings.keys);
+  const helpLine = (i) => {
+    const k = (control) => keyLabel(bindings[i ? "p2" : "p1"][control]);
+    return `${k("left")} ${k("right")} MOVE · ${k("jump")} JUMP · ${k("crouch")} CROUCH · ${k("light")} ${k("medium")} ${k("heavy")} PUNCH · ${k("kick")} ${k("mediumKick")} ${k("heavyKick")} KICK · ${k("special")} POWER · ${k("block")} GUARD · ${k("block")}+${k("light")} THROW`;
+  };
   const wrapper = document.createElement("div");
   wrapper.className = "mvm-combat";
   wrapper.dataset.touch = String(
@@ -57,7 +89,7 @@ export async function startCombat({
     );
   wrapper.insertAdjacentHTML(
     "beforeend",
-    `<div class="mvm-hud"><div><div class="mvm-hud-name">${safe(player.name)}</div><div class="mvm-health"><i data-health="0"></i></div><div class="mvm-energy"><i data-energy="0"></i></div><div class="mvm-rounds" data-rounds="0">○ ○</div></div><div class="mvm-clock"><small>TIME</small><span data-time>60</span><button class="mvm-pause-button" aria-label="Pause match">Ⅱ PAUSE</button></div><div class="mvm-hud-right"><div class="mvm-hud-name">${safe(opponent.name)}</div><div class="mvm-health"><i data-health="1"></i></div><div class="mvm-energy"><i data-energy="1"></i></div><div class="mvm-rounds" data-rounds="1">○ ○</div></div></div><div class="mvm-message"></div><div class="mvm-help">A D MOVE · W JUMP · S CROUCH · J K L PUNCH · U I O KICK · Q POWER · SHIFT GUARD · ESC PAUSE · CHAIN LP→MP→HP ON HIT</div>`,
+    `<div class="mvm-hud"><div><div class="mvm-hud-name">${safe(player.name)}</div><div class="mvm-health"><i data-health="0"></i></div><div class="mvm-energy"><i data-energy="0"></i></div><div class="mvm-rounds" data-rounds="0">○ ○</div></div><div class="mvm-clock"><small>TIME</small><span data-time>60</span><button class="mvm-pause-button" aria-label="Pause match">Ⅱ PAUSE</button></div><div class="mvm-hud-right"><div class="mvm-hud-name">${safe(opponent.name)}</div><div class="mvm-health"><i data-health="1"></i></div><div class="mvm-energy"><i data-energy="1"></i></div><div class="mvm-rounds" data-rounds="1">○ ○</div></div></div><div class="mvm-message"></div><div class="mvm-help">${helpLine(0)}${mode === "local" ? ` / P2 ${helpLine(1)}` : " · ESC PAUSE · CHAIN LP→MP→HP ON HIT"}</div>`,
   );
   container.append(wrapper);
   wrapper.insertAdjacentHTML(
@@ -75,11 +107,10 @@ export async function startCombat({
   });
   const message = wrapper.querySelector(".mvm-message");
   wrapper.dataset.mode = mode;
-  let trainingGuard = false;
   let assetFailed = false;
   wrapper.insertAdjacentHTML(
     "beforeend",
-    `<div class="mvm-stage-label">${safe(arena.name)} <span>${mode === "training" ? "TRAINING / INFINITE METER" : "FIRST TO TWO"}</span></div><div class="mvm-power-callout" aria-live="polite"></div><div class="mvm-combo" data-side="0"></div><div class="mvm-combo" data-side="1"></div><div class="mvm-hit-callout" aria-live="polite"></div><div class="mvm-training-readout"></div>`,
+    `<div class="mvm-stage-label">${safe(arena.name)} <span>${mode === "training" ? "TRAINING / INFINITE METER" : mode === "local" ? "VERSUS / FIRST TO TWO" : "FIRST TO TWO"}</span></div><div class="mvm-power-callout" aria-live="polite"></div><div class="mvm-combo" data-side="0"></div><div class="mvm-combo" data-side="1"></div><div class="mvm-hit-callout" aria-live="polite"></div><div class="mvm-training-readout"></div><div class="mvm-trial-hint" aria-live="polite"></div><div class="mvm-data"></div>${mode === "local" ? '<div class="mvm-local-hint">ON-SCREEN PAD IS PLAYER ONE · PLUG IN A SECOND PAD OR USE THE KEYBOARD FOR PLAYER TWO</div>' : ""}`,
   );
   wrapper.querySelectorAll(".mvm-energy").forEach((el, i) => {
     el.insertAdjacentHTML(
@@ -87,22 +118,78 @@ export async function startCombat({
       `<div class="mvm-meter-label" data-meter-label="${i}"></div>`,
     );
   });
+  // Training lab state. The dummy cycles OPEN → GUARD → CROUCH GUARD → RECORD → PLAY.
+  const DUMMY_MODES = ["open", "guard", "crouch", "record", "play"];
+  const DUMMY_LABELS = {
+    open: "OPEN",
+    guard: "GUARD",
+    crouch: "CROUCH GUARD",
+    record: "RECORD",
+    play: "PLAY",
+  };
+  const RECORD_SECONDS = 4;
+  const RECORD_HZ = 30;
+  const training = {
+    dummy: "open",
+    recording: [],
+    recordT: 0,
+    playT: 0,
+    pendingStrike: null,
+    trial: null,
+    data: false,
+  };
+  function setDummy(next) {
+    training.dummy = next;
+    if (next === "record") {
+      training.recording = [];
+      training.recordT = 0;
+      training.pendingStrike = null;
+    }
+    if (next === "play") training.playT = 0;
+    const button = wrapper.querySelector('[data-training="guard"]');
+    if (button) {
+      button.textContent = `DUMMY: ${DUMMY_LABELS[next]}${next === "record" ? " ●" : ""}`;
+      button.setAttribute("aria-pressed", String(next !== "open"));
+    }
+  }
+  function toggleTrial() {
+    training.trial = training.trial ? null : freshTrial();
+    wrapper
+      .querySelector('[data-training="trial"]')
+      ?.setAttribute("aria-pressed", String(Boolean(training.trial)));
+  }
+  function toggleData() {
+    training.data = !training.data;
+    wrapper
+      .querySelector('[data-training="data"]')
+      ?.setAttribute("aria-pressed", String(training.data));
+  }
+  function resetTraining() {
+    training.recording = [];
+    training.recordT = 0;
+    training.playT = 0;
+    training.pendingStrike = null;
+    if (training.dummy === "record" || training.dummy === "play") setDummy("open");
+    if (training.trial) training.trial = freshTrial();
+  }
   if (mode === "training") {
     wrapper.insertAdjacentHTML(
       "beforeend",
-      '<div class="mvm-training-tools"><button data-training="reset">RESET</button><button data-training="guard" aria-pressed="false">DUMMY: OPEN</button><button data-training="moves">MOVES</button></div>',
+      '<div class="mvm-training-tools"><button data-training="reset">RESET</button><button data-training="guard" aria-pressed="false">DUMMY: OPEN</button><button data-training="trial" aria-pressed="false">TRIAL</button><button data-training="data" aria-pressed="false">DATA</button><button data-training="moves">MOVES</button></div>',
     );
     wrapper.querySelector('[data-training="reset"]').onclick = () => {
       if (scene && !paused) {
         scene.resetRound();
+        resetTraining();
         Object.keys(stats).forEach((k) => (stats[k] = 0));
       }
     };
-    wrapper.querySelector('[data-training="guard"]').onclick = (e) => {
-      trainingGuard = !trainingGuard;
-      e.target.textContent = trainingGuard ? "DUMMY: GUARD" : "DUMMY: OPEN";
-      e.target.setAttribute("aria-pressed", String(trainingGuard));
-    };
+    wrapper.querySelector('[data-training="guard"]').onclick = () =>
+      setDummy(
+        DUMMY_MODES[(DUMMY_MODES.indexOf(training.dummy) + 1) % DUMMY_MODES.length],
+      );
+    wrapper.querySelector('[data-training="trial"]').onclick = toggleTrial;
+    wrapper.querySelector('[data-training="data"]').onclick = toggleData;
     wrapper.querySelector('[data-training="moves"]').onclick = () => {
       pause();
       onMoves?.();
@@ -229,33 +316,6 @@ export async function startCombat({
     overlay.children[2].focus();
   }
   wrapper.querySelector(".mvm-pause-button").onclick = pause;
-  const keyMap = {
-    KeyA: [0, "left"],
-    KeyD: [0, "right"],
-    KeyW: [0, "jump"],
-    KeyS: [0, "crouch"],
-    KeyJ: [0, "light"],
-    KeyK: [0, "medium"],
-    KeyL: [0, "heavy"],
-    KeyU: [0, "kick"],
-    KeyI: [0, "mediumKick"],
-    KeyO: [0, "heavyKick"],
-    KeyQ: [0, "special"],
-    ShiftLeft: [0, "block"],
-    ShiftRight: [0, "block"],
-    ArrowLeft: [1, "left"],
-    ArrowRight: [1, "right"],
-    ArrowUp: [1, "jump"],
-    ArrowDown: [1, "crouch"],
-    Numpad1: [1, "light"],
-    Numpad2: [1, "medium"],
-    Numpad3: [1, "heavy"],
-    Numpad4: [1, "kick"],
-    Numpad5: [1, "mediumKick"],
-    Numpad6: [1, "heavyKick"],
-    Numpad0: [1, "special"],
-    Space: [1, "block"],
-  };
   bind(window, "keydown", (e) => {
     if (e.code === "Escape") {
       if (document.querySelector(".modal-layer")) return;
@@ -302,6 +362,7 @@ export async function startCombat({
     hits: 0,
     blocked: 0,
     specials: 0,
+    throws: 0,
     maxCombo: 0,
   };
   class Fight extends Phaser.Scene {
@@ -395,6 +456,11 @@ export async function startCombat({
       this.hitstop = 0;
       this.aiClock = 0;
       this.aiAction = {};
+      this.aiMemory = { blockedInRow: 0, feint: false, px: undefined };
+      this.rng = Math.random;
+      this.tally = {};
+      this.log = [];
+      this.training = training;
       this.sparks = [];
       this.projectiles = [];
       this.pendingHits = [];
@@ -439,42 +505,231 @@ export async function startCombat({
         time: Math.ceil(this.timer),
       });
     }
+    // Bounded event record for tests and the training readout.
+    note(kind, index, detail = {}) {
+      const key = `${kind}${index}`;
+      this.tally[key] = (this.tally[key] || 0) + 1;
+      this.log.push({ t: this.elapsed, kind, index, ...detail });
+      if (this.log.length > 64) this.log.shift();
+    }
+    // CPU personality: difficulty sets reflexes, the fighter's kit sets the game plan.
     ai(dt) {
       this.aiClock -= dt;
-      if (this.aiClock > 0) return this.aiAction;
       const ai = this.fighters[1],
-        p = this.fighters[0],
-        distance = Math.abs(ai.x - p.x);
-      const hard = difficulty === "hard",
-        easy = difficulty === "easy";
-      this.aiClock = easy ? 0.29 : hard ? 0.11 : 0.19;
+        p = this.fighters[0];
+      const prof = AI_PROFILES[difficulty] || AI_PROFILES.normal;
+      const mem = this.aiMemory;
+      // Track the player's drift so an anti-air can be timed to where they will be.
+      const vx = mem.px === undefined || !dt ? 0 : (p.x - mem.px) / dt;
+      mem.px = p.x;
+      // A strike that just landed gets an immediate follow-up decision.
+      const fresh =
+        prof.cancels && ai.attack?.landed && this.aiAction.from !== ai.attack;
+      if (this.aiClock > 0 && !fresh) return this.aiAction;
+      this.aiClock = prof.think;
+      const rng = this.rng;
+      const kit = kitFor(ai.c);
+      const dx = p.x - ai.x,
+        dist = Math.abs(dx);
+      const toward = dx >= 0 ? "right" : "left",
+        away = dx >= 0 ? "left" : "right";
       const a = {};
-      if (distance > 125) {
-        a[ai.x > p.x ? "left" : "right"] = true;
-        if (Math.random() < 0.045) a.jump = true;
-      } else {
-        if (p.attack && Math.random() < (hard ? 0.8 : easy ? 0.23 : 0.48))
-          a.block = true;
-        else if (Math.random() < 0.75) {
-          a[
-            ai.energy >= 35 && Math.random() < 0.25
-              ? "special"
-              : MOVES[Math.floor(Math.random() * 6)].type
-          ] = true;
-        }
-        if (distance < 65 && Math.random() < 0.15)
-          a[ai.x > p.x ? "right" : "left"] = true;
-        if (Math.random() < 0.025) a.jump = true;
+      const act = (why) => {
+        a.why = why;
+        this.aiAction = a;
+        return a;
+      };
+      if (ai.down > 0) {
+        if (prof.wakeup === "mix") a[rng() < 0.5 ? "block" : "throw"] = true;
+        else if (prof.wakeup === "block" && rng() < prof.wakeBlock) a.block = true;
+        return act("wakeup");
       }
-      this.aiAction = a;
-      return a;
+      if (ai.attack) {
+        if (prof.cancels && ai.attack.landed) {
+          const next =
+            ai.attack.landed === "hit" &&
+            ai.energy >= SPECIAL_COST &&
+            rng() < 0.35
+              ? "special"
+              : CANCEL_ROUTE[ai.attack.type];
+          if (next) a[next] = true;
+          a.from = ai.attack;
+          return act("cancel");
+        }
+        return act("busy");
+      }
+      if (ai.blockstun > 0) {
+        a.block = true;
+        a.crouch = ai.crouch;
+        return act("blockstun");
+      }
+      if (ai.stun > 0 || ai.launched) return act("reeling");
+      // Anti-air: only CPUs that can see the jump coming.
+      if (prof.antiAir && p.y < 440 && p.vy < 0 && dist < ANTI_AIR_RANGE) {
+        const self = { ...ai, attack: null, cooldown: 0, guard: false, face: dx >= 0 ? 1 : -1 };
+        for (const type of ["heavy", "heavyKick"]) {
+          const m = createAttack(self, type);
+          const t = m.start + m.active / 2;
+          const future = {
+            ...p,
+            x: p.x + vx * t,
+            y: Math.min(450, p.y + p.vy * t + 725 * t * t),
+          };
+          if (future.y < 449 && inMeleeRange(self, future, m) && rng() < prof.antiAir) {
+            a[type] = true;
+            return act("anti-air");
+          }
+        }
+      }
+      const shot = this.projectiles.some(
+        (s) => s.target === ai && Math.abs(s.x - ai.x) < 260,
+      );
+      const threat =
+        shot ||
+        (p.attack &&
+          p.attack.family !== "throw" &&
+          p.attack.t < p.attack.start + p.attack.active &&
+          dist < p.attack.reach + 70);
+      if (threat && rng() < prof.block) {
+        a.block = true;
+        if (
+          p.attack?.height === "low" &&
+          (prof.readsHeight || rng() < 0.5)
+        )
+          a.crouch = true;
+        return act("block");
+      }
+      if (
+        prof.punish &&
+        p.attack &&
+        !p.attack.landed &&
+        p.attack.t > p.attack.start + p.attack.active &&
+        dist < 150
+      ) {
+        a[dist < 125 ? "heavy" : "mediumKick"] = true;
+        return act("punish");
+      }
+      const reach = throwRange(ai);
+      const turtle =
+        p.guard && p.y >= 449 && p.guardTime >= prof.turtle && dist < 220;
+      const mixup =
+        kit.role === "rushdown" && mem.blockedInRow >= 2 && dist < 220;
+      if (prof.throws && (turtle || mixup)) {
+        if (dist <= reach) {
+          a.throw = true;
+          mem.blockedInRow = 0;
+          return act("throw");
+        }
+        a[toward] = true;
+        return act("close-in");
+      }
+      if (kit.role === "counter" && ai.punish > 0 && dist < 150) {
+        a[dist < 125 ? "heavy" : "medium"] = true;
+        return act("counter-punish");
+      }
+      const power = createAttack({ ...ai, attack: null, cooldown: 0, guard: false }, "special");
+      const powerReach = power
+        ? power.variant === 3
+          ? p.y >= 449 && dist > 110
+          : dist < power.reach + 10
+        : false;
+      const usePower = (chance) =>
+        power && (prof.smartPower ? powerReach : rng() < chance);
+      const normal = () => MOVES[Math.floor(rng() * 6)].type;
+      switch (kit.role) {
+        case "zoner":
+          if (dist > 180 && usePower(0.6) && (prof.smartPower || dist < 420)) {
+            a.special = true;
+            return act("zone");
+          }
+          if (dist < 150 && rng() < 0.55) {
+            a[away] = true;
+            return act("space");
+          }
+          if (dist < 175) a[rng() < 0.5 ? "mediumKick" : "heavyKick"] = true;
+          else if (dist > 330) a[toward] = true;
+          return act("zone");
+        case "rushdown":
+          if (dist > 115) {
+            a[toward] = true;
+            if (rng() < 0.06) a.jump = true;
+            return act("rush");
+          }
+          if (usePower(0.2)) a.special = true;
+          else if (rng() < 0.8)
+            a[["light", "kick", "medium", "mediumKick"][Math.floor(rng() * 4)]] = true;
+          return act("rush");
+        case "counter":
+          if (dist > 280) a[toward] = true;
+          else if (dist < 125 && rng() < 0.35) a.light = true;
+          else if (dist < 200 && rng() < 0.3) a.block = true;
+          return act("wait");
+        case "grappler-lite":
+          if (dist > reach) {
+            a[toward] = true;
+            return act("close-in");
+          }
+          if (prof.throws && mem.feint) {
+            a.throw = true;
+            mem.feint = false;
+            return act("throw");
+          }
+          a.light = true;
+          mem.feint = true;
+          return act("feint");
+        default:
+          if (dist > 125) {
+            a[toward] = true;
+            if (rng() < 0.045) a.jump = true;
+            return act("approach");
+          }
+          if (rng() < 0.75) a[usePower(0.25) ? "special" : normal()] = true;
+          if (dist < 65 && rng() < 0.15) a[away] = true;
+          if (rng() < 0.025) a.jump = true;
+          return act("mix");
+      }
     }
-    attack(f, type, viaCancel = false) {
-      const m = viaCancel ? cancelAttack(f, type) : createAttack(f, type);
+    // Training dummy input: fixed guards, a recorder driven by P1's controls, or playback.
+    dummyInput(dt, p1) {
+      const t = training;
+      if (t.dummy === "guard") return { input: { block: true } };
+      if (t.dummy === "crouch") return { input: { block: true, crouch: true } };
+      if (t.dummy === "record") {
+        const held = {};
+        for (const k of ["left", "right", "jump", "crouch", "block"])
+          if (p1[k]) held[k] = true;
+        const strike = buffers[0]?.type;
+        buffers[0] = null;
+        if (strike) t.pendingStrike = strike;
+        t.recordT += dt;
+        while (t.recording.length < Math.min(RECORD_SECONDS * RECORD_HZ, Math.ceil(t.recordT * RECORD_HZ))) {
+          t.recording.push({ ...held, strike: t.pendingStrike });
+          t.pendingStrike = null;
+        }
+        if (t.recording.length >= RECORD_SECONDS * RECORD_HZ) setDummy("play");
+        return { input: strike ? { ...held, [strike]: true } : held, puppet: true };
+      }
+      if (t.dummy === "play" && t.recording.length) {
+        t.playT += dt;
+        const frame =
+          t.recording[Math.floor(t.playT * RECORD_HZ) % t.recording.length];
+        const input = { ...frame };
+        delete input.strike;
+        if (frame.strike) input[frame.strike] = true;
+        return { input };
+      }
+      return { input: {} };
+    }
+    attack(f, type, viaCancel = false, crouch = false) {
+      const m = viaCancel
+        ? cancelAttack(f, type, { crouch })
+        : createAttack(f, type, { crouch });
       if (!m) return false;
       f.attack = m;
       f.lastMove = type;
+      f.lastAttack = m;
       f.guard = false;
+      if (viaCancel) this.note("cancel", this.fighters.indexOf(f), { type });
       if (type === "special") {
         f.energy -= SPECIAL_COST;
         if (f === this.fighters[0]) stats.specials++;
@@ -492,32 +747,57 @@ export async function startCombat({
       f.stun = Math.max(0, f.stun - dt);
       f.blockstun = Math.max(0, f.blockstun - dt);
       f.down = Math.max(0, f.down - dt);
+      f.punish = Math.max(0, f.punish - dt);
       f.comboFlash = Math.max(0, f.comboFlash - dt);
       f.energy = Math.min(100, f.energy + dt * 5);
+      const human = index === 0 || mode === "local";
+      let strike = human
+        ? buffers[index]?.type
+        : a.throw
+          ? "throw"
+          : [...MOVES].reverse().find((m) => a[m.type])?.type;
+      // GUARD + LP is the throw chord on keyboard, pad and touch alike.
+      if (strike === "light" && a.block) strike = "throw";
+      // Wakeup: the tail of a knockdown accepts guard, jump or a reversal.
+      if (f.down > 0 && f.down <= wakeupWindow(f) && !f.launched) {
+        const reversal =
+          WAKEUP_REVERSALS.includes(strike) &&
+          (strike !== "special" || f.energy >= SPECIAL_COST);
+        if (reversal || a.jump || a.block) {
+          f.down = 0;
+          this.note("wakeup", index, {
+            action: reversal ? strike : a.jump ? "jump" : "guard",
+          });
+        }
+      }
       const free = f.stun <= 0 && f.down <= 0 && !f.launched;
+      const grounded = f.y >= 449;
       if (!f.attack && free) f.face = enemy.x >= f.x ? 1 : -1;
       // Guard holds for the whole blockstun window: a follow-up cannot slip through.
-      f.guard =
-        f.blockstun > 0 || (!!a.block && f.y >= 449 && !f.attack && free);
-      f.crouch = !!a.crouch && f.y >= 449 && !f.attack && free;
+      f.guard = f.blockstun > 0 || (!!a.block && grounded && !f.attack && free);
+      f.crouch =
+        (!!a.crouch && grounded && !f.attack && free) || !!f.attack?.crouch;
+      f.guardTime = f.guard ? f.guardTime + dt : 0;
       const speed = 185 + Math.min(10, Number(f.c.speed) || 5) * 9;
-      if (!f.attack && free && !f.guard && !f.crouch) {
+      // Air normals keep the jump's drift; grounded strikes plant the feet.
+      if ((!f.attack || f.attack.air) && free && !f.guard && !f.crouch) {
         f.x += ((a.right ? 1 : 0) - (a.left ? 1 : 0)) * speed * dt;
-        if (a.jump && f.y >= 449) {
+        if (a.jump && grounded && !f.attack) {
           f.vy = -540;
           beep(260, 0.08, "sine", 0.02);
         }
       }
-      const human = index === 0 || mode === "local";
-      const strike = human
-        ? buffers[index]?.type
-        : [...MOVES].reverse().find((m) => a[m.type])?.type;
       if (strike) {
+        const crouching = !!a.crouch && grounded;
+        const cancels = human || (AI_PROFILES[difficulty]?.cancels ?? difficulty !== "easy");
         const started = f.attack
-          ? (human || difficulty !== "easy") && this.attack(f, strike, true)
-          : free && !f.guard && this.attack(f, strike);
+          ? cancels && this.attack(f, strike, true, crouching)
+          : free &&
+            (!f.guard || strike === "throw") &&
+            this.attack(f, strike, false, crouching);
         if (started && human) buffers[index] = null;
       }
+      const wasAirborne = f.y < 449;
       f.vy += 1450 * dt;
       f.y += f.vy * dt;
       if (f.y >= 450) {
@@ -529,6 +809,11 @@ export async function startCombat({
           f.juggles = 0;
           f.stun = 0;
           f.down = KNOCKDOWN_TIME;
+        }
+        // Landing ends an air normal; the short cooldown keeps jump-ins from linking.
+        if (wasAirborne && f.attack?.air) {
+          f.attack = null;
+          f.cooldown = AIR_LAND_COOLDOWN;
         }
       }
       if (f.comboHits && free) f.comboHits = 0;
@@ -549,16 +834,17 @@ export async function startCombat({
         if (!m.hit && m.t >= m.start && m.t <= m.start + m.active) {
           if (m.type === "special" && m.variant === 3) {
             m.hit = true;
-            this.projectiles.push({
-              x: f.x + f.face * 50,
-              y: f.y - 95,
-              face: f.face,
-              owner: f,
-              target: enemy,
-              move: m,
-              index,
-              life: 1.5,
-            });
+            if (this.projectiles.length < PROJECTILE_CAP)
+              this.projectiles.push({
+                x: f.x + f.face * 50,
+                y: f.y - 95,
+                face: f.face,
+                owner: f,
+                target: enemy,
+                move: m,
+                index,
+                life: 1.5,
+              });
           }
           if (canBeHit(enemy) && inMeleeRange(f, enemy, m)) {
             m.hit = true;
@@ -576,6 +862,27 @@ export async function startCombat({
         }
       }
       this.renderFighter(f, a, dt, index);
+    }
+    // One render tick of white on a clean hit, the hurt blush, and the arcade shadow's tint.
+    tint(f) {
+      if (f.flash > 0) {
+        f.flash--;
+        f.sprite.setTintFill(0xffffff);
+      } else if (f.stun > 0 && f.visualTime < 0.05) f.sprite.setTint(0xffc6b4);
+      else if (f.c.shadow) f.sprite.setTint(0x9186d6);
+      else f.sprite.clearTint();
+    }
+    rumble(index, ms) {
+      if (settings.reducedMotion || !(index === 0 || mode === "local")) return;
+      try {
+        navigator
+          .getGamepads?.()
+          [index]?.vibrationActuator?.playEffect?.("dual-rumble", {
+            duration: ms,
+            strongMagnitude: Math.min(1, ms / 70),
+            weakMagnitude: 0.5,
+          });
+      } catch {}
     }
     renderFighter(f, a, dt, index, forcedState) {
       const moving =
@@ -640,8 +947,7 @@ export async function startCombat({
         .setFlipX(f.face < 0)
         .setScale(f.scale);
       f.shadow.setPosition(f.x, 452).setScale(1 - (450 - f.y) / 600);
-      if (f.stun > 0 && f.visualTime < 0.05) f.sprite.setTint(0xffc6b4);
-      else f.sprite.clearTint();
+      this.tint(f);
     }
 
     callout(text) {
@@ -653,6 +959,7 @@ export async function startCombat({
     hit(f, e, m, index) {
       // A hit only extends a combo while the target is still reeling or airborne.
       const inCombo = e.stun > 0 || e.launched;
+      const airborne = e.y < 449;
       const outcome = hitOutcome(f, e, m);
       const { blocking, damage } = outcome;
       if (m.source) m.source.landed = blocking ? "block" : "hit";
@@ -663,10 +970,28 @@ export async function startCombat({
         895,
       );
       f.energy = outcome.energy;
+      f.punish = 0;
       if (blocking) {
         e.blockstun = outcome.blockstun;
         e.comboHits = 0;
+        e.punish = outcome.blockstun + PUNISH_WINDOW;
         f.combo = 0;
+      } else if (outcome.throw) {
+        // Hard knockdown straight to the floor: no juggle, no combo credit.
+        Object.assign(e, {
+          stun: 0,
+          attack: null,
+          guard: false,
+          launched: false,
+          juggles: 0,
+          vy: 0,
+          y: 450,
+          comboHits: 0,
+          down: KNOCKDOWN_TIME,
+        });
+        f.combo = 0;
+        f.lastHit = this.elapsed;
+        this.callout("THROW!");
       } else {
         e.stun = outcome.stun;
         e.attack = null;
@@ -690,40 +1015,99 @@ export async function startCombat({
         f.lastHit = this.elapsed;
         if (outcome.counter) this.callout("COUNTER!");
       }
-      this.hitstop = blocking
-        ? 0.025
-        : outcome.knockdown || outcome.launch
-          ? 0.09
-          : 0.055;
+      if (index === 1) this.aiMemory.blockedInRow = blocking ? this.aiMemory.blockedInRow + 1 : 0;
+      this.note(blocking ? "block" : outcome.throw ? "throw" : "hit", index, {
+        type: m.type,
+        air: Boolean(m.air),
+      });
+      if (!blocking && airborne && !m.air && (m.type === "heavy" || m.type === "heavyKick"))
+        this.note("antiair", index);
+      if (mode === "training" && index === 0 && training.trial)
+        trialHit(training.trial, m.type, outcome.comboHits, blocking);
+      // Hitstop by weight; blocks freeze for 60%. Reduced motion keeps it (frame data).
+      this.hitstop = hitstopFor(m, blocking);
+      // The struck sprite flashes white for one render tick on a clean hit only.
+      e.flash = !blocking && !settings.reducedMotion ? 1 : 0;
       if (index === 0) {
         stats.damageDealt += damage;
         if (!blocking) {
           stats.hits++;
+          if (outcome.throw) stats.throws++;
           stats.maxCombo = Math.max(stats.maxCombo, f.combo);
         }
       } else {
         stats.damageTaken += damage;
         if (blocking) stats.blocked++;
       }
-      controller.vibrate(blocking ? 8 : m.type === "special" ? 40 : 18);
+      const pulse = blocking ? 8 : impactPulse(m);
+      controller.vibrate(pulse);
+      this.rumble(index, pulse);
+      this.rumble(1 - index, pulse);
       this.sparks.push({
         x: (f.x + e.x) / 2,
         y: Math.min(f.y, e.y) - 90,
         life: 0.22,
         block: blocking,
         special: m.type === "special",
+        throw: outcome.throw,
+        tier: m.tier ?? 1,
       });
-      if (!settings.reducedMotion && !blocking)
-        this.cameras.main.shake(
-          m.type === "special" ? 100 : 45,
-          m.type === "special" ? 0.007 : 0.003,
-        );
+      if (this.sparks.length > SPARK_CAP)
+        this.sparks.splice(0, this.sparks.length - SPARK_CAP);
+      if (!settings.reducedMotion) {
+        if (blocking) this.cameras.main.shake(30, 0.0015);
+        else
+          this.cameras.main.shake(
+            m.type === "special" ? 100 : 35 + (m.tier ?? 1) * 12,
+            m.type === "special" ? 0.007 : 0.002 + (m.tier ?? 1) * 0.0007,
+          );
+      }
       beep(
         blocking ? 600 : m.type === "heavy" ? 90 : 130,
         0.1,
         blocking ? "triangle" : "square",
         0.045,
       );
+    }
+    trainingReadout(p) {
+      const trial = training.trial;
+      const trialText = trial
+        ? trial.status === "active"
+          ? ` · TRIAL ${trial.step}/${TRIAL_SEQUENCE.length} · DROPS ${trial.drops}/3`
+          : ` · TRIAL ${trial.status.toUpperCase()}`
+        : "";
+      const rec =
+        training.dummy === "record"
+          ? ` · RECORDING ${Math.max(0, RECORD_SECONDS - training.recordT).toFixed(1)}s`
+          : "";
+      wrapper.querySelector(".mvm-training-readout").textContent =
+        `${moveName(p.c, p.lastMove)} · ${movePhase(p.attack)} / ${Math.round(stats.damageDealt)} DAMAGE · ${stats.hits} HITS${trialText}${rec}`;
+      const hint = wrapper.querySelector(".mvm-trial-hint");
+      if (!trial) hint.textContent = "";
+      else {
+        hint.dataset.status = trial.status;
+        const names = TRIAL_SEQUENCE.map((t) => moveName(p.c, t).toUpperCase());
+        hint.textContent =
+          trial.status === "pass"
+            ? "TRIAL PASS · JAB → CROSS → UPPERCUT → POWER"
+            : trial.status === "fail"
+              ? "TRIAL FAIL · RESET TO TRY AGAIN"
+              : `TRIAL · ${names.join(" → ")} · NEXT: ${names[trial.step]}`;
+      }
+      const data = wrapper.querySelector(".mvm-data");
+      const m = p.attack || p.lastAttack;
+      if (!training.data || !m) {
+        data.textContent = training.data ? "DATA · READY" : "";
+        return;
+      }
+      const ms = (x) => Math.round(x * 1000);
+      const tags = [
+        m.height === "low" && "LOW",
+        m.height === "overhead" && "OVERHEAD",
+        m.family === "throw" && "THROW",
+        m.air && "AIR",
+      ].filter(Boolean);
+      data.textContent = `DATA · ${moveName(p.c, m.type).toUpperCase()} · ${movePhase(p.attack)} · STARTUP ${ms(m.start)} · ACTIVE ${ms(m.active)} · RECOVERY ${ms(m.duration - m.start - m.active)} · HITSTUN ${ms(m.hitstun)} · BLOCKSTUN ${ms(m.blockstun)} MS${tags.length ? ` · ${tags.join(" ")}` : ""}`;
     }
     finishRound() {
       const [p, o] = this.fighters;
@@ -745,7 +1129,13 @@ export async function startCombat({
       this.phaseTime = 2.5;
       message.textContent = win
         ? (this.timer <= 0 ? "TIME! " : "K.O. ") +
-          (win === p ? "YOU WIN" : "RIVAL WINS")
+          (mode === "local"
+            ? win === p
+              ? "PLAYER ONE WINS"
+              : "PLAYER TWO WINS"
+            : win === p
+              ? "YOU WIN"
+              : "RIVAL WINS")
         : "DRAW — REMATCH";
       this.sync();
     }
@@ -776,6 +1166,7 @@ export async function startCombat({
       this.hitstop = 0;
       this.aiClock = 0;
       this.aiAction = {};
+      this.aiMemory = { blockedInRow: 0, feint: false, px: undefined };
       this.powerUntil = 0;
       this.timer = 60;
       this.phase = "intro";
@@ -820,24 +1211,29 @@ export async function startCombat({
       this.fighters.forEach((f, i) => {
         const el = wrapper.querySelector(`.mvm-combo[data-side="${i}"]`);
         if (!el) return;
-        el.textContent =
-          (i === 0 || mode === "local") && f.comboFlash > 0 && f.comboDisplay > 1
-            ? `${f.comboDisplay} HIT COMBO`
-            : "";
+        const shown =
+          (i === 0 || mode === "local") && f.comboFlash > 0 && f.comboDisplay > 1;
+        const text = shown ? `${f.comboDisplay} HIT COMBO` : "";
+        // The counter pops each time it grows.
+        if (shown && text !== el.textContent)
+          el.dataset.pop = el.dataset.pop === "a" ? "b" : "a";
+        el.textContent = text;
       });
-      if (mode === "training")
-        wrapper.querySelector(".mvm-training-readout").textContent =
-          `${moveName(activePlayer.c, activePlayer.lastMove)} · ${movePhase(activePlayer.attack)} / ${Math.round(stats.damageDealt)} DAMAGE · ${stats.hits} HITS`;
+      if (mode === "training") this.trainingReadout(activePlayer);
       this.sparks = this.sparks.filter((s) => (s.life -= dt) > 0);
       for (const s of this.sparks) {
+        // Size and ray count scale with the strike's tier; blocks are small and cool.
+        const tier = s.special ? 4 : s.tier;
+        const rays = 6 + tier * 2;
+        const size = (40 + tier * 12) * (s.block ? 0.6 : 1);
         this.fx.lineStyle(
-          s.special ? 5 : 3,
-          s.block ? 0x91dcff : 0xffe49e,
+          s.special ? 5 : 2 + Math.min(2, tier),
+          s.block ? 0x9fb4c0 : s.throw ? 0xff6ad5 : 0xffe49e,
           s.life / 0.22,
         );
-        for (let j = 0; j < 8; j++) {
-          let a = (j * Math.PI) / 4;
-          let r = (1 - s.life / 0.22) * 60;
+        for (let j = 0; j < rays; j++) {
+          let a = (j * Math.PI * 2) / rays;
+          let r = (1 - s.life / 0.22) * size;
           this.fx.lineBetween(
             s.x + Math.cos(a) * r * 0.4,
             s.y + Math.sin(a) * r * 0.4,
@@ -894,15 +1290,17 @@ export async function startCombat({
       }
       if (this.hitstop > 0) {
         this.hitstop -= dt;
+        this.fighters.forEach((f) => this.tint(f));
         return;
       }
       this.timer = mode === "training" ? 60 : Math.max(0, this.timer - dt);
-      const p2 =
-        mode === "training"
-          ? { block: trainingGuard }
-          : mode === "local"
-            ? mergeInput(inputs[1], pads[1])
-            : this.ai(dt);
+      let p1 = mergeInput(inputs[0], pads[0]);
+      let p2;
+      if (mode === "training") {
+        const dummy = this.dummyInput(dt, p1);
+        p2 = dummy.input;
+        if (dummy.puppet) p1 = {};
+      } else p2 = mode === "local" ? mergeInput(inputs[1], pads[1]) : this.ai(dt);
       for (const shot of this.projectiles) {
         shot.life -= dt;
         shot.x += shot.face * (shot.move.projectileSpeed || 580) * dt;
@@ -932,17 +1330,13 @@ export async function startCombat({
       this.projectiles = this.projectiles.filter(
         (p) => p.life > 0 && p.x > 0 && p.x < 960,
       );
-      this.tickFighter(
-        this.fighters[0],
-        this.fighters[1],
-        mergeInput(inputs[0], pads[0]),
-        dt,
-        0,
-      );
+      this.tickFighter(this.fighters[0], this.fighters[1], p1, dt, 0);
       this.tickFighter(this.fighters[1], this.fighters[0], p2, dt, 1);
       for (const hit of this.pendingHits) this.hit(...hit);
       this.pendingHits = [];
       const [p, o] = this.fighters;
+      // A trial drops when the dummy recovers before the POWER lands.
+      if (training.trial && o.comboHits === 0) trialDrop(training.trial);
       if (Math.abs(p.x - o.x) < 62 && Math.abs(p.y - o.y) < 100) {
         const mid = (p.x + o.x) / 2,
           sign = p.x <= o.x ? 1 : -1;
