@@ -192,6 +192,8 @@ function begin(mode) {
   state.ladder = [];
   state.ladderIntro = false; // CUTSCENE: replay LADDER for each new ladder
   state.shadowIntro = false; // CUTSCENE: replay SHADOW before each ladder's final
+  state.challengerIntro = 0; // CUTSCENE: CHALLENGER stage already introduced
+  state.openedMatch = null; // CUTSCENE: DUEL / VERSUS / TRAINING matchup already opened
   if (!read("mvm-onboarded", false)) {
     showHelp(() => {
       save("mvm-onboarded", true);
@@ -270,6 +272,7 @@ function confirmFighter() {
       buildLadder();
       state.ladderIntro = false; // CUTSCENE: new ladder, show LADDER again
       state.shadowIntro = false;
+      state.challengerIntro = 0;
       arenaSelection();
     } else if (isTournament()) {
       startTournament();
@@ -356,6 +359,45 @@ async function fight() {
     );
     return;
   }
+  // CUTSCENE: CHALLENGER introduces every later ladder stage except the shadow final
+  // (a continue re-fights the same stage without replaying it).
+  if (state.mode === "arcade" && state.stage > 0 && !isFinal() && state.challengerIntro !== state.stage) {
+    state.challengerIntro = state.stage;
+    cutscene(
+      "challenger",
+      { player: state.player, opponent: state.opponent, fighters: state.ladder, stage: state.stage, arena: state.arena, mode: "arcade" },
+      fight,
+    );
+    return;
+  }
+  // CUTSCENE: DUEL / VERSUS / TRAINING open each new matchup; a rematch goes straight in.
+  const opener = { duel: "duel", local: "versus", training: "training" }[state.mode];
+  const matchup = `${state.mode}:${state.player}:${state.opponent}:${state.arena}`;
+  if (opener && state.openedMatch !== matchup) {
+    state.openedMatch = matchup;
+    cutscene(opener, { player: state.player, opponent: state.opponent, arena: state.arena, mode: state.mode }, fight);
+    return;
+  }
+  // CUTSCENE: ROUND introduces each tournament round between the opening draw and the final.
+  const t = isTournament() ? state.tournament : null;
+  if (t && t.round > 0 && !isFinalRound(t) && state.roundIntro !== t.round) {
+    state.roundIntro = t.round;
+    cutscene(
+      "round",
+      {
+        player: state.player,
+        opponent: state.opponent,
+        fighters: t.entrants,
+        eliminated: t.entrants.filter((id) => tournamentKnockedOut(t, id)),
+        round: t.round,
+        roundName: roundName(t.round),
+        arena: state.arena,
+        mode: "tournament",
+      },
+      fight,
+    );
+    return;
+  }
   // CUTSCENE: SHADOW plays once before the arcade final against your own shadow.
   if (isFinal() && !state.shadowIntro) {
     state.shadowIntro = true;
@@ -437,6 +479,23 @@ function result(data) {
     );
     return;
   }
+  // CUTSCENE: FINISH plays the deciding blow of every quick duel and versus match.
+  if (!data.cutscenePlayed && (state.mode === "duel" || local)) {
+    cutscene(
+      "finish",
+      {
+        player: state.player,
+        opponent: state.opponent,
+        arena: state.arena,
+        mode: state.mode,
+        winner: data.winner,
+        playerRounds: data.playerRounds,
+        opponentRounds: data.opponentRounds,
+      },
+      () => result({ ...data, cutscenePlayed: true }),
+    );
+    return;
+  }
   if (state.mode !== "training" && !local) {
     record.matches++;
     record.wins += won ? 1 : 0;
@@ -497,6 +556,7 @@ function startTournament() {
   // Seven fresh random opponents on every start; never the player's own fighter.
   state.tournament = createTournament({ player: state.player, rosterSize: characters.length });
   state.finalIntro = false; // CUTSCENE: replay FINAL for each new bracket
+  state.roundIntro = 0; // CUTSCENE: replay ROUND for each new bracket
   prepareTournamentMatch(true);
   // CUTSCENE: TOURNAMENT intro with the eight drawn entrants, then the bracket.
   cutscene("tournament", { player: state.player, opponent: state.opponent, fighters: state.tournament.entrants, arena: state.arena, mode: "tournament" }, showTournamentBracket);
@@ -695,7 +755,7 @@ function showHelp(onDone) {
 }
 function showSettings() {
   const layer = modal(
-    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>SKIP CUTSCENES</strong><small>Intro, ladder, tournament, victory & defeat scenes</small></div><button class="toggle ${settings.skipCutscenes ? "active" : ""}" data-setting="skipCutscenes" aria-pressed="${Boolean(settings.skipCutscenes)}">${settings.skipCutscenes ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
+    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>SKIP CUTSCENES</strong><small>Intro, match openers, challengers, rounds & results</small></div><button class="toggle ${settings.skipCutscenes ? "active" : ""}" data-setting="skipCutscenes" aria-pressed="${Boolean(settings.skipCutscenes)}">${settings.skipCutscenes ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
     "",
     refresh,
   );

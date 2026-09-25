@@ -3,8 +3,11 @@
 //
 //   playCutscene(kind, context, options) -> Promise<{ kind, skipped }>
 //
-// kind:    "intro" | "ladder" | "tournament" | "victory" | "defeat" | "shadow" | "bonus" | "final"
-// context: { player, opponent, fighters: [...], arena, mode: "arcade" | "tournament" }
+// kind:    "intro" | "ladder" | "challenger" | "tournament" | "round" | "victory" | "defeat"
+//          | "shadow" | "bonus" | "final" | "duel" | "versus" | "training" | "finish"
+// context: { player, opponent, fighters: [...], arena, mode: "arcade" | "tournament" | "duel" | "local" | "training" }
+//          challenger also takes { stage }; round takes { round, roundName, eliminated: [...] };
+//          finish takes { winner: "player" | "opponent", playerRounds, opponentRounds }.
 //          fighters/players accept a roster index, a character id, or a character object;
 //          arena accepts an index, an arena id, or an arena object.
 // options: { container, reducedMotion, sound, seed, timers, now }
@@ -21,7 +24,10 @@ import { arenas as ARENAS } from "./arenas.js";
 import { kitFor } from "./moves.js";
 import { BONUS_DURATION } from "./bonus.js";
 
-export const CUTSCENE_KINDS = ["intro", "ladder", "tournament", "victory", "defeat", "shadow", "bonus", "final"];
+export const CUTSCENE_KINDS = [
+  "intro", "ladder", "challenger", "tournament", "round", "victory", "defeat", "shadow", "bonus", "final",
+  "duel", "versus", "training", "finish",
+];
 
 // Sheet layouts, matching combat.js: idle = 16 frames in one row; motion = 4x6
 // (walk, jump, guard, hurt, ko, victory); combat = 4x7 (one move per row, row 6 = power).
@@ -660,11 +666,19 @@ function pickCast(ctx, exclude, n) {
   return list.slice(0, n);
 }
 
+// A film-style location slug: a typed first line and a small second line.
+function slugLine(ctx, text, sub) {
+  const n = ctx.el("div", "cs-slug", `<span class="cs-sr">${ctx.esc(text)}</span><strong class="cs-typed" aria-hidden="true"></strong><small>${ctx.esc(sub)}</small>`);
+  n.dataset.text = text;
+  return n;
+}
+
 const CROWN_SVG =
   '<svg class="cs-crown" viewBox="0 0 120 80" aria-hidden="true"><path d="M8 70 L14 22 L38 46 L60 8 L82 46 L106 22 L112 70 Z"/><rect x="8" y="66" width="104" height="10"/><circle cx="14" cy="20" r="6"/><circle cx="60" cy="7" r="7"/><circle cx="106" cy="20" r="6"/></svg>';
 
 const SCENES = {
-  // THE INTRO: a studio-style cold open in six acts.
+  // THE INTRO: a studio-style cold open in six acts, paced so every shot lands
+  // (roughly 38 s; each act holds long enough to read before the next cut).
   //   ident → the mirror (it moves on its own) → the shatter → roster montage
   //   → triptych → face-off and clash in the Mirror Garden → logo slam.
   intro(ctx) {
@@ -674,8 +688,8 @@ const SCENES = {
     const stages = arenaList.filter((a) => a !== garden);
     const cast = reduced ? [] : pickCast(ctx, hero, 9);
     const T = reduced
-      ? { mirror: 700, stir: 1300, crack: 1700, shatter: 2300, face: 2500, guard: 3300, logo: 4300, end: 6800 }
-      : { mirror: 1900, stir: 2900, crack: 3500, shatter: 4300, montage: 4750, beat: 600, tri: 8350, face: 9650, guard: 10400, charge: 11200, clash: 12450, logo: 13400, end: 18400 };
+      ? { mirror: 900, stir: 1800, crack: 2400, shatter: 3000, face: 3400, guard: 4600, logo: 5800, end: 8800 }
+      : { heart: 900, mirror: 3400, stir: 6000, crack: 7600, shatter: 9000, montage: 10900, beat: 1300, tri: 18900, triGap: 520, face: 22600, guard: 24800, charge: 26600, clash: 28800, logo: 30600, end: 38500 };
     ctx.root.setAttribute("aria-label", "Intro: Me vs Me");
     ctx.preload([hero.sheet, hero.portrait, hero.motionSheet, hero.combatSheet, garden.background, ...stages.map((a) => a.background), ...cast.map((c) => c.combatSheet)]);
 
@@ -688,8 +702,8 @@ const SCENES = {
       ctx.on(identCopy);
       ctx.sfx.drone(reduced ? 3 : 6);
     });
-    ctx.at(reduced ? 300 : 650, () => ctx.sfx.heartbeat());
-    if (!reduced) ctx.at(1450, () => ctx.sfx.heartbeat());
+    ctx.at(reduced ? 300 : T.heart, () => ctx.sfx.heartbeat());
+    if (!reduced) ctx.at(T.heart * 2.4, () => ctx.sfx.heartbeat());
 
     // Act 1: the mirror. The hero stands before it; the reflection moves on its own.
     const s1 = ctx.shot("cs-mirror-shot");
@@ -757,12 +771,13 @@ const SCENES = {
       ctx.at(start, () => {
         ctx.cut(shot, `whip-${dir}`);
         ctx.sfx.whoosh();
-        actor.play(anim);
+        // Strikes play at a slowed rate so each pose reads before the hit lands.
+        actor.play(anim, dash ? {} : { fps: 6 });
         ctx.cam(bg, { s: 1.22, x: dir === "l" ? 3 : -3 });
         ctx.at(20, () => ctx.cam(bg, { s: 1.06, x: dir === "l" ? -2 : 2 }, T.beat + 200, "ease-out"));
-        if (dash) ctx.at(20, () => actor.moveTo(dir === "l" ? 120 : -20, T.beat + 120));
+        if (dash) ctx.at(20, () => actor.moveTo(dir === "l" ? 120 : -20, Math.round(T.beat * 0.95)));
         else
-          ctx.at(Math.round(T.beat * 0.45), () => {
+          ctx.at(Math.round(T.beat * 0.5), () => {
             ctx.flash(c.color || "#fff");
             ctx.impact(i % 2 ? "red" : "");
             ctx.shockwave(shot, dir === "l" ? 52 : 48, 58, c.color || "#fff");
@@ -770,7 +785,10 @@ const SCENES = {
           });
       });
     });
-    if (!reduced) ctx.at(T.montage + 40, () => ctx.caption(`${roster.length} IDENTITIES. ONE ORIGINAL.`));
+    if (!reduced) {
+      ctx.at(T.montage + 40, () => ctx.caption(`${roster.length} IDENTITIES. ONE ORIGINAL.`));
+      ctx.at(T.montage + T.beat * 3, () => ctx.caption("EVERY ONE OF THEM IS YOU."));
+    }
 
     // Act 3b: triptych. Three more fighters in three diagonal panels.
     if (!reduced) {
@@ -787,7 +805,7 @@ const SCENES = {
         ctx.cut(tri, "cut");
         ctx.caption(`${arenaList.length} PLACES TO SETTLE IT.`);
         panels.forEach((p, i) =>
-          ctx.at(i * 170, () => {
+          ctx.at(i * T.triGap, () => {
             ctx.on(p);
             p.querySelector(".cs-actor")?.play("victory");
             ctx.sfx.hit();
@@ -812,14 +830,14 @@ const SCENES = {
       ctx.cut(face, reduced ? "fade" : "zoom");
       ctx.bars("15vh");
       ctx.cam(faceCam, { s: 1 });
-      ctx.at(40, () => ctx.cam(faceCam, { s: 1.14, y: 2 }, 2800, "cubic-bezier(.3,0,.2,1)"));
+      ctx.at(40, () => ctx.cam(faceCam, { s: 1.14, y: 2 }, T.guard - T.face + 1600, "cubic-bezier(.3,0,.2,1)"));
       me.play("idle");
       reflection.play("idle");
       ctx.caption("ONE RIVAL.");
       ctx.sfx.low();
     });
-    ctx.at(T.face + (reduced ? 300 : 350), () => ctx.on(plateMe));
-    ctx.at(T.face + (reduced ? 500 : 650), () => ctx.on(plateYou));
+    ctx.at(T.face + (reduced ? 300 : 700), () => ctx.on(plateMe));
+    ctx.at(T.face + (reduced ? 500 : 1300), () => ctx.on(plateYou));
     ctx.at(T.guard, () => {
       me.play("guard");
       reflection.play("guard");
@@ -876,17 +894,17 @@ const SCENES = {
       ctx.bars(null);
       ctx.on(wrap);
       ctx.cam(logoCam, { s: 1.08 });
-      ctx.at(40, () => ctx.cam(logoCam, { s: 1 }, 4200, "ease-out"));
+      ctx.at(40, () => ctx.cam(logoCam, { s: 1 }, T.end - T.logo, "ease-out"));
       wrap.classList.add("m1");
       ctx.sfx.hit();
       ctx.shake();
     });
-    ctx.at(T.logo + (reduced ? 0 : 240), () => {
+    ctx.at(T.logo + (reduced ? 0 : 420), () => {
       wrap.classList.add("m2");
       ctx.sfx.hit();
       ctx.shake();
     });
-    ctx.at(T.logo + (reduced ? 0 : 560), () => {
+    ctx.at(T.logo + (reduced ? 0 : 1000), () => {
       wrap.classList.add("vs");
       ctx.flash("#ffe8a3");
       ctx.impact();
@@ -897,11 +915,11 @@ const SCENES = {
       ctx.sfx.boom();
       ctx.sfx.sting();
     });
-    ctx.at(T.logo + (reduced ? 200 : 1150), () => {
+    ctx.at(T.logo + (reduced ? 200 : 2000), () => {
       wrap.classList.add("sub");
       ctx.type(wrap.querySelector(".cs-logo-sub .cs-typed"), "THE MIRROR TOURNAMENT", 30);
     });
-    ctx.at(T.logo + (reduced ? 400 : 1900), () => ctx.caption("KNOW THYSELF."));
+    ctx.at(T.logo + (reduced ? 400 : 3600), () => ctx.caption("KNOW THYSELF."));
     return T.end;
   },
 
@@ -1390,6 +1408,647 @@ const SCENES = {
         ctx.sfx.braam();
       });
     }
+    return T.end;
+  },
+
+  // QUICK DUEL opener: an establishing shot with a location slug, two extreme
+  // close-ups on the eyes, a scope two-shot where both fighters walk in, charge and
+  // collide, then a smash cut to the match card.
+  duel(ctx) {
+    const { el, esc, reduced, context } = ctx;
+    const me = ctx.fighter(context.player ?? 0);
+    const rival = ctx.fighter(context.opponent ?? 1);
+    const arena = ctx.arena(context.arena ?? 0);
+    const mirrored = me.id === rival.id;
+    const T = reduced
+      ? { eyesA: 900, eyesB: 1700, wide: 2500, title: 3500, end: 5600 }
+      : { eyesA: 2800, eyesB: 4500, wide: 6200, guard: 8100, charge: 9100, clash: 10900, title: 11300, end: 14200 };
+    ctx.root.setAttribute("aria-label", `Quick duel: ${me.name} versus ${rival.name} at ${arena.name}`);
+    ctx.preload([arena.background, me.portrait, rival.portrait, me.motionSheet, rival.motionSheet, me.combatSheet, rival.combatSheet]);
+
+    // Shot 1: the place, before anyone is in it.
+    const est = ctx.shot("cs-establish");
+    const estCam = el("div", "cs-cam");
+    estCam.append(ctx.arenaLayer(arena, "cs-dim"));
+    ctx.particles(estCam, "dust", 26, ["#fff1d6", arena.color || "#46e1df"]);
+    const slug = slugLine(ctx, `${arena.name}${arena.subtitle ? ` — ${arena.subtitle}` : ""}`, "QUICK DUEL · BEST OF THREE");
+    est.append(estCam, slug);
+    ctx.cut(est, "cut");
+    ctx.bars("15vh");
+    ctx.cam(estCam, { s: 1.2, x: 2 });
+    ctx.at(40, () => ctx.cam(estCam, { s: 1.04, x: -1 }, T.eyesA, "cubic-bezier(.3,0,.3,1)"));
+    ctx.at(120, () => {
+      ctx.on(slug);
+      ctx.type(slug.querySelector(".cs-typed"), slug.dataset.text, 34);
+      ctx.sfx.drone(T.end / 1000);
+      ctx.caption("NO LADDER. NO BRACKET.");
+    });
+    if (!reduced) ctx.at(1500, () => ctx.caption("JUST THE TWO OF YOU."));
+
+    // Shots 2-3: eye-lines. A thin scope band on each face, drifting.
+    const eyes = (c, side, label) => {
+      const shot = ctx.shot(`cs-eyeline side-${side}`);
+      const cam = el("div", "cs-cam");
+      const face = ctx.portrait(c, "cs-ecu");
+      cam.append(face);
+      shot.append(cam, el("div", "cs-eyeline-tag", `<small>${esc(label)}</small><strong>${esc(c.name)}</strong>`));
+      shot.style.setProperty("--fighter-color", c.color || "#ee5943");
+      return { shot, cam };
+    };
+    const eyeMe = eyes(me, "l", "PLAYER 01");
+    const eyeRival = eyes(rival, "r", mirrored ? "THE MIRROR" : "YOUR OTHER SIDE");
+    [[eyeMe, T.eyesA, 1], [eyeRival, T.eyesB, -1]].forEach(([e, at, dir]) =>
+      ctx.at(at, () => {
+        ctx.cut(e.shot, "cut");
+        ctx.bars("34vh");
+        ctx.cam(e.cam, { s: 1.08, x: 3 * dir });
+        ctx.at(40, () => ctx.cam(e.cam, { s: 1.14, x: -3 * dir }, T.eyesB - T.eyesA + 400, "linear"));
+        ctx.sfx.heartbeat();
+        if (!reduced) ctx.sfx.whoosh();
+      }),
+    );
+    ctx.at(T.eyesA + 100, () => ctx.caption(`${me.name}.`));
+    ctx.at(T.eyesB + 100, () => ctx.caption(mirrored ? "THE SAME FACE LOOKS BACK." : `${rival.name}.`));
+
+    // Shot 4: scope two-shot. They walk in, square up, charge and collide.
+    const wide = ctx.shot("cs-two-shot");
+    const cam = el("div", "cs-cam");
+    cam.append(ctx.arenaLayer(arena), el("div", "cs-aura cs-aura-l"), el("div", "cs-aura cs-aura-r"));
+    const left = ctx.actor(me, reduced ? "idle" : "walk", { x: reduced ? 30 : -14, cls: "cs-hero" });
+    const right = ctx.actor(rival, reduced ? "idle" : "walk", { x: reduced ? 70 : 114, flip: true, cls: "cs-hero" });
+    cam.append(left, right);
+    ctx.particles(cam, "embers", 22, [me.color || "#ee5943", rival.color || "#46e1df", "#ffe8a3"]);
+    const plateL = ctx.nameplate(me, { side: "l", label: "PLAYER 01" });
+    const plateR = ctx.nameplate(rival, { side: "r", label: mirrored ? "MIRROR MATCH" : "CPU" });
+    wide.append(cam, plateL, plateR);
+    ctx.at(T.wide, () => {
+      ctx.cut(wide, reduced ? "fade" : "zoom");
+      ctx.bars("15vh");
+      ctx.cam(cam, { s: 1.02 });
+      ctx.at(40, () => ctx.cam(cam, { s: 1.12, y: 2 }, (T.clash ?? T.title) - T.wide, "cubic-bezier(.4,0,.3,1)"));
+      ctx.caption("TWO ROUNDS TO WIN.");
+      ctx.sfx.low();
+      if (!reduced) {
+        left.moveTo(30, 1500, "cubic-bezier(.3,.2,.3,1)");
+        right.moveTo(70, 1500, "cubic-bezier(.3,.2,.3,1)");
+        ctx.at(1500, () => {
+          left.play("idle");
+          right.play("idle");
+        });
+      }
+    });
+    ctx.at(T.wide + (reduced ? 200 : 900), () => ctx.on(plateL));
+    ctx.at(T.wide + (reduced ? 400 : 1400), () => ctx.on(plateR));
+    if (!reduced) {
+      ctx.at(T.guard, () => {
+        left.play("guard");
+        right.play("guard");
+        ctx.sfx.thump();
+      });
+      ctx.at(T.charge, () => {
+        ctx.off(plateL);
+        ctx.off(plateR);
+        wide.classList.add("cs-charge");
+        left.play("power", { fps: 4 });
+        right.play("power", { fps: 4 });
+        ctx.caption("NOBODY BACKS DOWN.");
+        ctx.sfx.riser((T.clash - T.charge) / 1000);
+      });
+      ctx.at(T.clash - 300, () => {
+        left.moveTo(44, 280, "cubic-bezier(.7,0,1,.6)");
+        right.moveTo(56, 280, "cubic-bezier(.7,0,1,.6)");
+      });
+      ctx.at(T.clash, () => {
+        wide.classList.add("cs-clashed");
+        ctx.flash("#fff");
+        ctx.impact();
+        ctx.shake("hard");
+        ctx.shockwave(cam, 50, 58, "#ffe8a3");
+        ctx.flare(cam, 58, "#ffd9a8");
+        ctx.particles(cam, "sparks", 36, ["#fff", "#ffe8a3", me.color || "#ee5943", rival.color || "#46e1df"]);
+        ctx.sfx.boom();
+      });
+    }
+
+    // Shot 5: smash cut to the match card.
+    const card = ctx.shot("cs-matchcard");
+    const cardCam = el("div", "cs-cam");
+    const title = ctx.title(
+      `<span class="cs-eyebrow">ROUND 01 · ${esc(arena.name)}</span><h2>${esc(me.name)} <em>VS</em> ${esc(rival.name)}</h2><small>SETTLE IT IN THREE</small>`,
+      "cs-card-title cs-card-center",
+    );
+    cardCam.append(ctx.arenaLayer(arena, "cs-blurred"), title);
+    card.append(cardCam);
+    ctx.at(T.title, () => {
+      ctx.cut(card, "cut");
+      ctx.bars(null);
+      ctx.on(title);
+      ctx.cam(cardCam, { s: 1.1 });
+      ctx.at(40, () => ctx.cam(cardCam, { s: 1 }, T.end - T.title, "ease-out"));
+      ctx.flash("#ffe8a3");
+      ctx.shake();
+      ctx.flare(cardCam, 50, me.color || "#ffd0a8");
+      ctx.sfx.braam();
+      ctx.sfx.sting();
+      ctx.caption("FIGHT YOURSELF.");
+    });
+    return T.end;
+  },
+
+  // VERSUS (two players, one cabinet): a diagonal split screen, one panel per
+  // player, a seam that cracks down the middle, then both sides meet in one frame.
+  versus(ctx) {
+    const { el, esc, reduced, context } = ctx;
+    const p1 = ctx.fighter(context.player ?? 0);
+    const p2 = ctx.fighter(context.opponent ?? 1);
+    const arena = ctx.arena(context.arena ?? 0);
+    const T = reduced
+      ? { p1: 200, p2: 600, seam: 1200, wide: 1800, title: 2600, end: 5400 }
+      : { p1: 500, p2: 1900, seam: 3500, wide: 4900, charge: 6300, clash: 7900, title: 8300, end: 11200 };
+    ctx.root.setAttribute("aria-label", `Versus: player one ${p1.name} against player two ${p2.name}`);
+    ctx.preload([arena.background, p1.motionSheet, p2.motionSheet, p1.combatSheet, p2.combatSheet]);
+
+    const split = ctx.shot("cs-split-shot");
+    const panel = (c, side, n, label, keys) => {
+      const p = el("div", `cs-split side-${side}`);
+      p.style.setProperty("--fighter-color", c.color || "#ee5943");
+      const cam = el("div", "cs-cam");
+      cam.append(ctx.arenaLayer(arena, "cs-parallax"), el("div", "cs-split-tint"), el("div", "cs-bignum", `${n}P`));
+      const actor = ctx.actor(c, "idle", { x: side === "l" ? 34 : 66, flip: side === "r", cls: "cs-hero" });
+      cam.append(actor);
+      p.append(cam, el("div", "cs-split-tag", `<small>${esc(label)}</small><strong>${esc(c.name)}</strong><span>${esc(keys)}</span>`));
+      split.append(p);
+      return { p, cam, actor };
+    };
+    const a = panel(p1, "l", 1, "PLAYER ONE", "WASD · J K L · U I O");
+    const b = panel(p2, "r", 2, "PLAYER TWO", "ARROWS · NUMPAD 1–6");
+    // The seam follows the panels' shared diagonal, from 62% at the top to 38% at the bottom.
+    const seam = el("div", "cs-seam", '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="62" y1="-2" x2="38" y2="102"/></svg>');
+    split.append(seam);
+    ctx.cut(split, "cut");
+    ctx.at(80, () => {
+      ctx.caption("ONE CABINET.");
+      ctx.sfx.drone(T.end / 1000);
+    });
+    [[a, T.p1, "l"], [b, T.p2, "r"]].forEach(([side, at, dir]) =>
+      ctx.at(at, () => {
+        ctx.on(side.p);
+        side.actor.play("victory");
+        ctx.cam(side.cam, { s: 1.2, x: dir === "l" ? -3 : 3 });
+        ctx.at(40, () => ctx.cam(side.cam, { s: 1.06, x: 0 }, 2600, "ease-out"));
+        ctx.sfx.hit();
+        ctx.sfx.whoosh();
+        ctx.shake();
+      }),
+    );
+    ctx.at(T.p2 + 200, () => ctx.caption("TWO PLAYERS."));
+    ctx.at(T.seam, () => {
+      ctx.on(seam);
+      seam.insertAdjacentHTML("beforeend", fracture(ctx, 50, 50, 7, 0.35));
+      a.actor.play("guard");
+      b.actor.play("guard");
+      ctx.flash("#fff");
+      ctx.impact();
+      ctx.flare(split, 50, "#fff6dc");
+      ctx.sfx.shatter();
+      ctx.sfx.thump();
+      ctx.caption("SAME SOUL. NO MERCY.");
+    });
+
+    // Both sides in one frame.
+    const wide = ctx.shot("cs-two-shot");
+    const cam = el("div", "cs-cam");
+    cam.append(ctx.arenaLayer(arena), el("div", "cs-aura cs-aura-l"), el("div", "cs-aura cs-aura-r"));
+    const left = ctx.actor(p1, "guard", { x: 30, cls: "cs-hero" });
+    const right = ctx.actor(p2, "guard", { x: 70, flip: true, cls: "cs-hero" });
+    cam.append(left, right);
+    ctx.particles(cam, "dust", 22, ["#fff", p1.color || "#ee5943", p2.color || "#46e1df"]);
+    const plateL = ctx.nameplate(p1, { side: "l", label: "1P" });
+    const plateR = ctx.nameplate(p2, { side: "r", label: "2P" });
+    wide.append(cam, plateL, plateR);
+    ctx.at(T.wide, () => {
+      ctx.cut(wide, reduced ? "fade" : "whip-l");
+      ctx.bars("15vh");
+      ctx.cam(cam, { s: 1.03 });
+      ctx.at(40, () => ctx.cam(cam, { s: 1.14, y: 2 }, (T.clash ?? T.title) - T.wide, "cubic-bezier(.4,0,.3,1)"));
+      ctx.on(plateL);
+      ctx.on(plateR);
+      ctx.sfx.low();
+    });
+    if (!reduced) {
+      ctx.at(T.charge, () => {
+        ctx.off(plateL);
+        ctx.off(plateR);
+        wide.classList.add("cs-charge");
+        left.play("power", { fps: 4 });
+        right.play("power", { fps: 4 });
+        ctx.caption("SETTLE IT.");
+        ctx.sfx.riser((T.clash - T.charge) / 1000);
+      });
+      ctx.at(T.clash - 300, () => {
+        left.moveTo(44, 280, "cubic-bezier(.7,0,1,.6)");
+        right.moveTo(56, 280, "cubic-bezier(.7,0,1,.6)");
+      });
+      ctx.at(T.clash, () => {
+        wide.classList.add("cs-clashed");
+        ctx.flash();
+        ctx.impact("red");
+        ctx.shake("hard");
+        ctx.shockwave(cam, 50, 58, "#fff");
+        ctx.particles(cam, "sparks", 36, ["#fff", p1.color || "#ee5943", p2.color || "#46e1df"]);
+        ctx.sfx.boom();
+      });
+    }
+    const card = ctx.shot("cs-matchcard");
+    const title = ctx.title(
+      `<span class="cs-eyebrow">VERSUS · ${esc(arena.name)}</span><h2>TWO PLAYERS. <em>ONE CABINET.</em></h2><small>${esc(p1.name)} · 1P &nbsp;/&nbsp; 2P · ${esc(p2.name)}</small>`,
+      "cs-card-title cs-card-center",
+    );
+    card.append(ctx.arenaLayer(arena, "cs-blurred"), title);
+    ctx.at(T.title, () => {
+      ctx.cut(card, "cut");
+      ctx.bars(null);
+      ctx.on(title);
+      ctx.flare(card, 50, "#fff6dc");
+      ctx.sfx.braam();
+      ctx.sfx.sting();
+    });
+    return T.end;
+  },
+
+  // TRAINING: an empty room, one light, and a translucent echo that repeats every
+  // strike a beat late. A HUD reads each input out like a coach's notes.
+  training(ctx) {
+    const { el, esc, reduced, context } = ctx;
+    const hero = ctx.fighter(context.player ?? 0);
+    const arena = ctx.arena(context.arena ?? 0);
+    const T = reduced ? { title: 900, end: 4800 } : { reps: 2400, beat: 1250, echo: 260, title: 8000, end: 11200 };
+    ctx.root.setAttribute("aria-label", `Training: ${hero.name} runs the drills`);
+    ctx.preload([arena.background, hero.combatSheet, hero.motionSheet]);
+
+    const shot = ctx.shot("cs-training-shot");
+    const cam = el("div", "cs-cam");
+    cam.append(ctx.arenaLayer(arena, "cs-dim"), el("div", "cs-grid-floor"));
+    ctx.beam(cam, 40, "#e8f6ff", "cs-beam-soft");
+    const actor = ctx.actor(hero, "idle", { x: 40, cls: "cs-hero" });
+    const echo = ctx.actor(hero, "idle", { x: 64, flip: true, cls: "cs-echo" });
+    cam.append(echo, actor);
+    ctx.particles(cam, "dust", 20, ["#e8f6ff", "#9fe8ff"]);
+    const hud = el("div", "cs-hud", `<span class="cs-rec"><i></i>REC · DRILL</span><small>INPUT 00</small><strong>READY</strong><em>${esc(hero.name)}</em>`);
+    hud.setAttribute("aria-hidden", "true");
+    const card = ctx.title(
+      `<span class="cs-eyebrow">TRAINING · ${esc(arena.name)}</span><h2>THE <em>WORK.</em></h2><small>NO TIMER · NO CROWD · NO PRESSURE</small>`,
+      "cs-card-title",
+    );
+    shot.append(cam, hud, card);
+    ctx.cut(shot);
+    ctx.bars("15vh");
+    ctx.cam(cam, { s: 1.16, x: 3 });
+    ctx.at(40, () => ctx.cam(cam, { s: 1.04, x: 0 }, T.end, "cubic-bezier(.3,0,.2,1)"));
+    ctx.at(100, () => {
+      ctx.on(hud);
+      ctx.caption("NO CROWD. NO CLOCK.");
+      ctx.sfx.drone(T.end / 1000);
+    });
+    const drills = [
+      ["uppercut", "HEAVY PUNCH", "L"],
+      ["sidekick", "MEDIUM KICK", "I"],
+      ["roundhouse", "HEAVY KICK · OVERHEAD", "O"],
+      ["power", `POWER · ${String(hero.move || "SIGNATURE").toUpperCase()}`, "Q"],
+    ];
+    if (!reduced) {
+      ctx.at(T.reps - 800, () => ctx.caption("EVERY REP IS A CONVERSATION WITH YOURSELF."));
+      drills.forEach(([anim, name, key], i) => {
+        const at = T.reps + i * T.beat;
+        const last = i === drills.length - 1;
+        ctx.at(at, () => {
+          actor.play(anim, { fps: last ? 6 : 9 });
+          hud.querySelector("small").textContent = `INPUT ${pad2(i + 1)} · ${key}`;
+          hud.querySelector("strong").textContent = name;
+          hud.classList.remove("cs-hud-hit");
+          void hud.offsetWidth;
+          hud.classList.add("cs-hud-hit");
+          ctx.sfx.whoosh();
+        });
+        ctx.at(at + T.echo, () => echo.play(anim, { fps: last ? 6 : 9 }));
+        ctx.at(at + Math.round(T.beat * (last ? 0.55 : 0.35)), () => {
+          if (last) {
+            ctx.flash(hero.color || "#fff");
+            ctx.shake();
+            ctx.shockwave(cam, 52, 58, hero.color || "#9fe8ff");
+            ctx.sfx.boom();
+          } else {
+            ctx.impact();
+            ctx.sfx.hit();
+          }
+        });
+        ctx.at(at + T.beat - 150, () => {
+          actor.play("idle");
+          echo.play("idle");
+        });
+      });
+    }
+    ctx.at(T.title, () => {
+      ctx.on(card);
+      ctx.sfx.sting();
+      ctx.caption("FIND YOUR RHYTHM.");
+    });
+    return T.end;
+  },
+
+  // ARCADE: the next reflection. A silhouette walks out of the dark, the lights
+  // find it, and a dossier types out while the ladder shows how far you have come.
+  challenger(ctx) {
+    const { el, esc, reduced, context } = ctx;
+    const hero = ctx.fighter(context.player ?? 0);
+    const rival = ctx.fighter(context.opponent ?? 1);
+    const arena = ctx.arena(context.arena ?? 0);
+    const ladder = (context.fighters?.length ? context.fighters : [context.opponent ?? 1]).map(ctx.fighter);
+    const stage = Math.max(0, Math.min(ladder.length - 1, Number(context.stage) || 0));
+    const reflections = Math.max(1, ladder.length - 1);
+    let kit = null;
+    try {
+      kit = kitFor(rival);
+    } catch {}
+    const T = reduced ? { reveal: 400, dossier: 700, face: 2400, end: 5000 } : { walk: 300, reveal: 3000, dossier: 3500, pips: 4500, face: 6800, end: 10200 };
+    ctx.root.setAttribute("aria-label", `Challenger ${stage + 1} of ${ladder.length}: ${rival.name}`);
+    ctx.preload([arena.background, rival.motionSheet, rival.sheet, hero.portrait, rival.portrait]);
+
+    const shot = ctx.shot("cs-challenger-shot");
+    const cam = el("div", "cs-cam");
+    cam.append(ctx.arenaLayer(arena, "cs-dim"), el("div", "cs-red-floor"));
+    const beam = ctx.beam(cam, 64, "#fff1d6", "cs-spot");
+    const actor = ctx.actor(rival, reduced ? "idle" : "walk", { x: reduced ? 64 : 92, flip: true, cls: "cs-silhouette" });
+    actor.style.setProperty("--fighter-color", rival.color || "#ee5943");
+    cam.append(actor);
+    ctx.particles(cam, "dust", 22, ["#fff1d6", rival.color || "#ee5943"]);
+    const slug = slugLine(ctx, `STAGE ${pad2(stage + 1)} · ${arena.name}`, `CHALLENGER ${pad2(stage + 1)} OF ${pad2(ladder.length)}`);
+    const dossier = el(
+      "div",
+      "cs-dossier",
+      `<small>REFLECTION ${pad2(Math.min(stage + 1, reflections))} / ${pad2(reflections)}</small><h2>${esc(rival.name)}</h2><em>${esc(rival.title || "")}</em><dl><div><dt>STYLE</dt><dd>${esc(kit?.label || "UNKNOWN")}</dd></div><div><dt>SIGNATURE</dt><dd>${esc(rival.move || "—")}</dd></div><div><dt>POWER CLASS</dt><dd>${esc(kit?.powerClass || "—")}</dd></div></dl>`,
+    );
+    dossier.style.setProperty("--fighter-color", rival.color || "#ee5943");
+    const pips = el("ol", "cs-pips");
+    pips.setAttribute("aria-hidden", "true");
+    ladder.forEach((c, i) => {
+      const li = el("li", i < stage ? "cleared" : i === stage ? "current" : i === ladder.length - 1 ? "shadow" : "");
+      li.append(ctx.portrait(c, "cs-pip-art"));
+      pips.append(li);
+    });
+    shot.append(cam, slug, dossier, pips);
+    ctx.cut(shot);
+    ctx.bars("15vh");
+    ctx.cam(cam, { s: 1.2, x: -4 });
+    ctx.at(40, () => ctx.cam(cam, { s: 1.06, x: -2 }, T.end, "cubic-bezier(.3,0,.2,1)"));
+    ctx.at(100, () => {
+      ctx.on(slug);
+      ctx.type(slug.querySelector(".cs-typed"), slug.dataset.text, 34);
+      ctx.sfx.drone(T.end / 1000);
+      ctx.caption(stage === 1 ? "ONE DOWN." : `${stage} DOWN.`);
+    });
+    if (!reduced) {
+      ctx.at(T.walk, () => actor.moveTo(64, T.reveal - T.walk - 200, "cubic-bezier(.3,.1,.4,1)"));
+      ctx.at(1300, () => {
+        ctx.caption("SOMETHING ELSE WEARS YOUR FACE.");
+        ctx.sfx.heartbeat();
+      });
+      ctx.at(T.reveal - 200, () => actor.play("idle"));
+    }
+    ctx.at(T.reveal, () => {
+      actor.classList.add("revealed");
+      ctx.on(beam);
+      actor.play("victory");
+      ctx.flash(rival.color || "#fff");
+      ctx.impact();
+      ctx.flare(cam, 46, rival.color || "#ffd0a8", 64);
+      ctx.sfx.braam();
+      ctx.sfx.boom();
+      ctx.caption(`${rival.name}.`);
+    });
+    ctx.at(T.dossier, () => {
+      ctx.on(dossier);
+      ctx.sfx.tick();
+    });
+    ctx.at(T.pips ?? T.dossier + 200, () => {
+      ctx.on(pips);
+      ctx.caption(`${ladder.length - stage - 1} MORE BEFORE YOUR SHADOW.`);
+    });
+
+    // Face-off: two halves, eyes level.
+    const face = ctx.shot("cs-halves");
+    const half = (c, side) => {
+      const h = el("div", `cs-half side-${side}`);
+      h.style.setProperty("--fighter-color", c.color || "#ee5943");
+      h.append(ctx.portrait(c, "cs-ecu"));
+      face.append(h);
+      return h;
+    };
+    const hl = half(hero, "l"), hr = half(rival, "r");
+    face.append(el("div", "cs-halves-vs", "VS"));
+    ctx.at(T.face, () => {
+      ctx.cut(face, "cut");
+      ctx.bars("22vh");
+      ctx.on(hl);
+      ctx.at(reduced ? 0 : 180, () => ctx.on(hr));
+      ctx.shake();
+      ctx.sfx.hit();
+      ctx.sfx.sting();
+      ctx.caption(`${hero.name} VS ${rival.name}`);
+    });
+    return T.end;
+  },
+
+  // TOURNAMENT middle rounds: the losers' tiles crack and fall out of the wall,
+  // the survivors close ranks, and your path lights up gold.
+  round(ctx) {
+    const { el, esc, reduced, context } = ctx;
+    const me = ctx.fighter(context.player ?? 0);
+    const rival = ctx.fighter(context.opponent ?? 1);
+    const arena = ctx.arena(context.arena ?? 0);
+    const entrants = (context.fighters?.length ? context.fighters : [context.player ?? 0, context.opponent ?? 1]).map(ctx.fighter);
+    const out = new Set(
+      (context.eliminated ?? entrants.filter((c) => c.id !== me.id && c.id !== rival.id).slice(0, Math.floor(entrants.length / 2)))
+        .map(ctx.fighter)
+        .map((c) => c.id),
+    );
+    const name = String(context.roundName || "SEMIFINALS");
+    const remain = entrants.length - out.size;
+    const T = reduced ? { title: 700, face: 2000, end: 5000 } : { burn: 1300, gap: 220, close: 3300, title: 4200, face: 6400, clash: 8600, end: 10400 };
+    ctx.root.setAttribute("aria-label", `Tournament ${name.toLowerCase()}: ${me.name} versus ${rival.name}`);
+    ctx.preload([arena.background, me.sheet, rival.sheet, ...entrants.map((c) => c.portrait)]);
+
+    const shot = ctx.shot("cs-round-shot");
+    const back = el("div", "cs-cam");
+    back.append(ctx.arenaLayer(arena, "cs-blurred"), el("div", "cs-spots"));
+    const wall = el("div", "cs-wall");
+    const tiles = entrants.map((c) => {
+      const t = el("div", `cs-tile${c.id === me.id ? " you" : ""}${c.id === rival.id ? " next" : ""}`);
+      t.style.setProperty("--fighter-color", c.color || "#ee5943");
+      t.dataset.fighter = c.id;
+      t.append(ctx.portrait(c, "cs-seat-art"), el("span", "", esc(c.name)));
+      wall.append(t);
+      return t;
+    });
+    const card = ctx.title(`<span class="cs-eyebrow">${remain} REMAIN · ${esc(arena.name)}</span><h2>THE <em>${esc(name)}.</em></h2>`, "cs-card-title");
+    card.insertAdjacentHTML("afterbegin", CROWN_SVG);
+    shot.append(back, wall, card);
+    ctx.particles(shot, "ash", 30, ["#bdbdbd", "#8a8a8a", "#e8e2d4"]);
+    ctx.cut(shot);
+    ctx.cam(back, { s: 1.1 });
+    ctx.at(40, () => ctx.cam(back, { s: 1 }, T.end, "ease-out"));
+    ctx.at(100, () => {
+      ctx.on(wall);
+      ctx.caption(`${entrants.length} ENTERED.`);
+      ctx.sfx.drone(T.end / 1000);
+    });
+    const fallen = tiles.filter((t) => out.has(t.dataset.fighter));
+    if (reduced) fallen.forEach((t) => t.classList.add("out"));
+    else
+      fallen.forEach((t, i) =>
+        ctx.at(T.burn + i * T.gap, () => {
+          t.insertAdjacentHTML("beforeend", fracture(ctx, 50, 45, 6, 0.4));
+          t.classList.add("out");
+          ctx.sfx.thump();
+          if (i === 0) ctx.caption(`${out.size} FELL.`);
+        }),
+      );
+    ctx.at(T.close ?? 300, () => {
+      wall.classList.add("cs-closed");
+      ctx.sfx.whoosh();
+    });
+    ctx.at(T.title, () => {
+      ctx.on(card);
+      ctx.flash("#ffe8a3");
+      ctx.impact();
+      ctx.sfx.boom();
+      ctx.sfx.sting();
+      ctx.caption(`${remain} REMAIN. YOU ARE ONE OF THEM.`);
+    });
+
+    // The match: spotlights, guard, and the first exchange.
+    const face = ctx.shot("cs-final-shot");
+    const cam = el("div", "cs-cam");
+    cam.append(ctx.arenaLayer(arena, "cs-dim"));
+    const beamA = ctx.beam(cam, 30, "#fff1d6", "cs-spot");
+    const beamB = ctx.beam(cam, 70, "#fff1d6", "cs-spot");
+    const left = ctx.actor(me, "idle", { x: 30, cls: "cs-finalist" });
+    const right = ctx.actor(rival, "idle", { x: 70, flip: true, cls: "cs-finalist" });
+    cam.append(left, right);
+    ctx.particles(cam, "dust", 24, ["#ffe8a3", "#fff"]);
+    const plateA = ctx.nameplate(me, { side: "l", label: "YOU" });
+    const plateB = ctx.nameplate(rival, { side: "r", label: `${name} OPPONENT` });
+    face.append(cam, plateA, plateB);
+    ctx.at(T.face, () => {
+      ctx.cut(face, reduced ? "fade" : "whip-r");
+      ctx.bars("15vh");
+      ctx.cam(cam, { s: 1.14, y: 2 });
+      ctx.at(40, () => ctx.cam(cam, { s: 1.02 }, T.end - T.face, "ease-out"));
+      [beamA, left, plateA].forEach(ctx.on);
+      ctx.sfx.thump();
+      ctx.caption(`${me.name} VS ${rival.name}`);
+    });
+    ctx.at(T.face + (reduced ? 200 : 600), () => {
+      [beamB, right, plateB].forEach(ctx.on);
+      left.play("guard");
+      right.play("guard");
+      ctx.sfx.thump();
+    });
+    if (!reduced) {
+      ctx.at(T.clash - 400, () => {
+        left.play("sidekick", { fps: 8 });
+        right.play("uppercut", { fps: 8 });
+      });
+      ctx.at(T.clash, () => {
+        ctx.flash();
+        ctx.impact("red");
+        ctx.shake("hard");
+        ctx.shockwave(cam, 50, 58, "#ffe8a3");
+        ctx.particles(cam, "sparks", 30, ["#fff", "#ffe8a3", me.color || "#ee5943", rival.color || "#46e1df"]);
+        ctx.sfx.boom();
+        ctx.caption("ONE WIN FROM THE FINAL.");
+      });
+    }
+    return T.end;
+  },
+
+  // QUICK DUEL / VERSUS result: the finishing blow in slow motion, the world
+  // drains of colour except the winner, then the score slams in.
+  finish(ctx) {
+    const { el, esc, reduced, context } = ctx;
+    const p = ctx.fighter(context.player ?? 0);
+    const o = ctx.fighter(context.opponent ?? 1);
+    const arena = ctx.arena(context.arena ?? 0);
+    const local = context.mode === "local";
+    const won = context.winner !== "opponent";
+    const winner = won ? p : o, loser = won ? o : p;
+    const label = local ? (won ? "PLAYER ONE" : "PLAYER TWO") : won ? "YOU" : "YOUR OTHER SIDE";
+    const wr = Number(won ? context.playerRounds : context.opponentRounds);
+    const lr = Number(won ? context.opponentRounds : context.playerRounds);
+    const score = [Number.isFinite(wr) ? wr : 2, Number.isFinite(lr) ? lr : 0];
+    const quote = fighterQuote(winner);
+    const line = local ? "SAME CABINET. SAME SOUL." : won ? "ONE VERSION STRONGER." : "YOUR OTHER SIDE HAD THE EDGE.";
+    const T = reduced ? { title: 300, quote: 800, end: 5000 } : { swing: 200, hit: 1300, fall: 1500, pose: 3100, title: 3700, quote: 4700, end: 9400 };
+    ctx.root.setAttribute("aria-label", `${label} wins: ${winner.name} defeats ${loser.name}`);
+    ctx.preload([arena.background, winner.combatSheet, winner.motionSheet, loser.motionSheet]);
+
+    const shot = ctx.shot("cs-finish-shot");
+    const world = el("div", "cs-world cs-cam");
+    world.append(ctx.arenaLayer(arena));
+    const down = ctx.actor(loser, reduced ? "ko" : "guard", { x: reduced ? 70 : 58, flip: true, cls: "cs-down" });
+    world.append(down);
+    const hero = ctx.actor(winner, reduced ? "victory" : "idle", { x: reduced ? 34 : 42, cls: "cs-winner" });
+    const copy = el(
+      "div",
+      "cs-copy",
+      `<span class="cs-eyebrow">${esc(label)} ${label === "YOU" ? "WIN" : "WINS"} · ${esc(arena.name)}</span><div class="cs-score"><b>${score[0]}</b><i></i><b>${score[1]}</b></div><h2>${esc(winner.name)} <em>WINS.</em></h2><small>${esc(line)}</small><blockquote class="cs-quote"><p><span class="cs-sr">${esc(quote)}</span><span class="cs-typed" aria-hidden="true"></span></p><cite>— ${esc(winner.name)}</cite></blockquote>`,
+    );
+    shot.append(world, hero, copy);
+    ctx.cut(shot);
+    ctx.bars("15vh");
+    if (reduced) shot.classList.add("cs-desat");
+    else {
+      ctx.cam(world, { s: 1.34, x: -4, y: 4 });
+      ctx.at(T.swing, () => {
+        hero.play("power", { fps: 3 });
+        ctx.caption("THE LAST EXCHANGE.");
+        ctx.sfx.riser((T.hit - T.swing) / 1000);
+        ctx.cam(world, { s: 1.24, x: -2, y: 3 }, T.hit - T.swing, "linear");
+      });
+      ctx.at(T.hit, () => {
+        ctx.flash();
+        ctx.impact("red");
+        ctx.at(110, () => ctx.impact());
+        ctx.shake("hard");
+        ctx.shockwave(world, 54, 58, winner.color || "#fff");
+        ctx.flare(world, 56, winner.color || "#ffd9a8");
+        ctx.particles(world, "sparks", 36, ["#fff", "#ffe8a3", winner.color || "#ee5943"]);
+        ctx.sfx.boom();
+        ctx.sfx.hit();
+        down.play("hurt", { fps: 5 });
+        ctx.cam(world, { s: 1.04, x: 0, y: 1 }, T.pose - T.hit + 600, "cubic-bezier(.2,.7,.2,1)");
+      });
+      ctx.at(T.fall, () => {
+        shot.classList.add("cs-desat");
+        down.play("ko", { fps: 3 });
+        down.moveTo(74, 1500, "cubic-bezier(.1,.7,.3,1)");
+      });
+      ctx.at(T.pose, () => {
+        hero.play("victory");
+        hero.moveTo(34, 700, "ease-out");
+        ctx.sfx.heartbeat();
+      });
+    }
+    ctx.at(T.title, () => {
+      ctx.on(copy);
+      ctx.sfx.braam();
+      ctx.sfx.sting();
+      ctx.caption(`${score[0]} ROUNDS TO ${score[1]}.`);
+    });
+    ctx.at(T.quote, () => {
+      copy.classList.add("cs-quoted");
+      ctx.type(copy.querySelector(".cs-typed"), `“${quote}”`, 30);
+    });
     return T.end;
   },
 };

@@ -2680,8 +2680,8 @@ body.cutscene-open { overflow: hidden; }
   --cs-bar: 11vh; --cs-ground: 14vh; --cs-size: min(84vh, 112vw);
 }
 .cs-stage { position: absolute; inset: 0; overflow: hidden; }
-.cs-shot { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .28s ease, visibility 0s .28s; }
-.cs-shot.on { opacity: 1; visibility: visible; transition: opacity .28s ease; }
+.cs-shot { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s .45s; }
+.cs-shot.on { opacity: 1; visibility: visible; transition: opacity .45s ease; }
 .cs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* letterbox, caption, skip, progress, flash */
@@ -2757,15 +2757,15 @@ body.cutscene-open { overflow: hidden; }
 .cs-mirror.broken > .cs-glass, .cs-mirror.broken > .cs-sheen, .cs-mirror.broken > .cs-crack { opacity: 0; }
 .cs-shards { position: absolute; inset: 0; }
 .cs-shards { perspective: 900px; }
-.cs-shard { position: absolute; inset: 0; animation: cs-shard 1.9s cubic-bezier(.15,.6,.25,1) var(--delay, 0ms) forwards; }
+.cs-shard { position: absolute; inset: 0; animation: cs-shard 2.8s cubic-bezier(.15,.6,.25,1) var(--delay, 0ms) forwards; }
 .cs-shard::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, #ffffff38, transparent 50%); }
 .cs-crack { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: visible; }
 .cs-crack path { fill: none; stroke: #f4fbff; stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: bevel; filter: drop-shadow(0 0 3px #9fe8ff); stroke-dasharray: 1; stroke-dashoffset: 1; animation: cs-draw .45s ease-out forwards; }
 .cs-montage.from-right .cs-shot-name { text-align: right; }
 .cs-shot-name { position: absolute; left: 4vw; right: 4vw; top: calc(var(--cs-bar) + 3vh); z-index: 1; font-family: var(--display, Impact, sans-serif); line-height: .9; }
-.cs-shot-name span { display: block; font-size: clamp(40px, 11vw, 150px); color: transparent; -webkit-text-stroke: 2px #eee9d9cc; animation: cs-drift 1s linear forwards; }
+.cs-shot-name span { display: block; font-size: clamp(40px, 11vw, 150px); color: transparent; -webkit-text-stroke: 2px #eee9d9cc; animation: cs-drift 1.6s linear forwards; }
 .cs-shot-name small { display: block; font: 700 clamp(10px, 1.6vw, 15px) "Space Mono", monospace; letter-spacing: .3em; color: var(--red, #ee5943); margin-top: 1vh; }
-.cs-pose { transform-origin: 50% 90%; animation: cs-pose-zoom .9s ease-out forwards; }
+.cs-pose { transform-origin: 50% 90%; animation: cs-pose-zoom 1.4s ease-out forwards; }
 .cs-mirror-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; translate: -1px 0; background: linear-gradient(180deg, transparent, #bff4ff 30%, #bff4ff 70%, transparent); box-shadow: 0 0 24px 6px #46e1df66; animation: cs-pulse 1.4s ease-in-out infinite; }
 .cs-faceoff .cs-arena { filter: brightness(.55) saturate(1.2); }
 .cs-logo-shot { background: radial-gradient(circle at 50% 50%, #3a1712, #05060a 65%); }
@@ -3029,11 +3029,128 @@ body.cutscene-open { overflow: hidden; }
 .cs-crown-drop .cs-crown { width: clamp(60px, 9vw, 130px); animation: cs-bob 2s ease-in-out infinite alternate; }
 .cs-clashed .cs-arena { filter: brightness(.6) saturate(1.3); }
 
+/* location slug (duel, challenger) */
+.cs-slug { position: absolute; z-index: 4; left: 4vw; top: calc(var(--cs-bar) + 3vh); opacity: 0; transition: opacity .6s ease; border-left: 3px solid var(--red, #ee5943); padding: .6vh 0 .6vh 1.2vw; }
+.cs-slug.on { opacity: 1; }
+.cs-slug strong { display: block; min-height: 1.3em; font-size: clamp(11px, 1.6vw, 17px); letter-spacing: .26em; color: #eee9d9; }
+.cs-slug small { display: block; margin-top: .6vh; font-size: clamp(9px, 1.05vw, 12px); letter-spacing: .32em; color: #9a9b97; }
+
+/* extreme close-ups: a portrait blown up to the eyes, seen through scope bars */
+.cs-ecu { position: absolute; inset: -6%; background-repeat: no-repeat; background-size: max(130vw, 170vh) auto; background-position: 50% 30%; image-rendering: pixelated; }
+.cs-eyeline, .cs-half { background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--fighter-color) 26%, #0b0f1c), #05060a 70%); }
+.cs-eyeline .cs-ecu { filter: contrast(1.15) saturate(1.1); }
+.cs-eyeline.side-r .cs-ecu { transform: scaleX(-1); filter: contrast(1.2) saturate(.9) sepia(.2) hue-rotate(-12deg); }
+.cs-eyeline::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, #000c, transparent 28%, transparent 72%, #000c); }
+.cs-eyeline-tag { position: absolute; z-index: 2; left: 5vw; bottom: calc(var(--cs-bar) + 1.2vh); font-family: var(--display, Impact, sans-serif); line-height: .9; }
+.cs-eyeline.side-r .cs-eyeline-tag { left: auto; right: 5vw; text-align: right; }
+.cs-eyeline-tag small { display: block; font: 700 clamp(9px, 1.1vw, 12px) "Space Mono", monospace; letter-spacing: .3em; color: var(--fighter-color); }
+.cs-eyeline-tag strong { display: block; font-weight: 400; font-size: clamp(26px, 5vw, 70px); color: #eee9d9; }
+.cs-card-center { top: 50%; translate: 0 -50%; }
+.cs-matchcard { background: #05060a; }
+.cs-matchcard .cs-arena { filter: blur(6px) brightness(.28) saturate(1.2); }
+.cs-matchcard .cs-card-title h2 { font-size: clamp(30px, 6.4vw, 96px); }
+
+/* versus split screen */
+.cs-split { position: absolute; top: 0; bottom: 0; width: 62%; overflow: hidden; opacity: 0; transition: opacity .4s ease, translate .7s cubic-bezier(.2,.9,.2,1); }
+.cs-split.side-l { left: 0; clip-path: polygon(0 0, 100% 0, 62% 100%, 0 100%); translate: -30% 0; }
+.cs-split.side-r { right: 0; clip-path: polygon(38% 0, 100% 0, 100% 100%, 0 100%); translate: 30% 0; }
+.cs-split.on { opacity: 1; translate: 0 0; }
+.cs-split .cs-arena { filter: brightness(.5) saturate(1.2); }
+.cs-split-tint { position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--fighter-color) 30%, transparent), transparent 55%, color-mix(in srgb, var(--fighter-color) 22%, transparent)); mix-blend-mode: screen; }
+.cs-bignum { position: absolute; top: 12%; font-family: var(--display, Impact, sans-serif); font-size: clamp(140px, 34vw, 480px); line-height: .8; color: transparent; -webkit-text-stroke: 2px color-mix(in srgb, var(--fighter-color) 70%, transparent); opacity: .5; }
+.cs-split.side-l .cs-bignum { left: 4%; } .cs-split.side-r .cs-bignum { right: 4%; }
+.cs-split .cs-actor { --cs-size: min(74vh, 70vw); }
+.cs-split-tag { position: absolute; z-index: 2; bottom: calc(var(--cs-bar) + 2vh); font-family: var(--display, Impact, sans-serif); line-height: .95; }
+.cs-split.side-l .cs-split-tag { left: 5%; } .cs-split.side-r .cs-split-tag { right: 5%; text-align: right; }
+.cs-split-tag small, .cs-split-tag span { display: block; font: 700 clamp(9px, 1.1vw, 12px) "Space Mono", monospace; letter-spacing: .28em; }
+.cs-split-tag small { color: var(--fighter-color); } .cs-split-tag span { color: #9a9b97; margin-top: .6vh; }
+.cs-split-tag strong { display: block; font-weight: 400; font-size: clamp(24px, 4.4vw, 62px); }
+.cs-seam { position: absolute; z-index: 3; inset: 0; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.cs-seam.on { opacity: 1; }
+.cs-seam > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.cs-seam line { stroke: #fff; stroke-width: 3; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 18px #ffe8a3); }
+
+/* training */
+.cs-grid-floor { position: absolute; left: -50%; right: -50%; bottom: 0; height: 40%; transform: perspective(40vh) rotateX(62deg); transform-origin: 50% 100%; background: repeating-linear-gradient(90deg, #9fe8ff22 0 1px, transparent 1px 8vw), repeating-linear-gradient(0deg, #9fe8ff1a 0 1px, transparent 1px 6vh); -webkit-mask-image: linear-gradient(0deg, #000, transparent); mask-image: linear-gradient(0deg, #000, transparent); }
+.cs-echo .cs-sprite { filter: grayscale(.6) brightness(1.3) sepia(.3) hue-rotate(150deg) drop-shadow(0 0 12px #46e1df); opacity: .45; }
+.cs-hud { position: absolute; z-index: 4; left: 4vw; top: calc(var(--cs-bar) + 3vh); min-width: min(38vw, 360px); padding: 1.2vh 1.2vw; border: 1px solid #9fe8ff44; background: #05101acc; opacity: 0; transition: opacity .5s ease; }
+.cs-hud.on { opacity: 1; }
+.cs-hud small, .cs-hud em, .cs-rec { display: block; font-style: normal; font-size: clamp(9px, 1vw, 11px); letter-spacing: .28em; color: #9fe8ff; }
+.cs-hud strong { display: block; margin: .6vh 0; font-family: var(--display, Impact, sans-serif); font-weight: 400; font-size: clamp(20px, 3.2vw, 44px); line-height: 1; color: #eee9d9; }
+.cs-hud em { color: #6d7e86; }
+.cs-rec { margin-bottom: .8vh; color: #ee5943; }
+.cs-rec i { display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: #ee5943; animation: cs-blink 1.2s steps(1) infinite; }
+.cs-hud-hit strong { animation: cs-hud-hit .45s cubic-bezier(.2,1.4,.4,1); }
+
+/* arcade challenger */
+.cs-silhouette .cs-sprite { filter: brightness(0) drop-shadow(1px 0 0 color-mix(in srgb, var(--fighter-color) 80%, #fff)) drop-shadow(0 0 18px color-mix(in srgb, var(--fighter-color) 40%, transparent)); transition: filter .9s ease; }
+.cs-silhouette.revealed .cs-sprite { filter: drop-shadow(0 0 18px color-mix(in srgb, var(--fighter-color) 60%, transparent)); }
+.cs-dossier { position: absolute; z-index: 4; left: 5vw; top: 50%; translate: 0 -40%; width: min(40vw, 460px); opacity: 0; visibility: hidden; }
+.cs-dossier.on { opacity: 1; visibility: visible; }
+.cs-dossier > * { opacity: 0; translate: -3vw 0; transition: opacity .4s ease, translate .6s cubic-bezier(.2,.9,.2,1); }
+.cs-dossier.on > * { opacity: 1; translate: 0 0; }
+.cs-dossier.on > :nth-child(2) { transition-delay: .12s; } .cs-dossier.on > :nth-child(3) { transition-delay: .24s; } .cs-dossier.on > :nth-child(4) { transition-delay: .4s; }
+.cs-dossier small { display: block; font-size: clamp(9px, 1.1vw, 12px); letter-spacing: .3em; color: var(--fighter-color); }
+.cs-dossier h2 { margin: .15em 0 0; font-family: var(--display, Impact, sans-serif); font-weight: 400; font-size: clamp(38px, 7vw, 104px); line-height: .88; text-shadow: -2px 0 #ff2a4a99, 2px 0 #2ae8ff99, 0 4px 0 #000a; }
+.cs-dossier > em { display: block; font-style: normal; font-size: clamp(10px, 1.3vw, 14px); letter-spacing: .24em; color: #b9b8b1; }
+.cs-dossier dl { margin: 2.4vh 0 0; display: grid; gap: .8vh; border-top: 1px solid #ffffff26; padding-top: 1.6vh; }
+.cs-dossier dl div { display: flex; justify-content: space-between; gap: 2vw; }
+.cs-dossier dt { font-size: clamp(9px, 1vw, 11px); letter-spacing: .28em; color: #9a9b97; }
+.cs-dossier dd { margin: 0; font-size: clamp(10px, 1.2vw, 13px); letter-spacing: .14em; text-align: right; }
+.cs-pips { position: absolute; z-index: 4; left: 50%; bottom: calc(var(--cs-bar) + 2vh); translate: -50% 0; display: flex; gap: .7vw; margin: 0; padding: 0; list-style: none; opacity: 0; transition: opacity .5s ease; }
+.cs-pips.on { opacity: 1; }
+.cs-pips li { position: relative; width: clamp(22px, 3.2vw, 44px); aspect-ratio: 1; overflow: hidden; border: 1px solid #ffffff33; background: #000a; }
+.cs-pip-art { position: absolute; inset: 0; background: 50% 30% / 220% auto no-repeat; image-rendering: pixelated; }
+.cs-pips li.cleared .cs-pip-art { filter: grayscale(1) brightness(.45); }
+.cs-pips li.cleared::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 46%, #ee5943 47% 53%, transparent 54%); }
+.cs-pips li.current { border-color: #ffe8a3; box-shadow: 0 0 14px #ffe8a366; animation: cs-pulse 1s ease-in-out infinite; }
+.cs-pips li.shadow { border-color: #ee5943; }
+.cs-pips li.shadow .cs-pip-art { filter: brightness(0) drop-shadow(0 0 4px #ee5943); }
+.cs-halves { background: #05060a; }
+.cs-half { position: absolute; top: 0; bottom: 0; width: 50%; overflow: hidden; opacity: 0; transition: opacity .2s ease, translate .5s cubic-bezier(.2,.9,.2,1); }
+.cs-half.side-l { left: 0; translate: -12vw 0; } .cs-half.side-r { right: 0; translate: 12vw 0; }
+.cs-half.on { opacity: 1; translate: 0 0; }
+.cs-half .cs-ecu { background-size: max(110vw, 150vh) auto; background-position: 50% 34%; }
+.cs-half.side-r .cs-ecu { transform: scaleX(-1); }
+.cs-half::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, color-mix(in srgb, var(--fighter-color) 35%, transparent), transparent 50%); mix-blend-mode: screen; }
+.cs-halves-vs { position: absolute; z-index: 2; left: 50%; top: 50%; translate: -50% -50%; font-family: "MVM Pixel", var(--display, Impact, sans-serif); font-size: clamp(48px, 9vw, 130px); color: var(--red, #ee5943); text-shadow: -3px 0 #2ae8ff, 3px 0 #ff2a4a, 0 0 40px #ee5943; }
+
+/* tournament middle rounds */
+.cs-wall { position: absolute; left: 50%; top: 56%; translate: -50% -50%; width: min(86vw, 1100px); display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2vw; opacity: 0; transition: opacity .6s ease; }
+.cs-wall.on { opacity: 1; }
+.cs-tile { position: relative; aspect-ratio: 5 / 4; overflow: hidden; border-bottom: 4px solid var(--fighter-color); background: linear-gradient(180deg, color-mix(in srgb, var(--fighter-color) 30%, #0000), #000a); transition: opacity .8s ease, translate 1s cubic-bezier(.5,0,.8,.4), filter .4s ease, box-shadow .5s ease; }
+.cs-tile .cs-seat-art { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; background-size: 130% auto; background-position: 50% 26%; }
+.cs-tile > span { position: absolute; left: 6%; bottom: 5%; font-family: var(--display, Impact, sans-serif); font-size: clamp(12px, 1.8vw, 24px); text-shadow: 0 2px 0 #000; }
+.cs-tile.out { filter: grayscale(1) brightness(.4); translate: 0 60vh; opacity: 0; }
+.cs-tile .cs-crack path { stroke: #fff; }
+.cs-closed .cs-tile.you, .cs-closed .cs-tile.next { box-shadow: 0 0 0 2px #ffe8a3, 0 0 34px #ffe8a366; }
+.cs-closed .cs-tile:not(.you):not(.next):not(.out) { filter: brightness(.55); }
+.cs-closed .cs-tile.out { display: none; }
+.cs-closed .cs-tile:not(.out) { animation: cs-slam .5s cubic-bezier(.2,1.2,.4,1) both; }
+
+/* duel / versus result */
+.cs-score { display: flex; align-items: center; gap: 1.6vw; margin: 1vh 0 .4vh; font-family: "MVM Pixel", var(--display, Impact, sans-serif); font-size: clamp(48px, 8vw, 120px); line-height: .9; color: #eee9d9; }
+.cs-score b { font-weight: 400; } .cs-score b:first-child { color: #ffe8a3; text-shadow: 0 0 30px #ffd25766; }
+.cs-score i { width: clamp(20px, 3vw, 44px); height: 4px; background: var(--red, #ee5943); }
+.cs-finish-shot .cs-down .cs-sprite { filter: grayscale(.6) brightness(.7); }
+.cs-finish-shot.cs-desat .cs-world { filter: grayscale(1) brightness(.5) contrast(1.15); }
+
+@keyframes cs-hud-hit { 0% { translate: -2vw 0; opacity: 0; color: #9fe8ff; } 100% { translate: 0 0; opacity: 1; } }
+
+@media (max-aspect-ratio: 1/1) {
+  .cs-dossier { top: calc(var(--cs-bar) + 12vh); translate: 0 0; width: 80vw; }
+  .cs-wall { grid-template-columns: repeat(2, 1fr); width: 70vw; }
+  .cs-split-tag strong { font-size: clamp(18px, 5.6vw, 28px); }
+  .cs-split-tag span { display: none; }
+  .cs-hud { min-width: 0; right: 4vw; }
+}
+
 /* reduced motion keeps the new layers still */
 .cs-reduced .cs-grain, .cs-reduced .cs-particles, .cs-reduced .cs-shock, .cs-reduced .cs-flare { display: none; }
 .cs-reduced .cs-l { opacity: 1; }
 .cs-reduced .cs-logo-rule { width: min(60vw, 720px); }
 .cs-reduced .cs-cast.risen { transform: none; }
+.cs-reduced .cs-split, .cs-reduced .cs-half, .cs-reduced .cs-dossier > * { translate: 0 0; }
 
 @media (max-aspect-ratio: 1/1) {
   .cs-nameplate { max-width: 70vw; bottom: calc(var(--cs-bar) + 1.5vh); }
