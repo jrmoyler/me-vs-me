@@ -48,6 +48,9 @@ const contexts = {
   tournament: { fighters: ['hataalii', 'urban', 'gauntlet', 'tote', 'vector', 'kinetic', 'glyph', 'zenith'], arena: 'the-foundry', mode: 'tournament' },
   victory: { player: 5, opponent: 19, fighters: [1, 2, 3], arena: 4, mode: 'arcade' },
   defeat: { player: 0, opponent: 7, arena: 'neon-avenue', mode: 'arcade' },
+  shadow: { player: 6, opponent: 6, fighters: [1, 2, 3, 6], arena: 'null-vault', mode: 'arcade' },
+  bonus: { player: 2, arena: 5, mode: 'arcade' },
+  final: { player: 9, opponent: 14, fighters: [9, 14, 1, 2, 3, 4, 5, 6], arena: 'glasshouse', mode: 'tournament' },
 };
 // The art each kind must visibly use: fighter sheets and the arena background.
 const expectedArt = {
@@ -56,7 +59,12 @@ const expectedArt = {
   tournament: ['hataalii', 'urban', 'gauntlet', 'tote', 'vector', 'kinetic', 'glyph', 'zenith'].map((id) => characters.find((c) => c.id === id).portrait).concat(arenas[3].background),
   victory: [characters[5].motionSheet, arenas[4].background, characters[19].motionSheet],
   defeat: [characters[0].motionSheet, characters[7].combatSheet, arenas[0].background],
+  shadow: [characters[6].sheet, arenas.find((a) => a.id === 'null-vault').background],
+  bonus: [characters[2].motionSheet, arenas[5].background],
+  final: [characters[9].sheet, characters[14].sheet, arenas.find((a) => a.id === 'glasshouse').background],
 };
+// The intro is the studio-style cold open and may run longer than the in-game scenes.
+const maxLength = (kind) => (kind === 'intro' ? 20000 : 10000);
 
 for (const kind of CUTSCENE_KINDS) {
   test(`${kind} cutscene renders real art, skips on Escape and cleans up`, async () => {
@@ -76,7 +84,7 @@ for (const kind of CUTSCENE_KINDS) {
     for (const url of expectedArt[kind]) assert.ok(css.includes(url), `${kind} uses ${url}`);
     assert.ok(root.querySelector('.cs-sprite, .cs-seat-art'), 'animated fighter art present');
     const duration = parseFloat(root.style.getPropertyValue('--cs-duration'));
-    assert.ok(duration >= 5000 && duration <= 10000, `${kind} runs 5-10 s (got ${duration})`);
+    assert.ok(duration >= 5000 && duration <= maxLength(kind), `${kind} runs 5-${maxLength(kind) / 1000} s (got ${duration})`);
     // Keys never leak to the game underneath while the scene plays.
     document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     assert.deepEqual(outsideKeys, []);
@@ -100,11 +108,12 @@ for (const kind of CUTSCENE_KINDS) {
       const root = body.querySelector('.cutscene');
       assert.equal(root.classList.contains('cs-reduced'), reducedMotion);
       lengths[reducedMotion] = parseFloat(root.style.getPropertyValue('--cs-duration'));
-      let flashed = false, shook = false;
-      for (let t = 0; t < 11000; t += 50) {
+      let flashed = false, shook = false, impacted = false;
+      for (let t = 0; t < lengths[reducedMotion] + 1000; t += 50) {
         c.advance(50);
         flashed ||= Boolean(root.querySelector('.cs-flash.go'));
         shook ||= root.classList.contains('cs-shake') || root.classList.contains('cs-shake-hard');
+        impacted ||= root.classList.contains('cs-impact') || root.classList.contains('cs-impact-red');
       }
       assert.deepEqual(await done, { kind, skipped: false });
       assert.equal(body.querySelector('.cutscene'), null);
@@ -113,6 +122,10 @@ for (const kind of CUTSCENE_KINDS) {
         assert.equal(flashed, false, 'no flashes with reduced motion');
         assert.equal(shook, false, 'no shake with reduced motion');
         assert.equal(root.querySelectorAll('.cs-confetti').length, 0, 'no particles with reduced motion');
+        assert.equal(root.querySelectorAll('.cs-particles, .cs-shock, .cs-flare').length, 0, 'no weather, shockwaves or flares with reduced motion');
+        assert.equal(impacted, false, 'no impact frames with reduced motion');
+      } else {
+        assert.ok(flashed || shook || impacted, `${kind} has at least one hit beat`);
       }
     }
     assert.ok(lengths.true < lengths.false, 'reduced motion shortens the scene');
@@ -231,7 +244,7 @@ function app(saved = {}) {
   };
 }
 
-test('main.js plays INTRO before the title, LADDER before the first arcade fight, VICTORY at the end', async () => {
+test('main.js plays INTRO before the title, LADDER before the first arcade fight, BONUS before each bonus, SHADOW before the final, VICTORY at the end', async () => {
   const h = app({ 'mvm-onboarded': true });
   assert.equal(h.calls[0].kind, 'intro');
   await h.flush();
@@ -248,13 +261,19 @@ test('main.js plays INTRO before the title, LADDER before the first arcade fight
     await h.flush();
     if (/ARCADE COMPLETE/.test(h.document.body.textContent)) break;
     h.click('[data-action="next-stage"]');
+    await h.flush();
     if (h.screen() === 'bonus') h.finishBonus();
     await h.flush();
     h.click('[data-action="fight"]');
+    await h.flush();
     await h.launch();
   }
-  assert.deepEqual(h.calls.map((c) => c.kind), ['intro', 'ladder', 'victory']);
-  assert.equal(h.calls[2].ctx.mode, 'arcade');
+  const bonuses = Math.floor((ladder - 1) / 3);
+  assert.deepEqual(h.calls.map((c) => c.kind), ['intro', 'ladder', ...Array(bonuses).fill('bonus'), 'shadow', 'victory']);
+  assert.equal(h.calls.at(-1).ctx.mode, 'arcade');
+  const shadow = h.calls.at(-2).ctx;
+  assert.equal(shadow.player, shadow.opponent, 'the shadow is your own fighter');
+  assert.ok(h.calls.filter((c) => c.kind === 'bonus').every((c) => c.ctx.player === shadow.player));
   assert.match(h.document.body.textContent, /ARCADE COMPLETE/);
   assert.equal(JSON.parse(h.window.localStorage.getItem('mvm-record')).wins, ladder, 'records counted once');
 });
@@ -284,7 +303,7 @@ async function enterTournament(h) {
   assert.equal(h.screen(), 'bracket');
 }
 
-test('main.js plays TOURNAMENT with the eight drawn entrants, then VICTORY for the champion', async () => {
+test('main.js plays TOURNAMENT with the eight drawn entrants, FINAL before the last match, then VICTORY for the champion', async () => {
   const h = app({ 'mvm-onboarded': true });
   await enterTournament(h);
   const intro = h.calls.at(-1);
@@ -294,13 +313,16 @@ test('main.js plays TOURNAMENT with the eight drawn entrants, then VICTORY for t
   assert.ok(intro.ctx.fighters.includes(intro.ctx.player));
   for (let round = 0; round < 3; round++) {
     h.click('[data-action="fight"]');
+    await h.flush();
     await h.launch();
     h.end('player');
     await h.flush();
     if (round < 2) { h.click('[data-action="tournament-bracket"]'); await h.flush(); }
   }
-  assert.deepEqual(h.calls.map((c) => c.kind), ['intro', 'tournament', 'victory']);
+  assert.deepEqual(h.calls.map((c) => c.kind), ['intro', 'tournament', 'final', 'victory']);
   assert.equal(h.calls[2].ctx.mode, 'tournament');
+  assert.equal(h.calls[2].ctx.player, intro.ctx.player);
+  assert.equal(h.calls[3].ctx.mode, 'tournament');
 });
 
 test('main.js plays DEFEAT with tournament wording when the player is eliminated', async () => {
