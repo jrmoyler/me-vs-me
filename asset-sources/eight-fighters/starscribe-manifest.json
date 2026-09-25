@@ -1,0 +1,64 @@
+{
+  "id": "starscribe",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 148,
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "sourceCrop": "Four-column atlas with adaptive gutter cuts; effects crossing frame boundaries may be clipped.",
+  "lowKickSource": "Initial 4x4 atlas poses 3,2,7,1",
+  "sources": {
+    "combat": {
+      "file": "starscribe-combat.png",
+      "sha256": "2ab6d251adce021c362b4dc24187026b9382f8f7ade6c7289818a1b9b635239d"
+    },
+    "motion": {
+      "file": "starscribe-motion.png",
+      "sha256": "6ca6ba66ca0673d19391bb2158233eb5d8e6e50a377ffe47b04403d4f16c31aa"
+    },
+    "initial": {
+      "file": "starscribe-initial.png",
+      "sha256": "dde6b6b5dba1b102404c49339ced1bc369a08fd155ce518cfc1a1c6f7a048e53"
+    }
+  }
+}

@@ -334,6 +334,15 @@ export const POWERS = {
     duration: 0.92,
     projectileSpeed: 540,
   },
+
+  patchrunner: { variant: 1, style: "circuitcascade", damage: 24, reach: 164, start: 0.35, active: 0.2, duration: 0.94, travel: 118 },
+  starscribe: { variant: 3, style: "orbitcollapse", damage: 22, reach: 278, start: 0.42, active: 0.23, duration: 0.99, projectileSpeed: 560 },
+  sovereign: { variant: 1, style: "royalgambit", damage: 27, reach: 145, start: 0.43, active: 0.2, duration: 1.04, travel: 85 },
+  circuitbreaker: { variant: 3, style: "systemoverride", damage: 21, reach: 285, start: 0.39, active: 0.22, duration: 0.96, projectileSpeed: 575 },
+  ironchef: { variant: 0, style: "infernoplatter", damage: 23, reach: 223, start: 0.4, active: 0.22, duration: 0.98, travel: 48 },
+  eventhorizon: { variant: 3, style: "singularitydrive", damage: 24, reach: 290, start: 0.44, active: 0.25, duration: 1.05, projectileSpeed: 520 },
+  crimsonoracle: { variant: 0, style: "bloodmoonseal", damage: 25, reach: 235, start: 0.41, active: 0.23, duration: 1.02, travel: 32 },
+  dunevoyager: { variant: 1, style: "sandstormbreak", damage: 23, reach: 158, start: 0.38, active: 0.22, duration: 0.96, travel: 104 },
 };
 
 export function moveFrame(move) {
@@ -447,6 +456,15 @@ export const KITS = {
   gaia: "balanced",
   sketch: "balanced",
   student: "balanced",
+
+  patchrunner: "rushdown",
+  starscribe: "zoner",
+  sovereign: "grappler-lite",
+  circuitbreaker: "zoner",
+  ironchef: "balanced",
+  eventhorizon: "zoner",
+  crimsonoracle: "counter",
+  dunevoyager: "rushdown",
 };
 // Data-only modifiers; combat-rules clamps them so the cancel tree still holds.
 export const KIT_MODS = {

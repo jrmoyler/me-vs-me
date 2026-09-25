@@ -1,0 +1,64 @@
+{
+  "id": "patchrunner",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 176,
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "sourceCrop": "Four-column atlas with adaptive gutter cuts; effects crossing frame boundaries may be clipped.",
+  "lowKickSource": "Initial 4x4 atlas poses 3,2,7,1",
+  "sources": {
+    "combat": {
+      "file": "patchrunner-combat.png",
+      "sha256": "5f1416cda30f3f467492b359472fdbd1bcb90384d500dd13e474a4f2bf56a6f8"
+    },
+    "motion": {
+      "file": "patchrunner-motion.png",
+      "sha256": "2a70c3db9584873b2dc0a2664c337eac75cbff3fe347debd8a74256fb86b6bce"
+    },
+    "initial": {
+      "file": "patchrunner-initial.png",
+      "sha256": "cbdf1ddee08e9ef7ff8a36e16021864ab66b6a46bf5380f0398529697515075d"
+    }
+  }
+}

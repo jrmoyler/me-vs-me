@@ -313,6 +313,88 @@ export function paintPower(g, f, time, reducedMotion) {
       }
       break;
     }
+    // Eight-fighter pack. New styles only; the previous painters are unchanged.
+    case "circuitcascade": {
+      const gap = x + face * (40 + r * 0.4);
+      g.lineBetween(x + face * 20, y + 10, gap - face * 28, y + 10);
+      g.lineBetween(gap - face * 28, y + 10, gap - face * 8, y - 22);
+      g.lineBetween(gap - face * 8, y - 22, gap + face * 18, y + 18);
+      g.lineBetween(gap + face * 18, y + 18, gap + face * 46, y - 6);
+      g.fillStyle(0xffd27a, strength);
+      g.fillCircle(gap + face * 46, y - 6, 5);
+      break;
+    }
+    case "orbitcollapse": {
+      const core = x + face * (58 + r * 0.2);
+      for (let i = 0; i < 3; i++) g.strokeCircle(core, y, 18 + i * 16);
+      g.fillStyle(0xdfe4ff, strength);
+      g.fillCircle(core, y, 6);
+      for (let i = 0; i < 4; i++) {
+        const a = i * 1.57;
+        g.fillStyle(0x9ba8ff, strength);
+        g.fillRect(core + Math.cos(a) * 28 - 3, y + Math.sin(a) * 28 - 3, 6, 6);
+      }
+      break;
+    }
+    case "royalgambit": {
+      const board = x + face * 70;
+      g.strokeRect(board - 28, y - 28, 56, 56);
+      g.fillStyle(0xfff1c2, strength);
+      g.fillRect(board - 18, y - 8, 12, 22);
+      g.fillStyle(0xeac35e, strength);
+      g.fillTriangle(board + 4, y - 22, board - 6, y + 4, board + 16, y + 4);
+      g.lineBetween(x + face * 24, y, board - face * 30, y);
+      break;
+    }
+    case "systemoverride": {
+      const term = x + face * (50 + r * 0.15);
+      g.strokeRect(term - 36, y - 22, 72, 44);
+      g.lineBetween(term - 24, y - 6, term - 12, y + 6);
+      g.lineBetween(term - 12, y + 6, term + 2, y - 10);
+      g.fillStyle(0x58ea88, strength);
+      g.fillRect(term + 10, y - 4, 14, 8);
+      break;
+    }
+    case "infernoplatter": {
+      const pan = x + face * 64;
+      g.strokeEllipse(pan, y + 8, 70, 22);
+      g.lineBetween(pan + face * 28, y + 8, pan + face * (48 + r * 0.2), y + 8);
+      for (let i = -2; i <= 2; i++) g.lineBetween(pan + i * 8, y + 4, pan + i * 10, y - 18 - Math.abs(i) * 4);
+      g.fillStyle(0xff7a2a, strength);
+      g.fillCircle(pan, y - 6, 7);
+      break;
+    }
+    case "singularitydrive": {
+      const well = x + face * (72 + r * 0.25);
+      g.strokeEllipse(well, y, 90, 28);
+      g.strokeEllipse(well, y, 40, 70);
+      g.fillStyle(0x1a1030, Math.min(1, strength * 0.9));
+      g.fillCircle(well, y, 8);
+      g.lineBetween(x + face * 28, y, well - face * 46, y);
+      break;
+    }
+    case "bloodmoonseal": {
+      const seal = x + face * 68;
+      g.strokeCircle(seal, y, 34);
+      g.strokeCircle(seal, y, 18);
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3;
+        g.lineBetween(seal + Math.cos(a) * 18, y + Math.sin(a) * 18, seal + Math.cos(a) * 34, y + Math.sin(a) * 34);
+      }
+      g.fillStyle(0xf34d65, strength);
+      g.fillCircle(seal, y, 5);
+      break;
+    }
+    case "sandstormbreak": {
+      const dune = x + face * (36 + r * 0.15);
+      for (let i = 0; i < 5; i++) {
+        const yy = y - 20 + i * 10;
+        g.lineBetween(dune - face * (10 + i * 6), yy, dune + face * (30 + i * 14), yy - 4);
+      }
+      g.fillStyle(0xe6c48a, strength);
+      g.fillEllipse(dune + face * 20, f.y - 12, 48, 14);
+      break;
+    }
     case "crown":
       g.beginPath();
       g.moveTo(x - 65, y);
@@ -439,6 +521,31 @@ export function paintProjectile(g, shot, time = 0) {
       g.strokeEllipse(x, y, 16, 44);
       g.fillStyle(0xf1dbff, 0.95);
       g.fillCircle(x, y, 7);
+      return;
+    case "orbitcollapse":
+      g.lineStyle(2, color, 0.9);
+      g.strokeCircle(x, y, 22);
+      g.strokeCircle(x, y, 10);
+      for (let i = 0; i < 3; i++) {
+        const a = time * 5 + i * 2.1;
+        g.fillStyle(0xe7ebff, 0.95);
+        g.fillRect(x + Math.cos(a) * 16 - 2, y + Math.sin(a) * 16 - 2, 4, 4);
+      }
+      return;
+    case "systemoverride":
+      g.lineStyle(2, 0x58ea88, 0.95);
+      g.strokeRect(x - 16, y - 10, 32, 20);
+      g.fillStyle(color, 0.85);
+      g.fillRect(x - 8, y - 3, 16, 6);
+      g.lineBetween(x - face * 28, y, x - 16, y);
+      return;
+    case "singularitydrive":
+      g.lineStyle(2, color, 0.9);
+      g.strokeEllipse(x, y, 52, 16);
+      g.fillStyle(0x120818, 0.95);
+      g.fillCircle(x, y, 7);
+      g.lineBetween(x - face * 30, y - 8, x - face * 8, y);
+      g.lineBetween(x - face * 30, y + 8, x - face * 8, y);
       return;
     default:
       g.fillStyle(color, 0.18);

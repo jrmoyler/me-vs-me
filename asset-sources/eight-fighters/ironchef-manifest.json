@@ -1,0 +1,64 @@
+{
+  "id": "ironchef",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 172,
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "sourceCrop": "Four-column atlas with adaptive gutter cuts; effects crossing frame boundaries may be clipped.",
+  "lowKickSource": "Initial 4x4 atlas poses 3,2,7,1",
+  "sources": {
+    "combat": {
+      "file": "ironchef-combat.png",
+      "sha256": "2fffb858bf6d30ce8644435e6f1be1ab30d702deb544de42ae0f4d5366cbc478"
+    },
+    "motion": {
+      "file": "ironchef-motion.png",
+      "sha256": "db9ba01ffa6b9a566fa88e5b8a50f4640fa41abf9407dca5a4aa2d1d568b21d5"
+    },
+    "initial": {
+      "file": "ironchef-initial.png",
+      "sha256": "edbca87da619246d9f61890c4b93fef6a04fbbe1be0de5e8098124f39aa3b3f6"
+    }
+  }
+}
