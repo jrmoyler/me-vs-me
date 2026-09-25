@@ -1,0 +1,60 @@
+{
+  "id": "dunevoyager",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 176,
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "sourceCrop": "Four-column atlas with adaptive gutter cuts; effects crossing frame boundaries may be clipped.",
+  "lowKickSource": "combat row 4",
+  "sources": {
+    "combat": {
+      "file": "dunevoyager-combat.png",
+      "sha256": "470ac1398e4c11d1e7fc31d7fd8ad17012951a645e146ead2a4c2a5614efede9"
+    },
+    "motion": {
+      "file": "dunevoyager-motion.png",
+      "sha256": "8fe613b18988a146345d182a3e8261480ee2880c3a1bf9b0ddbe445d3cc67c09"
+    }
+  }
+}

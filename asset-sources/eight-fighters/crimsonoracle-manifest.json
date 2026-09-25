@@ -1,0 +1,60 @@
+{
+  "id": "crimsonoracle",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 157,
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "sourceCrop": "Four-column atlas with adaptive gutter cuts; effects crossing frame boundaries may be clipped.",
+  "lowKickSource": "combat row 4",
+  "sources": {
+    "combat": {
+      "file": "crimsonoracle-combat.png",
+      "sha256": "164494a5640c2c880414886ddb1c49cd8881367b7be7b12d8ac13e7f6ce17bb6"
+    },
+    "motion": {
+      "file": "crimsonoracle-motion.png",
+      "sha256": "c05ef7fdadbc6f8e256e4be3a6a76ceea49966c1db0cfb816a28e5683add1e06"
+    }
+  }
+}

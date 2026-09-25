@@ -8,7 +8,7 @@ Each sheet is 5120×320 pixels: sixteen horizontal 320×320 frames. Frame zero i
 
 The five arena SVGs are original game backgrounds created for this implementation. They are not screenshots or extracted artwork from the linked reference video. Reference-video fidelity requires direct visual comparison; this asset pipeline does not establish that claim.
 
-Run `node --test tests/assets.test.mjs` to verify roster and arena counts, path availability, distinct identities, PNG dimensions, stats, transparency margins, and grounded bounds for every ready-sheet, combat and motion frame (27 fighters × 16 + 28 + 24). The test uses only Node built-ins and decodes the PNG alpha channel to inspect actual frame bounds.
+Run `node --test tests/assets.test.mjs` to verify roster and arena counts, path availability, distinct identities, PNG dimensions, stats, transparency margins, and grounded bounds for every ready-sheet, combat and motion frame (35 fighters × 16 + 28 + 24). The test uses only Node built-ins and decodes the PNG alpha channel to inspect actual frame bounds.
 
 ## Combat edition — September 20, 2026
 
@@ -111,3 +111,20 @@ Names, titles, stats, quotes and POWER profiles are game interpretations of the 
 **Effects.** Each new POWER has its own painter in `src/stage-effects.js`. Projectile POWERs now also travel as their own shape through `paintProjectile` (arrows, fireball, pages, and matching shapes for Ion Burst, Mirror Shatter, Pulse Relay and Apex Pulse) instead of one shared orb; hit detection is unchanged.
 
 These are stylized generated illustrations; art direction acceptance is a human review, separate from the automated structural checks.
+
+## Eight-fighter pack — September 25, 2026
+
+Eight more fighters bring the roster to 35. They were supplied already packed (`Me-vs-Me-Eight-Playable-Fighters.zip`) in the same export format: a 1280×2240 combat atlas, a 1280×1920 motion atlas, a 5120×320 ready sheet and a 320×320 portrait each, on 320×320 cells with feet at y=296. The previous twenty-seven fighters, their art, order, ids, stats and POWER profiles are unchanged; the new eight are appended as roster slots 28–35.
+
+| ID | Name | Power | Role |
+|---|---|---|---|
+| patchrunner | PATCHRUNNER | Circuit Cascade | Rushdown |
+| starscribe | STAR SCRIBE | Orbit Collapse | Zoner / projectile |
+| sovereign | SOVEREIGN | Royal Gambit | Grappler-lite |
+| circuitbreaker | CIRCUIT BREAKER | System Override | Zoner / projectile |
+| ironchef | IRON CHEF | Inferno Platter | Balanced |
+| eventhorizon | EVENT HORIZON | Singularity Drive | Zoner / projectile |
+| crimsonoracle | CRIMSON ORACLE | Blood Moon Seal | Counter |
+| dunevoyager | DUNE VOYAGER | Sandstorm Break | Rushdown |
+
+Shorter packed bodies (starscribe 148, sovereign 136, ironchef 172, eventhorizon 172, crimsonoracle 157) use `bodyHeight` from `asset-sources/eight-fighters/{id}-manifest.json`. The per-move GIFs and source sheets stay out of the repo, same as the earlier expansions. Each new POWER has its own painter; the three projectile styles travel as their own shapes.

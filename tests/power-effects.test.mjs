@@ -55,7 +55,7 @@ function shot(character, face, time = 0) {
 }
 test('each projectile POWER travels as its own shape in both directions', () => {
   const projectile = characters.filter(c => POWERS[c.id].variant === 3);
-  assert.deepEqual(projectile.map(c => c.id), ['gauntlet', 'pixel', 'nexus', 'zenith', 'archer', 'nomad', 'student']);
+  assert.deepEqual(projectile.map(c => c.id), ['gauntlet', 'pixel', 'nexus', 'zenith', 'archer', 'nomad', 'student', 'starscribe', 'circuitbreaker', 'eventhorizon']);
   const shapes = projectile.map(c => JSON.stringify(shot(c, 1, 0.4)));
   assert.equal(new Set(shapes).size, projectile.length);
   for (const c of projectile) {

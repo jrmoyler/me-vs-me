@@ -1,0 +1,64 @@
+{
+  "id": "circuitbreaker",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 176,
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "sourceCrop": "Four-column atlas with adaptive gutter cuts; effects crossing frame boundaries may be clipped.",
+  "lowKickSource": "Initial 4x4 atlas poses 3,2,7,1",
+  "sources": {
+    "combat": {
+      "file": "circuitbreaker-combat.png",
+      "sha256": "d35980762d8fb3311da25198598eab613094411622219cd808a83703b614d924"
+    },
+    "motion": {
+      "file": "circuitbreaker-motion.png",
+      "sha256": "5d9867212d74c8c9ed34127ffc0f8e85469119bffe57ceeec09b75afff837abe"
+    },
+    "initial": {
+      "file": "circuitbreaker-initial.png",
+      "sha256": "b8c0aa9798b80b28a56e435a7e4eae064d6674c220ec0d212fd6c62154d53f78"
+    }
+  }
+}

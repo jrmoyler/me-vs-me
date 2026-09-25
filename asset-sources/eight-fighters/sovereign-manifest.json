@@ -1,0 +1,64 @@
+{
+  "id": "sovereign",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 136,
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "sourceCrop": "Four-column atlas with adaptive gutter cuts; effects crossing frame boundaries may be clipped.",
+  "lowKickSource": "Initial 4x4 atlas poses 3,2,7,1",
+  "sources": {
+    "combat": {
+      "file": "sovereign-combat.png",
+      "sha256": "27e1c2c7ab2c3f99af1cf76f0598795b9bf74986b62c09359e56dd4a745aa434"
+    },
+    "motion": {
+      "file": "sovereign-motion.png",
+      "sha256": "4f015f7138f69f5e37a0d2ea7bc65c0a5d9a0571875e2f1ed3af16438e9f2d9a"
+    },
+    "initial": {
+      "file": "sovereign-initial.png",
+      "sha256": "7c1b7ec4bf63c730cd01a79f239f635c49c3e2006b756fc77a7b6d4b298b8f5b"
+    }
+  }
+}

@@ -359,5 +359,14 @@ export const characters = [
     bodyHeight: 143,
     motionBodyHeight: 156, // motion atlas was packed under eon in the supplied export
   }),
+  // Eight-fighter photo-reference pack.
+  fighter({ id: "patchrunner", name: "PATCHRUNNER", title: "The Fixer", color: "#ffa933", description: "Black vest, amber circuits, and a charge that jumps the gap.", move: "Circuit Cascade", quote: "Every system has an opening.", speed: 9, power: 7, reach: 8, bodyHeight: 176 }),
+  fighter({ id: "starscribe", name: "STAR SCRIBE", title: "The Astral", color: "#9ba8ff", description: "Star-draped robe and orbiting staff.", move: "Orbit Collapse", quote: "I wrote this outcome in the stars.", speed: 6, power: 8, reach: 10, bodyHeight: 148 }),
+  fighter({ id: "sovereign", name: "SOVEREIGN", title: "The Crown", color: "#eac35e", description: "Fur-trimmed mantle and a royal gambit.", move: "Royal Gambit", quote: "Your next move is already mine.", speed: 6, power: 10, reach: 7, bodyHeight: 136 }),
+  fighter({ id: "circuitbreaker", name: "CIRCUIT BREAKER", title: "The Hacker", color: "#58ea88", description: "Circuit boards and a green systems breach.", move: "System Override", quote: "Access granted. Control revoked.", speed: 8, power: 7, reach: 9, bodyHeight: 176 }),
+  fighter({ id: "ironchef", name: "IRON CHEF", title: "The Flame", color: "#f6a347", description: "Navy chef coat and a searing signature dish.", move: "Inferno Platter", quote: "The heat was always intentional.", speed: 7, power: 8, reach: 8, bodyHeight: 172 }),
+  fighter({ id: "eventhorizon", name: "EVENT HORIZON", title: "The Explorer", color: "#b792ff", description: "Violet spacesuit and a pocket gravity well.", move: "Singularity Drive", quote: "You crossed the point of no return.", speed: 5, power: 9, reach: 10, bodyHeight: 172 }),
+  fighter({ id: "crimsonoracle", name: "CRIMSON ORACLE", title: "The Seer", color: "#f34d65", description: "Red runes and a sealed fate.", move: "Blood Moon Seal", quote: "I saw you coming.", speed: 7, power: 9, reach: 8, bodyHeight: 157 }),
+  fighter({ id: "dunevoyager", name: "DUNE VOYAGER", title: "The Pathfinder", color: "#dca35f", description: "Expedition gear and a spiral of desert sand.", move: "Sandstorm Break", quote: "The desert keeps its own score.", speed: 8, power: 7, reach: 9, bodyHeight: 176 }),
 ];
 export default characters;

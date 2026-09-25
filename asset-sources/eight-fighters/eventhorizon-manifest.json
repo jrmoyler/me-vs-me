@@ -1,0 +1,60 @@
+{
+  "id": "eventhorizon",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 172,
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "sourceCrop": "Four-column atlas with adaptive gutter cuts; effects crossing frame boundaries may be clipped.",
+  "lowKickSource": "combat row 4",
+  "sources": {
+    "combat": {
+      "file": "eventhorizon-combat.png",
+      "sha256": "67e6580cfe5d05f5dcfe7d7f17828fdd7e6b20600b0df8f929223962d35eae44"
+    },
+    "motion": {
+      "file": "eventhorizon-motion.png",
+      "sha256": "feeba25cf410ab19ceedb0b560c30f7ad61a92ba3998fa42d4bb367c95a593d7"
+    }
+  }
+}
