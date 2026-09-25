@@ -2735,14 +2735,14 @@ body.cutscene-open { overflow: hidden; }
 /* fighters: frames are 320px squares with feet at 296px (see combat.js) */
 .cs-actor {
   position: absolute; bottom: var(--cs-ground); width: var(--cs-size); height: var(--cs-size); translate: -50% 7.5%;
-  transition: left var(--walk, 0ms) linear, opacity .6s ease, filter .6s ease; pointer-events: none;
+  transition: left var(--walk, 0ms) var(--walk-ease, linear), opacity .6s ease, filter .6s ease; pointer-events: none;
 }
 .cs-actor::before { content: ""; position: absolute; left: 38%; right: 38%; bottom: 6.2%; height: 3%; border-radius: 50%; background: #000; opacity: .45; filter: blur(3px); }
 .cs-sprite { position: absolute; inset: 0; background-repeat: no-repeat; image-rendering: pixelated; transform: scaleX(var(--flip, 1)); }
 .cs-reflection .cs-sprite { filter: grayscale(.55) brightness(1.2) sepia(.25) hue-rotate(150deg) drop-shadow(0 0 14px #46e1df); opacity: .8; }
-.cs-shadow { opacity: 0; transition: opacity 1.1s ease; }
-.cs-shadow.on { opacity: .95; }
-.cs-shadow .cs-sprite { filter: brightness(0) drop-shadow(0 0 6px #ee5943) drop-shadow(0 0 26px #ee594399); }
+.cs-shade { opacity: 0; transition: opacity 1.1s ease; }
+.cs-shade.on { opacity: .95; }
+.cs-shade .cs-sprite { filter: brightness(0) drop-shadow(0 0 6px #ee5943) drop-shadow(0 0 26px #ee594399); }
 .cs-fallen { opacity: .6; filter: grayscale(.7) brightness(.6); }
 .cs-hero .cs-sprite, .cs-champ .cs-sprite, .cs-winner .cs-sprite { filter: drop-shadow(0 0 16px color-mix(in srgb, var(--fighter-color) 55%, transparent)); }
 
@@ -2756,7 +2756,8 @@ body.cutscene-open { overflow: hidden; }
 .cs-mirror.broken { outline-color: transparent; box-shadow: none; transition: outline-color .4s, box-shadow .4s; }
 .cs-mirror.broken > .cs-glass, .cs-mirror.broken > .cs-sheen, .cs-mirror.broken > .cs-crack { opacity: 0; }
 .cs-shards { position: absolute; inset: 0; }
-.cs-shard { position: absolute; inset: 0; animation: cs-shard 1.25s cubic-bezier(.2,.7,.3,1) var(--delay, 0ms) forwards; }
+.cs-shards { perspective: 900px; }
+.cs-shard { position: absolute; inset: 0; animation: cs-shard 1.9s cubic-bezier(.15,.6,.25,1) var(--delay, 0ms) forwards; }
 .cs-shard::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, #ffffff38, transparent 50%); }
 .cs-crack { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: visible; }
 .cs-crack path { fill: none; stroke: #f4fbff; stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: bevel; filter: drop-shadow(0 0 3px #9fe8ff); stroke-dasharray: 1; stroke-dashoffset: 1; animation: cs-draw .45s ease-out forwards; }
@@ -2787,9 +2788,9 @@ body.cutscene-open { overflow: hidden; }
 .cs-card-title { position: absolute; left: 4vw; right: 4vw; top: calc(var(--cs-bar) + 3vh); text-align: center; }
 .cs-card-title h2 { font-size: clamp(34px, 6vw, 88px); }
 .cs-center h2, .cs-copy h2, .cs-card-title h2 { margin: .3em 0; font-family: var(--display, Impact, sans-serif); font-weight: 400; line-height: .88; text-shadow: 0 4px 0 #000a; }
-.cs-center h2, .cs-copy h2 { font-size: clamp(38px, 7.5vw, 104px); }
+.cs-center h2, .cs-copy h2 { font-size: clamp(34px, 6.4vw, 92px); }
 .cs-center h2 { font-size: clamp(26px, 4vw, 64px); }
-.cs-eyebrow { display: block; font-weight: 700; font-size: clamp(10px, 1.4vw, 13px); letter-spacing: .28em; color: #ffe8a3; }
+.cs-eyebrow { text-transform: uppercase; display: block; font-weight: 700; font-size: clamp(10px, 1.4vw, 13px); letter-spacing: .28em; color: #ffe8a3; }
 .cs-card-title small, .cs-center small, .cs-copy small { font-weight: 700; font-size: clamp(10px, 1.3vw, 13px); letter-spacing: .22em; color: #9a9b97; }
 
 /* tournament bracket */
@@ -2845,7 +2846,7 @@ body.cutscene-open { overflow: hidden; }
   .cutscene { --cs-bar: 9vh; --cs-ground: 12vh; --cs-size: min(62vh, 108vw); }
   .cs-copy { left: 6vw; right: 6vw; width: auto; top: calc(var(--cs-bar) + 2vh); translate: none; }
   .cs-actor.cs-champ { left: 50% !important; }
-  .cs-actor.cs-shadow { left: 80% !important; }
+  .cs-actor.cs-shade { left: 80% !important; }
   .cs-rays.cs-gold { left: 50%; top: 62%; }
   .cs-card-title { max-width: none; right: 6vw; }
   .cs-rung { left: calc(30% + var(--i) * 3.4%); bottom: calc(30% + var(--i) * 2.6%); }
@@ -2868,11 +2869,244 @@ body.cutscene-open { overflow: hidden; }
 @keyframes cs-sweep { from { background-position: 120% 0; } to { background-position: -40% 0; } }
 @keyframes cs-speed { from { background-position: 0 0; } to { background-position: 0 5vh; } }
 @keyframes cs-draw { to { stroke-dashoffset: 0; } }
-@keyframes cs-shard { 0% { transform: none; opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(.9); opacity: 0; } }
+@keyframes cs-shard { 0% { transform: none; opacity: 1; filter: brightness(1); } 12% { filter: brightness(1.8); } 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) rotateX(var(--rx, 0deg)) scale(.9); opacity: 0; filter: brightness(.8); } }
 @keyframes cs-drift { from { translate: -3vw 0; } to { translate: 3vw 0; } }
 @keyframes cs-pose-zoom { from { scale: 1.25; } to { scale: 1.05; } }
 @keyframes cs-pulse { 50% { opacity: .55; } }
 @keyframes cs-slam { 0% { opacity: 0; scale: 2.2; } 60% { opacity: 1; scale: .96; } 100% { opacity: 1; scale: 1; } }
 @keyframes cs-flicker { 0%, 100% { opacity: calc(.72 - var(--i) * .024); } 50% { opacity: calc(.2 - var(--i) * .006); } }
 @keyframes cs-fall { 0% { opacity: 1; transform: translate(0, 0) rotate(0deg) rotateX(0deg); } 100% { opacity: 1; transform: translate(var(--drift), 112vh) rotate(var(--r)) rotateX(720deg); } }
+/* ---- cinematic toolkit: film, camera, impact, weather, lower thirds ---- */
+.cs-film { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.cs-grain {
+  position: absolute; inset: -50%; opacity: .085; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  animation: cs-grain .5s steps(5) infinite;
+}
+.cs-vig { position: absolute; inset: 0; background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, #000a 100%); }
+.cs-fadeout .cs-stage, .cs-fadeout .cs-caption { opacity: 0; transition: opacity .4s ease-in; }
+.cs-cam { position: absolute; inset: 0; transform-origin: 50% 60%; will-change: transform; }
+.cs-shot.cs-in-cut { transition: none; }
+.cs-shot.on.cs-in-whip-l { animation: cs-whip-l .3s cubic-bezier(.2,.8,.2,1) both; }
+.cs-shot.on.cs-in-whip-r { animation: cs-whip-r .3s cubic-bezier(.2,.8,.2,1) both; }
+.cs-shot.on.cs-in-zoom { animation: cs-in-zoom .6s cubic-bezier(.2,.8,.2,1) both; }
+.cs-impact .cs-stage { filter: invert(1) grayscale(1) contrast(2.6); }
+.cs-impact-red .cs-stage { filter: grayscale(1) contrast(3) sepia(1) hue-rotate(-38deg) saturate(7) brightness(.85); }
+.cs-shock {
+  position: absolute; z-index: 3; width: 4vmin; height: 4vmin; translate: -50% -50%; border-radius: 50%; pointer-events: none;
+  border: 1.2vmin solid var(--c, #fff); box-shadow: 0 0 30px var(--c, #fff), inset 0 0 20px var(--c, #fff);
+  animation: cs-shock .7s cubic-bezier(.1,.7,.3,1) forwards;
+}
+.cs-flare {
+  position: absolute; z-index: 3; width: 160vw; height: 1.4vh; translate: -50% -50%; pointer-events: none; mix-blend-mode: screen;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, #fff 0 4%, var(--c) 12%, transparent 70%);
+  filter: blur(1px); animation: cs-flare 1.1s ease-out forwards;
+}
+.cs-flare::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22vmin; height: 22vmin; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, #fffc 0, var(--c) 18%, transparent 62%); }
+.cs-beam {
+  position: absolute; top: -12%; width: 46vmin; height: 118%; translate: -50% 0; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 55%, transparent), color-mix(in srgb, var(--c) 14%, transparent) 70%, transparent);
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%); filter: blur(10px); opacity: .5;
+}
+.cs-beam-soft { opacity: .28; }
+.cs-beam-flicker { animation: cs-light-flicker 2.3s steps(1) infinite; }
+.cs-beam-gold, .cs-spot { opacity: 0; transition: opacity .5s ease; }
+.cs-beam-gold.on { opacity: .55; } .cs-spot.on { opacity: .62; }
+.cs-particles { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+.cs-particles i { position: absolute; left: var(--x); top: var(--y); width: calc(.5vmin * var(--s)); height: calc(.5vmin * var(--s)); min-width: 2px; min-height: 2px; border-radius: 50%; background: var(--c); }
+.cs-p-dust i { opacity: .5; filter: blur(.5px); animation: cs-dust var(--d) var(--delay) ease-in-out infinite alternate; }
+.cs-p-embers i { top: 104%; box-shadow: 0 0 8px var(--c); animation: cs-ember var(--d) var(--delay) linear infinite; }
+.cs-p-ash i { top: -4%; border-radius: 1px; opacity: .7; animation: cs-ash calc(var(--d) * 1.6) var(--delay) linear infinite; }
+.cs-p-petals i { top: -6%; width: calc(1.2vmin * var(--s)); height: calc(.7vmin * var(--s)); border-radius: 80% 0 80% 0; opacity: .9; animation: cs-petal calc(var(--d) * 1.2) var(--delay) linear infinite; }
+.cs-p-sparks i { left: 50%; top: 58%; width: calc(.35vmin * var(--s)); height: calc(2.4vmin * var(--s)); border-radius: 2px; rotate: var(--a); box-shadow: 0 0 10px var(--c); opacity: 0; animation: cs-spark var(--d) var(--delay) cubic-bezier(.1,.8,.3,1) forwards; }
+.cs-nameplate {
+  position: absolute; z-index: 4; bottom: calc(var(--cs-bar) + 3vh); max-width: 42vw; padding: 1.2vh 1.6vw 1.4vh 2vw;
+  background: linear-gradient(90deg, #000d, #0000); opacity: 0; transition: opacity .3s ease, translate .45s cubic-bezier(.2,1.2,.3,1);
+}
+.cs-nameplate.side-l { left: 4vw; translate: -6vw 0; }
+.cs-nameplate.side-r { right: 4vw; text-align: right; translate: 6vw 0; padding: 1.2vh 2vw 1.4vh 1.6vw; background: linear-gradient(270deg, #000d, #0000); }
+.cs-nameplate.on { opacity: 1; translate: 0 0; }
+.cs-np-bar { position: absolute; top: 0; bottom: 0; width: .6vmin; min-width: 4px; background: var(--fighter-color); box-shadow: 0 0 18px var(--fighter-color); }
+.side-l .cs-np-bar { left: 0; } .side-r .cs-np-bar { right: 0; }
+.cs-nameplate small { display: block; font-size: clamp(9px, 1.1vw, 12px); letter-spacing: .3em; color: var(--fighter-color); }
+.cs-nameplate strong { display: block; font-family: var(--display, Impact, sans-serif); font-weight: 400; font-size: clamp(26px, 4.6vw, 64px); line-height: .95; letter-spacing: .02em; }
+.cs-nameplate span { display: block; font-size: clamp(9px, 1.05vw, 12px); letter-spacing: .2em; color: #b9b8b1; }
+.cs-chroma, .cs-title.on h2 { text-shadow: -2px 0 #ff2a4a99, 2px 0 #2ae8ff99, 0 4px 0 #000a; }
+
+/* intro acts */
+.cs-ident-shot { background: #000; }
+.cs-ident { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 1.6vh; text-align: center; opacity: 0; transition: opacity 1s ease, letter-spacing 1.6s ease-out; letter-spacing: .2em; }
+.cs-ident.on { opacity: 1; letter-spacing: .34em; }
+.cs-ident small { font-size: clamp(11px, 1.5vw, 16px); color: #b9b8b1; letter-spacing: inherit; }
+.cs-ident small b { color: var(--red, #ee5943); font-weight: 400; }
+.cs-ident span { font-size: clamp(9px, 1vw, 11px); color: #6d6e6a; letter-spacing: .6em; }
+.cs-ident-rule { display: block; width: 0; height: 1px; background: linear-gradient(90deg, transparent, #ee5943, transparent); transition: width 1.4s ease-out .2s; }
+.cs-ident.on .cs-ident-rule { width: min(40vw, 380px); }
+.cs-leak { position: absolute; inset: -20%; background: radial-gradient(ellipse 30% 45% at 20% 30%, #ee594322, transparent 70%), radial-gradient(ellipse 35% 30% at 80% 75%, #46e1df1a, transparent 70%); animation: cs-leak 4s ease-in-out infinite alternate; }
+.cs-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(180deg, transparent, #0b1424 60%); }
+.cs-floor::after { content: ""; position: absolute; left: 25%; right: 25%; top: 20%; height: 30%; background: radial-gradient(ellipse at 50% 0, #9fe8ff22, transparent 70%); }
+.cs-onlooker .cs-sprite { filter: brightness(.55) drop-shadow(0 0 10px #9fe8ff55); }
+.cs-onlooker { opacity: .95; }
+.cs-eyes { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse 30% 22% at 50% 34%, #ee594355, transparent 70%); mix-blend-mode: screen; transition: opacity .6s ease; }
+.cs-mirror.cs-stir { box-shadow: 0 0 0 14px #1a1410, 0 0 110px #ee594355; }
+.cs-mirror.cs-stir .cs-eyes { opacity: 1; animation: cs-pulse .9s ease-in-out infinite; }
+.cs-mirror.cs-stir .cs-glass { animation: cs-glass-stir 1.2s ease-in-out forwards; }
+.cs-parallax { inset: -8%; }
+.cs-slash {
+  position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: .8;
+  background: linear-gradient(100deg, transparent 38%, color-mix(in srgb, var(--fighter-color) 70%, transparent) 38.5% 46%, transparent 46.5%);
+  animation: cs-slash-in .45s cubic-bezier(.2,.8,.2,1) both;
+}
+.cs-montage.from-r .cs-slash { transform: scaleX(-1); }
+.cs-montage .cs-arena { filter: saturate(1.25) contrast(1.1) brightness(.8); }
+.cs-dash .cs-sprite { filter: drop-shadow(-24px 0 0 #ffffff22) drop-shadow(-48px 0 0 #ffffff12); }
+.cs-tri-shot { background: #05060a; }
+.cs-tri-panel {
+  position: absolute; top: 0; bottom: 0; width: 44%; overflow: hidden; opacity: 0; translate: 0 -12vh;
+  transition: opacity .2s ease, translate .38s cubic-bezier(.2,1.3,.4,1); border-left: 3px solid var(--fighter-color);
+}
+.cs-tri-panel.p0 { left: -4%; clip-path: polygon(10% 0, 100% 0, 80% 100%, 0 100%); }
+.cs-tri-panel.p1 { left: 28%; clip-path: polygon(20% 0, 100% 0, 80% 100%, 0 100%); translate: 0 12vh; }
+.cs-tri-panel.p2 { left: 60%; clip-path: polygon(20% 0, 100% 0, 100% 100%, 0 100%); }
+.cs-tri-panel.on { opacity: 1; translate: 0 0; }
+.cs-tri-panel .cs-arena { filter: brightness(.6) saturate(1.3); }
+.cs-tri-actor { --cs-size: min(70vh, 60vw); }
+.cs-tri-name { position: absolute; left: 24%; right: 20%; bottom: calc(var(--cs-bar) + 2vh); text-align: center; }
+.cs-tri-name strong { display: block; font-family: var(--display, Impact, sans-serif); font-weight: 400; font-size: clamp(16px, 2.6vw, 36px); line-height: 1; }
+.cs-tri-name small { font-size: clamp(8px, 1vw, 11px); letter-spacing: .24em; color: var(--fighter-color); }
+.cs-aura { position: absolute; bottom: var(--cs-ground); width: 40vmin; height: 60vmin; translate: -50% 0; border-radius: 50%; opacity: 0; filter: blur(30px); transition: opacity .8s ease; pointer-events: none; }
+.cs-aura-l { left: 28%; background: radial-gradient(ellipse at 50% 70%, #ee5943aa, transparent 70%); }
+.cs-aura-r { left: 72%; background: radial-gradient(ellipse at 50% 70%, #46e1dfaa, transparent 70%); }
+.cs-charge .cs-aura { opacity: 1; animation: cs-pulse .35s ease-in-out infinite; }
+.cs-charge .cs-arena { filter: brightness(.3) saturate(1.4); transition: filter .8s ease; }
+.cs-clashed .cs-aura { left: 50%; opacity: 0; transition: opacity .9s ease, left .2s; }
+.cs-logo-row { display: flex; align-items: center; justify-content: center; gap: 2vw; }
+.cs-l { display: inline-block; opacity: 0; }
+.cs-l-me, .cs-l-me2 { font-family: var(--display, Impact, sans-serif); font-size: clamp(64px, 16vw, 220px); line-height: .85; color: #eee9d9; text-shadow: 0 .06em 0 #ee5943, 0 0 60px #ee594366; }
+.cs-l-me2 { transform: scaleX(-1); color: #d8f7ff; text-shadow: 0 .06em 0 #1d8fa0, 0 0 60px #46e1df66; }
+.cs-l-vs { font-style: normal; font-family: "MVM Pixel", var(--display, Impact, sans-serif); font-size: clamp(52px, 11vw, 150px); color: var(--red, #ee5943); text-shadow: -3px 0 #2ae8ff, 3px 0 #ff2a4a, 0 0 40px #ee5943; }
+.m1 .cs-l-me { opacity: 1; animation: cs-slam-l .42s cubic-bezier(.2,1.4,.4,1) both; }
+.m2 .cs-l-me2 { opacity: 1; animation: cs-slam-r .42s cubic-bezier(.2,1.4,.4,1) both; }
+.vs .cs-l-vs { opacity: 1; animation: cs-slam .5s cubic-bezier(.2,1.6,.4,1) both, cs-chroma 2.2s steps(1) .5s infinite; }
+.cs-logo-rule { display: block; justify-self: center; width: 0; height: 3px; margin: 2.4vh auto 0; background: linear-gradient(90deg, transparent, #ee5943, #ffe8a3, #46e1df, transparent); transition: width .9s cubic-bezier(.2,.8,.2,1); }
+.sub .cs-logo-rule { width: min(60vw, 720px); }
+.cs-logo-wrap .cs-logo-sub { min-height: 1.4em; }
+
+/* shadow final */
+.cs-dim { filter: brightness(.38) saturate(.8); }
+.cs-flickering .cs-dim { animation: cs-light-flicker 2.3s steps(1) infinite; }
+.cs-red-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: radial-gradient(ellipse 60% 70% at 50% 100%, #ee594333, transparent 70%); }
+.cs-cast { transform-origin: 50% 92.5%; transform: scaleY(-.26) skewX(52deg); opacity: .8; transition: transform 1.1s cubic-bezier(.5,0,.2,1), left var(--walk, 0ms) var(--walk-ease, linear), opacity .6s; }
+.cs-cast .cs-sprite { filter: brightness(0) blur(1px); }
+.cs-cast.risen { transform: none; opacity: .96; }
+.cs-cast.awake .cs-sprite { filter: brightness(0) drop-shadow(0 0 6px #ee5943) drop-shadow(0 0 28px #ee5943aa); }
+
+/* bonus */
+.cs-crystal {
+  position: absolute; left: 70%; bottom: calc(var(--cs-ground) + 2vh); width: min(24vh, 30vw); height: min(44vh, 56vw); translate: -50% 0;
+  background: linear-gradient(120deg, #f6ffff, #55d6e8 38%, #214c80 39%, #84edf5 65%, #164675 66%);
+  clip-path: polygon(50% 0, 95% 20%, 100% 77%, 50% 100%, 0 77%, 5% 20%); filter: drop-shadow(0 0 16px #72f4ff);
+  animation: cs-hover 2.4s ease-in-out infinite alternate;
+}
+.cs-crystal .cs-crack path { stroke: #09203f; filter: none; stroke-width: 2.2; }
+.cs-count {
+  position: absolute; z-index: 4; left: 50%; top: 50%; translate: -50% -50%; opacity: 0; pointer-events: none;
+  font-family: "MVM Pixel", var(--display, Impact, sans-serif); font-size: clamp(80px, 20vw, 260px); color: #ffe8a3;
+  text-shadow: 6px 6px 0 #b83c31, 0 0 50px #ffd25788;
+}
+.cs-count.go { animation: cs-count .52s cubic-bezier(.2,1.4,.4,1) forwards; }
+.cs-count.cs-break { color: #fff; font-size: clamp(60px, 13vw, 180px); animation-duration: 1.6s; }
+
+/* tournament final + bracket extras */
+.cs-spots { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; background: conic-gradient(from 160deg at 20% -10%, transparent 0 8deg, #ffe8a322 10deg 18deg, transparent 20deg), conic-gradient(from 180deg at 80% -10%, transparent 0 8deg, #ffe8a322 10deg 18deg, transparent 20deg); animation: cs-spots 5s ease-in-out infinite alternate; }
+.cs-crown { display: block; width: clamp(40px, 6vw, 84px); margin: 0 auto 1vh; fill: #ffe8a3; filter: drop-shadow(0 0 14px #ffd25799); }
+.cs-copy .cs-crown { margin: 0 0 1vh; }
+.cs-first-match .cs-seat:not(.cs-up) { opacity: .45; }
+.cs-finalist .cs-sprite { filter: brightness(0) opacity(.8); transition: filter .5s ease; }
+.cs-finalist.on .cs-sprite { filter: drop-shadow(0 0 16px color-mix(in srgb, var(--fighter-color) 60%, transparent)); }
+.cs-crown-drop { position: absolute; left: 50%; top: 42%; translate: -50% -30vh; opacity: 0; transition: translate 1.2s cubic-bezier(.2,.9,.3,1.1), opacity .4s; }
+.cs-crown-drop.on { translate: -50% 0; opacity: 1; }
+.cs-crown-drop .cs-crown { width: clamp(60px, 9vw, 130px); animation: cs-bob 2s ease-in-out infinite alternate; }
+.cs-clashed .cs-arena { filter: brightness(.6) saturate(1.3); }
+
+/* reduced motion keeps the new layers still */
+.cs-reduced .cs-grain, .cs-reduced .cs-particles, .cs-reduced .cs-shock, .cs-reduced .cs-flare { display: none; }
+.cs-reduced .cs-l { opacity: 1; }
+.cs-reduced .cs-logo-rule { width: min(60vw, 720px); }
+.cs-reduced .cs-cast.risen { transform: none; }
+
+@media (max-aspect-ratio: 1/1) {
+  .cs-nameplate { max-width: 70vw; bottom: calc(var(--cs-bar) + 1.5vh); }
+  .cs-nameplate.side-r { bottom: calc(var(--cs-bar) + 13vh); }
+  .cs-tri-panel { width: 56%; }
+  .cs-tri-panel.p1 { left: 22%; } .cs-tri-panel.p2 { left: 48%; }
+  .cs-crystal { left: 74%; }
+  .cs-logo-row { gap: 1vw; }
+}
+
+@keyframes cs-grain { 0% { translate: 0 0; } 20% { translate: -6% 4%; } 40% { translate: 4% -8%; } 60% { translate: -8% -2%; } 80% { translate: 6% 6%; } }
+@keyframes cs-whip-l { from { translate: 30% 0; filter: blur(14px); } to { translate: 0 0; filter: blur(0); } }
+@keyframes cs-whip-r { from { translate: -30% 0; filter: blur(14px); } to { translate: 0 0; filter: blur(0); } }
+@keyframes cs-in-zoom { from { scale: 1.3; filter: blur(8px) brightness(2); } to { scale: 1; filter: blur(0) brightness(1); } }
+@keyframes cs-shock { from { width: 4vmin; height: 4vmin; opacity: 1; border-width: 1.2vmin; } to { width: 130vmin; height: 130vmin; opacity: 0; border-width: 1px; } }
+@keyframes cs-flare { 0% { opacity: 0; scale: .2 1; } 15% { opacity: 1; scale: 1 1; } 100% { opacity: 0; scale: 1.3 .6; } }
+@keyframes cs-light-flicker { 0%, 100% { opacity: 1; } 8% { opacity: .35; } 10% { opacity: 1; } 47% { opacity: .6; } 49% { opacity: 1; } 71% { opacity: .2; } 73% { opacity: 1; } }
+@keyframes cs-dust { from { transform: translate(0, 0); } to { transform: translate(var(--drift), -6vh); } }
+@keyframes cs-ember { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate(var(--drift), -115vh); opacity: 0; } }
+@keyframes cs-ash { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 10% { opacity: .7; } 100% { transform: translate(var(--drift), 112vh) rotate(var(--r)); opacity: .2; } }
+@keyframes cs-petal { 0% { transform: translate(0, 0) rotate(0) rotateY(0); } 50% { transform: translate(calc(var(--drift) * -.5), 55vh) rotate(calc(var(--r) / 2)) rotateY(180deg); } 100% { transform: translate(var(--drift), 112vh) rotate(var(--r)) rotateY(360deg); } }
+@keyframes cs-spark { 0% { opacity: 1; transform: translateY(0) scaleY(1); } 100% { opacity: 0; transform: translateY(calc(var(--dist) * -1)) scaleY(.3); } }
+@keyframes cs-leak { from { translate: -3% 0; opacity: .7; } to { translate: 3% 2%; opacity: 1; } }
+@keyframes cs-glass-stir { 0% { transform: none; } 40% { transform: skewX(-2deg) scale(1.02); filter: hue-rotate(-40deg) saturate(1.6); } 100% { transform: skewX(1deg) scale(1.03); filter: hue-rotate(-60deg) saturate(2) brightness(.9); } }
+@keyframes cs-slash-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes cs-slam-l { 0% { opacity: 0; translate: -40vw 0; scale: 1.4; filter: blur(10px); } 70% { opacity: 1; translate: 1vw 0; scale: .98; filter: blur(0); } 100% { opacity: 1; translate: 0 0; scale: 1; } }
+@keyframes cs-slam-r { 0% { opacity: 0; translate: 40vw 0; scale: 1.4; filter: blur(10px); } 70% { opacity: 1; translate: -1vw 0; scale: .98; filter: blur(0); } 100% { opacity: 1; translate: 0 0; scale: 1; } }
+@keyframes cs-chroma { 0%, 88%, 100% { translate: 0 0; } 90% { translate: -3px 1px; } 94% { translate: 3px -1px; } }
+@keyframes cs-hover { from { translate: -50% 0; } to { translate: -50% -1.6vh; } }
+@keyframes cs-count { 0% { opacity: 0; scale: 2.4; } 30% { opacity: 1; scale: .95; } 70% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: .9; } }
+@keyframes cs-bob { from { translate: 0 0; } to { translate: 0 -1.2vh; } }
+@keyframes cs-spots { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
 /* ===================== END CUTSCENES ===================== */
+
+/* ─── Versus splash: cinematic entrance (1.9 s before every fight) ─── */
+.versus-screen { position: relative; isolation: isolate; }
+.versus-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.versus-fx i { position: absolute; inset: 0; z-index: 5; }
+.versus-fx .versus-arena { inset: -4%; background: center / cover no-repeat; opacity: 0.32; mix-blend-mode: soft-light; filter: blur(3px) saturate(1.3); animation: versusPush 2s ease-out both; }
+.versus-screen .versus-panels, .versus-screen .versus-top, .versus-screen .versus-bottom { position: relative; }
+.versus-fx .versus-divide {
+  left: 50%; width: 3px; translate: -50% 0; rotate: 10deg; inset-block: -10%;
+  background: linear-gradient(180deg, transparent, var(--red), #ffe8a3, var(--red), transparent);
+  box-shadow: 0 0 30px 6px #ee594366; transform: scaleY(0); animation: versusDivide 0.35s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.versus-fx .versus-flash { background: #fff; opacity: 0; mix-blend-mode: screen; animation: versusFlash 0.5s 0.45s ease-out, versusOut 0.3s 1.6s ease-in forwards; }
+.versus-fx .versus-grain {
+  inset: -50%; opacity: 0.07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  animation: cs-grain 0.5s steps(5) infinite;
+}
+.versus-fx .versus-bars { z-index: 2; background: linear-gradient(180deg, #000 0 7vh, transparent 7vh calc(100% - 7vh), #000 calc(100% - 7vh)); animation: versusBars 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.versus-screen .versus-player { animation: versusWipeL 0.42s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
+.versus-screen .versus-player.rival { animation: versusWipeR 0.42s 0.1s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
+.versus-screen .versus-player::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(105deg, transparent 35%, #ffffff30 48%, transparent 60%); background-size: 260% 100%;
+  animation: cs-sweep 1.1s 0.35s ease-out both;
+}
+.versus-screen .versus-player > .fighter-art { animation: versusIn 0.5s ease-out, versusPush 2s ease-out both; }
+.versus-screen .versus-player > div { animation: versusName 0.45s 0.3s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.versus-screen .versus-player.rival > div { animation-delay: 0.42s; }
+.versus-title { display: block; font: italic 700 11px "Space Mono", monospace; letter-spacing: 0.18em; color: #b9b8b1; text-transform: uppercase; }
+.versus-screen .versus-mark { animation: versusMark 0.55s 0.42s cubic-bezier(0.2, 1.6, 0.4, 1) both, versusChroma 1.6s 1s steps(1) infinite; }
+.versus-screen .versus-mark { text-shadow: -4px 0 #2ae8ff, 4px 0 #ff2a4a, 8px 8px #0c0f15, 0 0 40px #ee594388; }
+.versus-screen.shadow-final .versus-fx .versus-arena { filter: blur(3px) grayscale(1) brightness(0.6); }
+@keyframes versusPush { from { scale: 1.08; } to { scale: 1; } }
+@keyframes versusDivide { to { transform: scaleY(1); } }
+@keyframes versusFlash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+@keyframes versusOut { from { opacity: 0; background: #05060a; mix-blend-mode: normal; } to { opacity: 1; background: #05060a; mix-blend-mode: normal; } }
+@keyframes versusBars { from { opacity: 0; clip-path: inset(40% 0 40% 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
+@keyframes versusWipeL { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes versusWipeR { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+@keyframes versusName { from { opacity: 0; translate: 0 30px; } to { opacity: 1; translate: 0 0; } }
+@keyframes versusMark { 0% { opacity: 0; scale: 3; filter: blur(8px); } 60% { opacity: 1; scale: 0.92; filter: blur(0); } 100% { opacity: 1; scale: 1; } }
+@keyframes versusChroma { 0%, 86%, 100% { translate: 0 0; } 88% { translate: -3px 1px; } 92% { translate: 3px -2px; } }

@@ -98,15 +98,27 @@ Arcade advances one stage per fight; the bonus stage borrows the upcoming arena'
 
 ## Cutscenes
 
-`src/cutscenes.js` (styles in the `CUTSCENES` section of `src/style.css`) plays short cinematics built entirely in code from the shipped fighter sheets (`-sheet`, `-motion`, `-combat`, `-portrait`) and arena backgrounds: DOM + CSS animation, stepped sprite frames, procedural light rays, speed lines, letterbox bars, glass shards, SVG cracks, confetti, typed captions, and small WebAudio cues. No video or new image files.
+`src/cutscenes.js` (styles in the `CUTSCENES` section of `src/style.css`) plays cinematics built entirely in code from the shipped fighter sheets (`-sheet`, `-motion`, `-combat`, `-portrait`) and arena backgrounds. No video, no new image files, no generated imagery. Every scene uses the same camera toolkit:
+
+- **Framing:** letterbox bars that widen to scope for the face-off, slow camera pushes and pull-outs on every shot, whip-pan cuts with motion blur, zoom-in cuts, and a fade to black on the way out.
+- **Film:** animated SVG-noise grain, a vignette, and anamorphic lens flares.
+- **Hits:** two-frame inverted or red impact frames, radial shockwaves, flashes and camera shake, plus spark bursts.
+- **Atmosphere:** CSS particles (dust, embers, cherry petals, ash, sparks), volumetric light beams, spotlights, light rays, glass shards and SVG cracks.
+- **Type:** lower-third nameplates showing name, title and role, chromatic-split titles, and typed captions.
+- **Score:** synthesized with WebAudio through a compressor and a generated-impulse reverb: drones, heartbeats, noise risers, braams, sub booms, stings, whooshes and ticks.
 
 | Kind | When (wiring in `src/main.js`) | What happens |
 |---|---|---|
-| `intro` | Once per page load, before the title screen | Mirror cracks and shatters, four fighters flash across real arenas, Hataalii faces his reflection, "ME VS ME" slams in |
-| `ladder` | Before the first fight of a new arcade ladder | Your fighter walks into the chosen arena, the ladder of reflections flickers behind, your shadow appears |
-| `tournament` | When a new tournament is drawn, before the bracket screen | The eight drawn fighters fill a bracket, first matchup highlighted |
-| `victory` | Arcade complete, or tournament final won (before the champion screen) | Champion victory pose in the final arena, light rays, confetti, fighter quote |
-| `defeat` | Arcade game over (the continue timer runs out, or the player leaves the loss screen via BACK TO TITLE), or tournament elimination | Winning blow, fall, screen cracks and desaturates, the winner stands over, winner quote |
+| `intro` | Once per page load, before the title screen | ~18 s cold open. Studio ident over a heartbeat. The hero stands before a mirror whose reflection moves on its own. The glass cracks and shatters in slow motion. Six whip-pan montage shots of fighters landing strikes in the real arenas, then a three-panel triptych. A scope-framed face-off in the Mirror Garden (petals, auras, a charge, a clash with a shockwave, both fighters knocked back). ME slams in, its mirror image slams back, and VS detonates between them. |
+| `ladder` | Before the first fight of a new arcade ladder | Your fighter walks into the chosen arena under a light beam, gets a nameplate, the ladder of reflections flickers behind, and your shadow appears with a braam. |
+| `bonus` | Before each destruction bonus stage | Your fighter walks up to a crystal mirror, BONUS STAGE title, a 3-2-1 countdown, then BREAK! with the POWER pose, a cracked crystal and sparks. |
+| `shadow` | Once per ladder, before the arcade final | The lights flicker, your cast shadow peels off the floor, stands up and glows red; YOUR SHADOW title and YOU vs SHADOW nameplates. |
+| `tournament` | When a new tournament is drawn, before the bracket screen | Spotlights sweep while the eight drawn fighters fill a bracket, the crown and title hit, and the first matchup is highlighted. |
+| `final` | Once per bracket, before the tournament final | Two finalists step into spotlights with nameplates, the crown descends between them, THE FINAL title, then both fire their POWERs into a clash. |
+| `victory` | Arcade complete, or tournament final won (before the champion screen) | Victory pose under a gold spotlight with rays, embers, confetti, a crown for tournaments, and the fighter's quote. |
+| `defeat` | Arcade game over (the continue timer runs out, or the player leaves the loss screen via BACK TO TITLE), or tournament elimination | Slow-motion winning blow and fall, falling ash, the screen cracks and desaturates, the winner stands over, and the winner's quote. |
+
+The 1.9 s versus splash before every fight (all modes) also has a cinematic entrance. The panels wipe in from each side, a light sweep runs across them, a glowing divider draws in, VS slams down with a chromatic split and a flash, and the frame fades to black just before the arena loads. It also adds letterbox bars, grain, the arena tinted in underneath, and each fighter's title.
 
 ```js
 import { playCutscene } from "./cutscenes.js";
@@ -117,7 +129,7 @@ await playCutscene("defeat", { player: you, opponent: winner, arena, mode: "tour
 
 Context fields: `player`, `opponent`, `fighters` (roster indices, character ids, or character objects), `arena` (index, id, or arena object), `mode` (`"arcade"` or `"tournament"`, which changes the victory/defeat wording). The promise always resolves with `{ kind, skipped }`. The quote is `character.quote`, or the character `description` when no quote exists.
 
-Every cutscene lasts 5–10 s. Skip with a click or tap, Enter, Space, Escape, or gamepad A/Start. While a cutscene plays it takes all keyboard input and makes the page behind it inert. When it ends, it removes its DOM, timers, listeners, and audio. Reduced motion shortens each scene and removes shake, flashes, particles, and sprite loops. A missing image leaves a gradient in its place and does not stop the scene. Players can turn cutscenes off with **Settings → Skip cutscenes**. Add `?nocutscenes` to the URL to disable them for automated runs.
+The intro lasts about 18 s; every other cutscene lasts 5–10 s. Skip with a click or tap, Enter, Space, Escape, or gamepad A/Start. While a cutscene plays it takes all keyboard input and makes the page behind it inert. When it ends, it removes its DOM, timers, listeners, and audio. Reduced motion shortens each scene and removes shake, flashes, impact frames, camera moves, shockwaves, flares, particles, grain, and sprite loops. A missing image leaves a gradient in its place and does not stop the scene. Players can turn cutscenes off with **Settings → Skip cutscenes**. Add `?nocutscenes` to the URL to disable them for automated runs.
 
 ## Develop and build
 

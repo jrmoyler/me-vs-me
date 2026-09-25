@@ -191,6 +191,7 @@ function begin(mode) {
   state.stage = 0;
   state.ladder = [];
   state.ladderIntro = false; // CUTSCENE: replay LADDER for each new ladder
+  state.shadowIntro = false; // CUTSCENE: replay SHADOW before each ladder's final
   if (!read("mvm-onboarded", false)) {
     showHelp(() => {
       save("mvm-onboarded", true);
@@ -268,6 +269,7 @@ function confirmFighter() {
       state.ladder = [];
       buildLadder();
       state.ladderIntro = false; // CUTSCENE: new ladder, show LADDER again
+      state.shadowIntro = false;
       arenaSelection();
     } else if (isTournament()) {
       startTournament();
@@ -302,18 +304,21 @@ function nextChallenger() {
     arcadeRoute();
     return;
   }
-  setScreen("bonus");
-  app.innerHTML = '<main id="bonus-host" aria-label="Bonus challenge"></main>';
-  bonus = startBonus({
-    container: document.querySelector("#bonus-host"),
-    character: characters[state.player],
-    arena: arenas[state.arena],
-    settings: { ...settings },
-    onEnd: () => {
-      bonus?.destroy();
-      bonus = null;
-      arcadeRoute();
-    },
+  // CUTSCENE: BONUS introduces the destruction stage, then it starts.
+  cutscene("bonus", { player: state.player, arena: state.arena, mode: "arcade" }, () => {
+    setScreen("bonus");
+    app.innerHTML = '<main id="bonus-host" aria-label="Bonus challenge"></main>';
+    bonus = startBonus({
+      container: document.querySelector("#bonus-host"),
+      character: characters[state.player],
+      arena: arenas[state.arena],
+      settings: { ...settings },
+      onEnd: () => {
+        bonus?.destroy();
+        bonus = null;
+        arcadeRoute();
+      },
+    });
   });
 }
 function beginContinueCountdown() {
@@ -351,6 +356,26 @@ async function fight() {
     );
     return;
   }
+  // CUTSCENE: SHADOW plays once before the arcade final against your own shadow.
+  if (isFinal() && !state.shadowIntro) {
+    state.shadowIntro = true;
+    cutscene(
+      "shadow",
+      { player: state.player, opponent: state.opponent, fighters: state.ladder, arena: state.arena, mode: "arcade" },
+      fight,
+    );
+    return;
+  }
+  // CUTSCENE: FINAL plays once before the tournament final.
+  if (isTournament() && state.tournament && isFinalRound(state.tournament) && !state.finalIntro) {
+    state.finalIntro = true;
+    cutscene(
+      "final",
+      { player: state.player, opponent: state.opponent, fighters: state.tournament.entrants, arena: state.arena, mode: "tournament" },
+      fight,
+    );
+    return;
+  }
   setScreen("versus");
   const p = characters[state.player],
     o = characters[state.opponent],
@@ -359,7 +384,7 @@ async function fight() {
     shadow = isFinal();
   const top = shadow ? "YOUR SHADOW" : `ME VS ME / ${local ? "VERSUS" : state.mode.toUpperCase()}`;
   const rivalLabel = local ? "PLAYER TWO" : shadow ? "YOUR SHADOW" : "YOUR OTHER SIDE";
-  app.innerHTML = `<main class="versus-screen${shadow ? " shadow-final" : ""}"><div class="versus-top"><span>${top}</span><span>${esc(a.name)}</span></div><div class="versus-panels"><div class="versus-player" style="--fighter-color:${esc(p.color)}">${portrait(p)}<div><small>PLAYER ONE</small><h2>${esc(p.name)}</h2></div></div><strong class="versus-mark">VS</strong><div class="versus-player rival" style="--fighter-color:${esc(o.color)}">${portrait(o, shadow ? "shadow-art" : "")}<div><small>${rivalLabel}</small><h2>${shadow ? "SHADOW " : ""}${esc(o.name)}</h2></div></div></div><div class="versus-bottom"><span>BEST OF THREE</span><span class="blink">${shadow ? "THE LAST REFLECTION IS YOU" : "GET READY TO MEET YOURSELF"}</span><span>${local ? "SAME CABINET" : settings.difficulty.toUpperCase()}</span></div></main>`;
+  app.innerHTML = `<main class="versus-screen${shadow ? " shadow-final" : ""}" style="--arena-color:${esc(a.color || "#ee5943")}"><div class="versus-fx" aria-hidden="true"><i class="versus-arena" style="background-image:url('${esc(a.background)}')"></i><i class="versus-divide"></i><i class="versus-flash"></i><i class="versus-grain"></i><i class="versus-bars"></i></div><div class="versus-top"><span>${top}</span><span>${esc(a.name)}</span></div><div class="versus-panels"><div class="versus-player" style="--fighter-color:${esc(p.color)}">${portrait(p)}<div><small>PLAYER ONE</small><h2>${esc(p.name)}</h2><em class="versus-title">${esc(p.title || "")}</em></div></div><strong class="versus-mark">VS</strong><div class="versus-player rival" style="--fighter-color:${esc(o.color)}">${portrait(o, shadow ? "shadow-art" : "")}<div><small>${rivalLabel}</small><h2>${shadow ? "SHADOW " : ""}${esc(o.name)}</h2><em class="versus-title">${esc(shadow ? "THE LAST REFLECTION" : o.title || "")}</em></div></div></div><div class="versus-bottom"><span>BEST OF THREE</span><span class="blink">${shadow ? "THE LAST REFLECTION IS YOU" : "GET READY TO MEET YOURSELF"}</span><span>${local ? "SAME CABINET" : settings.difficulty.toUpperCase()}</span></div></main>`;
   transitionTimer = setTimeout(
     launchCombat,
     settings.reducedMotion ? 250 : 1900,
@@ -471,6 +496,7 @@ function startTournament() {
   state.mode = "tournament";
   // Seven fresh random opponents on every start; never the player's own fighter.
   state.tournament = createTournament({ player: state.player, rosterSize: characters.length });
+  state.finalIntro = false; // CUTSCENE: replay FINAL for each new bracket
   prepareTournamentMatch(true);
   // CUTSCENE: TOURNAMENT intro with the eight drawn entrants, then the bracket.
   cutscene("tournament", { player: state.player, opponent: state.opponent, fighters: state.tournament.entrants, arena: state.arena, mode: "tournament" }, showTournamentBracket);
