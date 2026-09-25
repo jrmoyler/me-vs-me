@@ -817,3 +817,68 @@ test("touch: GUARD held + LP tap throws through the on-screen controller", async
   assert.ok(h.until(() => o.down > 0, 40));
   h.control.destroy();
 });
+
+// --- Roster parity: combo routes into POWER ------------------------------------------
+// Every cancel-legal chain of normals that ends in POWER (31 of them).
+const ROUTE_KEYS = { light: "KeyJ", medium: "KeyK", heavy: "KeyL", kick: "KeyU", mediumKick: "KeyI", heavyKick: "KeyO", special: "KeyQ" };
+const ROUTE_NORMALS = ["light", "medium", "heavy", "kick", "mediumKick", "heavyKick"];
+function powerRoutes() {
+  const routes = [];
+  const next = (a, b) => {
+    const A = rules.MOVE_TABLE[a], B = rules.MOVE_TABLE[b];
+    if (A.family === B.family) return B.tier > A.tier;
+    return A.family === "punch" && B.family === "kick" && B.tier >= A.tier;
+  };
+  const walk = (path) => {
+    routes.push([...path, "special"]);
+    for (const b of ROUTE_NORMALS) if (next(path.at(-1), b)) walk([...path, b]);
+  };
+  for (const a of ROUTE_NORMALS) walk([a]);
+  return routes;
+}
+// Plays every route from close range and counts the ones that stay a true combo to the end.
+async function comboRoutes(c) {
+  const h = await duel(c);
+  const [p, o] = h.scene.fighters;
+  const landed = [];
+  for (const chain of powerRoutes()) {
+    Object.assign(p, rules.freshFighterState(), { x: 350, y: 450, vy: 0, face: 1, hp: 100, energy: 100 });
+    Object.assign(o, rules.freshFighterState(), { x: 435, y: 450, vy: 0, face: -1, hp: 100 });
+    Object.assign(h.scene, { projectiles: [], pendingHits: [], hitstop: 0, timer: 60 });
+    h.tap(ROUTE_KEYS[chain[0]]);
+    h.step(1);
+    for (let i = 1; i < chain.length; i++) {
+      if (!h.until(() => p.attack?.type === chain[i - 1] && p.attack.landed, 60)) break;
+      h.tap(ROUTE_KEYS[chain[i]]);
+      if (!h.until(() => p.attack?.type === chain[i], 30)) break;
+    }
+    h.until(() => !p.attack, 120);
+    h.step(12); // let any unused buffered press expire before the next route
+    if (p.combo === chain.length) landed.push(chain.join(">"));
+  }
+  h.control.destroy();
+  return landed;
+}
+test("roster parity: no newer fighter has fewer true combo routes into POWER than the thinnest original of its kind", async () => {
+  assert.equal(powerRoutes().length, 31);
+  const originals = characters.slice(0, 11);
+  const count = {};
+  for (const c of characters) count[c.id] = (await comboRoutes(c)).length;
+  const kind = (c) => ({ role: moves.kitFor(c).role, variant: moves.POWERS[c.id].variant });
+  const floor = (match) => Math.min(...originals.filter(match).map((o) => count[o.id]));
+  for (const c of characters.slice(11)) {
+    const { role, variant } = kind(c);
+    const same = originals.filter((o) => kind(o).role === role && kind(o).variant === variant);
+    // Same role and POWER class when an original has it; otherwise the thinner of the two.
+    const baseline = same.length
+      ? floor((o) => same.includes(o))
+      : Math.min(floor((o) => kind(o).role === role), floor((o) => kind(o).variant === variant));
+    assert.ok(Number.isFinite(baseline), `${c.id}: has an original baseline`);
+    assert.ok(count[c.id] >= baseline, `${c.id}: ${count[c.id]} combo routes into POWER, originals of its kind land ${baseline}`);
+  }
+  // The originals keep their measured route counts.
+  assert.deepEqual(
+    originals.map((o) => count[o.id]),
+    [17, 24, 16, 17, 24, 17, 18, 24, 9, 17, 21],
+  );
+});

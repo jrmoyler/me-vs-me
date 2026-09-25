@@ -9,6 +9,7 @@ A browser arcade fighter with 35 versions of Hataalii, ten illustrated arenas, a
 - **Choose your match:** a quick duel against the CPU. Pick both fighters, including a mirror match.
 - **Versus / two players:** two people on one cabinet. Player one picks, then player two, then a shared stage. Player one uses the keyboard's left side (or the first pad, or the on-screen controller); player two uses the arrows and numpad (or a second pad).
 - **Arcade ladder:** eight reflections dealt from the other thirty-four identities with the roles mixed, then a final against **your shadow**: a mirror match of your own fighter. A destruction bonus follows wins three and six, and each win or loss ends with a one-line quote from the winner. Turn on **FULL CIRCLE** on the stage or route screen to face all thirty-four before the shadow, with a bonus after every third win; the choice is saved. Two rounds win each match. Defeat offers a ten-second continue.
+- **Tournament:** an eight-fighter single-elimination bracket: quarterfinals, semifinals, final. You pick your fighter. The other seven entrants are drawn at random from the remaining thirty-four, with a fresh draw every time a tournament starts and no repeats. The bracket screen appears before each of your matches. It shows all eight entrants with portraits, every round, results so far, your next opponent and the stage, which is picked at random for each match. You play your own matches against the CPU, two rounds to win. CPU-vs-CPU matches are simulated from each fighter's speed, power and reach plus some randomness. One loss knocks you out, and the rest of the bracket is played out so you can see who took the crown. Win the final to become tournament champion. Bracket logic lives in `src/tournament.js`.
 - **Training:** infinite health and meter, RESET, and a dummy that cycles OPEN → GUARD → CROUCH GUARD → RECORD → PLAY. Also TRIAL (jab → cross → uppercut → POWER, pass or fail), DATA (live frame data and LOW / OVERHEAD / THROW / AIR tags) and the move manual.
 - **Move list:** preview all seven attacks, the fighter's role and the defensive system from character selection, training, or the pause menu.
 
@@ -39,13 +40,15 @@ One shared move table; each fighter's role comes from its POWER profile. Roles o
 
 | Role | Fighters | Modifiers |
 |---|---|---|
-| Zoner (projectile zoning) | Iron Will, Shadow Self, Nexus, Zenith, Evergreen, Nomad | POWER pushes 18 px further on block; jumping LP reach +8 |
-| Rushdown (command dash / rising launcher pressure) | Hataalii, Green Light, Fast Lane, Old Soul, Glyph, Overclock | Throw range +12; jab recovery −0.02 s (startup unchanged) |
-| Counter (counter hit specialist) | Quiet Luxury, Civic Sage, Quilt, Eon | First punish after a successful block is a counter hit; POWER startup +0.04 s, damage +2 |
-| Grappler (close-range throws) | Varsity, Juris | Throw damage 16, range +18; wakeup window +0.04 s |
-| Balanced (long-range footsies) | After Hours, Blueprint, Wild Card, Hybrid, Binary, Aether, Gaia, Sketch, Student | None |
+| Zoner (projectile zoning) | Iron Will, Shadow Self, Nexus, Zenith, Evergreen, Nomad, Star Scribe, Circuit Breaker, Event Horizon | POWER pushes 18 px further on block; jumping LP reach +8 |
+| Rushdown (command dash / rising launcher pressure) | Hataalii, Green Light, Fast Lane, Old Soul, Glyph, Overclock, Patchrunner, Dune Voyager | Throw range +12; jab recovery −0.02 s (startup unchanged) |
+| Counter (counter hit specialist) | Quiet Luxury, Civic Sage, Quilt, Eon, Crimson Oracle | First punish after a successful block is a counter hit; POWER startup +0.04 s, damage +2 |
+| Grappler (close-range throws) | Varsity, Juris, Sovereign | Throw damage 16, range +18; wakeup window +0.04 s |
+| Balanced (long-range footsies) | After Hours, Blueprint, Wild Card, Hybrid, Binary, Aether, Gaia, Sketch, Student, Iron Chef | None |
 
-Varsity's Overtime Elbow is a travel/elbow power. The kit brief grouped it with rushdown or counter, but it was made the grappler so the role has a fighter; Juris (Verdict Shield) now joins it. The rushdown jab change lowers the smallest recovery-plus-next-startup gap from 0.41 s to 0.39 s. That is still above the 0.36 s jab hitstun, and tests assert no link combos for any kit.
+Varsity's Overtime Elbow is a travel/elbow power. The kit brief grouped it with rushdown or counter, but it was made the grappler so the role has a fighter; Juris (Verdict Shield) and Sovereign (Royal Gambit) now join it. The rushdown jab change lowers the smallest recovery-plus-next-startup gap from 0.41 s to 0.39 s. That is still above the 0.36 s jab hitstun, and tests assert no link combos for any kit.
+
+**Roster parity.** The twenty-four fighters added after the original eleven are held to the originals' bar. Every POWER profile has the fields of its class among the originals (sweeps and dashes travel, launchers also lift, projectiles carry a speed), and its damage, startup, active and duration sit inside the originals' ranges (21–28 damage, 0.32–0.43 s startup, 0.18–0.25 s active, 0.88–1.03 s total). A runtime test plays all 31 cancel-legal chains that end in POWER for every fighter and requires each newer fighter to land at least as many true combos as the thinnest original of the same role and POWER class: 24 for balanced sweeps, 17 for counters, 21 for grapplers, 17 for rushdown, 9 for zoners. Hybrid, Binary, Aether, Gaia, Sketch and Iron Chef got faster sweeps; Civic Sage, Eon and Crimson Oracle got counter POWERs as quick as Quiet Luxury's; Juris and Sovereign got Varsity's speed; Glyph, Zenith and Event Horizon moved inside the original startup and duration limits. Evergreen's volley now deals 21, the originals' floor, and Circuit Breaker and Event Horizon use the originals' 280 px projectile reach. The original eleven are unchanged.
 
 ### CPU personality
 
@@ -93,6 +96,29 @@ Hits and blocks now follow shared frame data in `src/combat-rules.js`:
 
 Arcade advances one stage per fight; the bonus stage borrows the upcoming arena's atmosphere id and colour. Stage select shows two rows on desktop and a swipeable strip on phones.
 
+## Cutscenes
+
+`src/cutscenes.js` (styles in the `CUTSCENES` section of `src/style.css`) plays short cinematics built entirely in code from the shipped fighter sheets (`-sheet`, `-motion`, `-combat`, `-portrait`) and arena backgrounds: DOM + CSS animation, stepped sprite frames, procedural light rays, speed lines, letterbox bars, glass shards, SVG cracks, confetti, typed captions, and small WebAudio cues. No video or new image files.
+
+| Kind | When (wiring in `src/main.js`) | What happens |
+|---|---|---|
+| `intro` | Once per page load, before the title screen | Mirror cracks and shatters, four fighters flash across real arenas, Hataalii faces his reflection, "ME VS ME" slams in |
+| `ladder` | Before the first fight of a new arcade ladder | Your fighter walks into the chosen arena, the ladder of reflections flickers behind, your shadow appears |
+| `tournament` | When a new tournament is drawn, before the bracket screen | The eight drawn fighters fill a bracket, first matchup highlighted |
+| `victory` | Arcade complete, or tournament final won (before the champion screen) | Champion victory pose in the final arena, light rays, confetti, fighter quote |
+| `defeat` | Arcade game over (the continue timer runs out, or the player leaves the loss screen via BACK TO TITLE), or tournament elimination | Winning blow, fall, screen cracks and desaturates, the winner stands over, winner quote |
+
+```js
+import { playCutscene } from "./cutscenes.js";
+await playCutscene("tournament", { fighters: [0, "urban", 5, 7, 11, 14, 18, 19], arena: 3, mode: "tournament" }, { reducedMotion, sound });
+await playCutscene("victory", { player: champ, opponent: finalist, arena, mode: "tournament" });
+await playCutscene("defeat", { player: you, opponent: winner, arena, mode: "tournament" });
+```
+
+Context fields: `player`, `opponent`, `fighters` (roster indices, character ids, or character objects), `arena` (index, id, or arena object), `mode` (`"arcade"` or `"tournament"`, which changes the victory/defeat wording). The promise always resolves with `{ kind, skipped }`. The quote is `character.quote`, or the character `description` when no quote exists.
+
+Every cutscene lasts 5–10 s. Skip with a click or tap, Enter, Space, Escape, or gamepad A/Start. While a cutscene plays it takes all keyboard input and makes the page behind it inert. When it ends, it removes its DOM, timers, listeners, and audio. Reduced motion shortens each scene and removes shake, flashes, particles, and sprite loops. A missing image leaves a gradient in its place and does not stop the scene. Players can turn cutscenes off with **Settings → Skip cutscenes**. Add `?nocutscenes` to the URL to disable them for automated runs.
+
 ## Develop and build
 
 ```sh
@@ -121,6 +147,6 @@ Review the original [77 impact poses](docs/qa/all-77-move-peaks.jpg), the [seven
 
 ## Verification boundaries
 
-Automated checks cover original and new asset integrity (including that each fighter's motion atlas shows that fighter at its combat height), all 245 runtime attacks, per-style POWER and projectile painters, meter costs, one-hit damage, and tap buffering. They cover the cancel tree and its frame-data invariants for every kit, a three-hit runtime combo with scaling, launch and knockdown, blockstun guard persistence, whiff safety, and counter hits. They cover throws (keyboard and touch chord), lows and overheads against both guards, air normals and landing, wakeup guard/jump/reversal, and kit modifiers. They cover CPU personality: a hard CPU throws a turtle and anti-airs a jumper in a seeded bout, and an easy CPU never cancels. They cover the training recorder, trial and data readout, weighted hitstop, the flash and reduced motion, a spark/projectile budget, local two-player input, and Versus, arcade (short, full circle, shadow final, bonuses, quotes) and settings/remap flows. They also cover the slide pad and multi-touch cluster, every stage's atmosphere, pause, and UI navigation. Runtime tests use a Phaser graphics stub; they exercise actual game scene logic but do not establish GPU performance or visual acceptance. See [QA notes](docs/qa/validation.md) and [docs/qa/ten-arenas-controller-combos.md](docs/qa/ten-arenas-controller-combos.md).
+Automated checks cover original and new asset integrity (including that each fighter's motion atlas shows that fighter at its combat height), all 245 runtime attacks, per-style POWER and projectile painters, meter costs, one-hit damage, and tap buffering. They cover the cancel tree and its frame-data invariants for every kit, roster parity (every newer fighter's POWER fields, frame-data ranges, effect-switch cases and true combo routes measured against the original eleven), a three-hit runtime combo with scaling, launch and knockdown, blockstun guard persistence, whiff safety, and counter hits. They cover throws (keyboard and touch chord), lows and overheads against both guards, air normals and landing, wakeup guard/jump/reversal, and kit modifiers. They cover CPU personality: a hard CPU throws a turtle and anti-airs a jumper in a seeded bout, and an easy CPU never cancels. They cover the training recorder, trial and data readout, weighted hitstop, the flash and reduced motion, a spark/projectile budget, local two-player input, and Versus, arcade (short, full circle, shadow final, bonuses, quotes), tournament (seeded random draw, 4→2→1 bracket, simulated CPU matches, elimination, championship) and settings/remap flows. They also cover the slide pad and multi-touch cluster, every stage's atmosphere, pause, and UI navigation. Runtime tests use a Phaser graphics stub; they exercise actual game scene logic but do not establish GPU performance or visual acceptance. See [QA notes](docs/qa/validation.md) and [docs/qa/ten-arenas-controller-combos.md](docs/qa/ten-arenas-controller-combos.md).
 
 The structural reference is Street Fighter II arcade progression. Exact video matching, physical device performance, and physical gamepad validation are not established by these checks.

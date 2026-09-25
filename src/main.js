@@ -4,6 +4,8 @@ import { arenas } from "./arenas.js";
 import { MOVES, SYSTEM_MOVES, BINDABLE, kitFor, bindingsFor, keyLabel } from "./moves.js";
 import { startCombat } from "./combat.js";
 import { startBonus } from "./bonus.js";
+import { createTournament, recordPlayerResult, currentOpponent, isChampion, isEliminated, isFinalRound, roundName, playerFinish, ROUND_NAMES, ROUND_SHORT } from "./tournament.js";
+import { playCutscene } from "./cutscenes.js";
 
 const app = document.querySelector("#app");
 const read = (key, fallback) => {
@@ -40,6 +42,7 @@ let state = {
   selecting: "player",
   ladder: [],
   stage: 0,
+  tournament: null, // TOURNAMENT MODE bracket (src/tournament.js); null outside tournaments
 };
 let combat = null,
   transitionTimer = null,
@@ -59,6 +62,7 @@ const pad2 = (n) => String(n).padStart(2, "0");
 const LADDER_SHORT = 8;
 const quoteFor = (c) => c.quote || "The reflection never lies.";
 const isLocal = () => state.mode === "local";
+const isTournament = () => state.mode === "tournament";
 const isFinal = () =>
   state.mode === "arcade" &&
   state.ladder.length > 0 &&
@@ -145,11 +149,40 @@ function setScreen(screen) {
   document.body.dataset.screen = screen;
   if (changed) window.scrollTo(0, 0);
 }
+// --- CUTSCENE HOOKS (see src/cutscenes.js) --------------------------------
+// Runs `then` after the cutscene, or immediately when cutscenes are unavailable
+// (tests evaluate this file without its imports), disabled in settings, or the
+// page URL carries ?nocutscenes.
+function cutscene(kind, context, then) {
+  let enabled = false;
+  try {
+    enabled =
+      typeof playCutscene === "function" &&
+      !settings.skipCutscenes &&
+      !/[?&]nocutscenes\b/.test(window.location?.search || "");
+  } catch {}
+  if (!enabled) return then();
+  playCutscene(kind, context, {
+    reducedMotion: settings.reducedMotion,
+    sound: settings.sound,
+  }).then(then, then);
+}
+function gameOver() {
+  // DEFEAT cutscene: arcade continue declined or expired.
+  clearTimeout(continueTimer);
+  continueTimer = null;
+  cutscene(
+    "defeat",
+    { player: state.player, opponent: state.opponent, arena: state.arena, mode: "arcade" },
+    title,
+  );
+}
+// --- END CUTSCENE HOOKS ------------------------------------------------------
 function title() {
   setScreen("title");
   const lead = characters[0],
     second = characters[Math.min(5, characters.length - 1)];
-  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="local">VERSUS / TWO PLAYERS <span>↗</span></button><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button></div></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>ONE PLAYER OR TWO / SAME CABINET</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
+  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="local">VERSUS / TWO PLAYERS <span>↗</span></button><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="tournament">TOURNAMENT <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button></div></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>ONE PLAYER OR TWO / SAME CABINET</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
   bind();
 }
 function begin(mode) {
@@ -157,6 +190,7 @@ function begin(mode) {
   state.selecting = "player";
   state.stage = 0;
   state.ladder = [];
+  state.ladderIntro = false; // CUTSCENE: replay LADDER for each new ladder
   if (!read("mvm-onboarded", false)) {
     showHelp(() => {
       save("mvm-onboarded", true);
@@ -191,6 +225,8 @@ function selection() {
   const eyebrow =
     state.mode === "arcade"
       ? "ARCADE / FIGHT YOUR WAY THROUGH THE ROSTER"
+      : isTournament()
+        ? "TOURNAMENT / EIGHT ENTER. ONE IS CROWNED."
       : state.mode === "training"
         ? "TRAINING / NO PRESSURE. FIND YOUR RHYTHM."
         : local
@@ -214,13 +250,15 @@ function selection() {
     state.selecting === "player"
       ? state.mode === "arcade"
         ? "START ARCADE LADDER"
+        : isTournament()
+          ? "ENTER THE TOURNAMENT"
         : local
           ? "NEXT: PLAYER TWO"
           : "NEXT: CHOOSE OPPONENT"
       : local
         ? "CONFIRM PLAYER TWO & CHOOSE STAGE"
         : "CONFIRM RIVAL & CHOOSE STAGE";
-  app.innerHTML = `${chrome(local ? "TWO PLAYERS. ONE CABINET." : "CHOOSE YOUR SIDE")}<main class="selection-screen"><div class="screen-heading"><button class="text-button" data-action="home">← BACK</button><div><span class="eyebrow">${eyebrow}</span><h1>${heading}</h1></div><span class="step-counter">01 <small>/ 03</small></span></div><div class="selection-stage">${fighterPreview(p, "left")}<div class="selection-vs"><span>VS</span><small>SAME SOUL.<br>DIFFERENT FIGHT.</small></div>${fighterPreview(o, "right")}</div><div class="roster-section">${state.mode !== "arcade" ? `<div class="selection-tabs" aria-label="Choose which fighter to edit"><button data-action="select-player" aria-pressed="${state.selecting === "player"}">${local ? "1 · PLAYER ONE" : "1 · YOUR FIGHTER"}</button><button data-action="select-opponent" aria-pressed="${state.selecting === "opponent"}">${local ? "2 · PLAYER TWO" : "2 · YOUR OPPONENT"}</button></div>` : ""}<div class="roster-caption"><span><b>${state.selecting === "player" ? "P1" : second}</b> ${caption}</span><span>ALL ${characters.length} VERSIONS UNLOCKED</span></div><div class="roster">${characters.map((c, i) => `<button class="roster-fighter ${state[state.selecting] === i ? "selected" : ""} ${state.player === i ? "p1-chosen" : ""}" data-action="fighter" data-index="${i}" style="--fighter-color:${esc(c.color || "#e95541")}" aria-label="Select ${esc(c.name)}, ${esc(kitFor(c).label.toLowerCase())}" aria-pressed="${state[state.selecting] === i}"><span class="roster-num">${String(i + 1).padStart(2, "0")}</span>${portrait(c)}<strong>${esc(c.name)}</strong><small class="role-tag" data-role="${kitFor(c).role}">${kitFor(c).label}</small>${state[state.selecting] === i ? `<span class="selected-marker">${state.selecting === "player" ? "P1" : second}</span>` : ""}</button>`).join("")}</div><div class="selection-bottom"><div class="selection-hint"><span class="keycap">←</span><span class="keycap">→</span> CHOOSE <span class="keycap">↵</span> CONFIRM</div><div class="selection-actions"><button class="button outline" data-action="moves">MOVE LIST</button>${state.selecting === "opponent" ? `<button class="button outline" data-action="mirror">MIRROR MATCH</button><button class="text-button" data-action="select-player">CHANGE P1</button>` : ""}<button class="button primary" data-action="confirm-fighter">${confirm} <span>→</span></button></div></div></div></main>${footer(local ? "PLAYER TWO: ARROWS + NUMPAD, OR A SECOND PAD." : "EVERY VERSION HAS SOMETHING TO PROVE.")}`;
+  app.innerHTML = `${chrome(local ? "TWO PLAYERS. ONE CABINET." : "CHOOSE YOUR SIDE")}<main class="selection-screen"><div class="screen-heading"><button class="text-button" data-action="home">← BACK</button><div><span class="eyebrow">${eyebrow}</span><h1>${heading}</h1></div><span class="step-counter">01 <small>/ 03</small></span></div><div class="selection-stage">${fighterPreview(p, "left")}<div class="selection-vs"><span>VS</span><small>SAME SOUL.<br>DIFFERENT FIGHT.</small></div>${fighterPreview(o, "right")}</div><div class="roster-section">${state.mode !== "arcade" && !isTournament() ?`<div class="selection-tabs" aria-label="Choose which fighter to edit"><button data-action="select-player" aria-pressed="${state.selecting === "player"}">${local ? "1 · PLAYER ONE" : "1 · YOUR FIGHTER"}</button><button data-action="select-opponent" aria-pressed="${state.selecting === "opponent"}">${local ? "2 · PLAYER TWO" : "2 · YOUR OPPONENT"}</button></div>` : ""}<div class="roster-caption"><span><b>${state.selecting === "player" ? "P1" : second}</b> ${caption}</span><span>ALL ${characters.length} VERSIONS UNLOCKED</span></div><div class="roster">${characters.map((c, i) => `<button class="roster-fighter ${state[state.selecting] === i ? "selected" : ""} ${state.player === i ? "p1-chosen" : ""}" data-action="fighter" data-index="${i}" style="--fighter-color:${esc(c.color || "#e95541")}" aria-label="Select ${esc(c.name)}, ${esc(kitFor(c).label.toLowerCase())}" aria-pressed="${state[state.selecting] === i}"><span class="roster-num">${String(i + 1).padStart(2, "0")}</span>${portrait(c)}<strong>${esc(c.name)}</strong><small class="role-tag" data-role="${kitFor(c).role}">${kitFor(c).label}</small>${state[state.selecting] === i ? `<span class="selected-marker">${state.selecting === "player" ? "P1" : second}</span>` : ""}</button>`).join("")}</div><div class="selection-bottom"><div class="selection-hint"><span class="keycap">←</span><span class="keycap">→</span> CHOOSE <span class="keycap">↵</span> CONFIRM</div><div class="selection-actions"><button class="button outline" data-action="moves">MOVE LIST</button>${state.selecting === "opponent" ? `<button class="button outline" data-action="mirror">MIRROR MATCH</button><button class="text-button" data-action="select-player">CHANGE P1</button>` : ""}<button class="button primary" data-action="confirm-fighter">${confirm} <span>→</span></button></div></div></div></main>${footer(local ? "PLAYER TWO: ARROWS + NUMPAD, OR A SECOND PAD." : "EVERY VERSION HAS SOMETHING TO PROVE.")}`;
   bind();
 }
 function confirmFighter() {
@@ -229,7 +267,10 @@ function confirmFighter() {
       state.stage = 0;
       state.ladder = [];
       buildLadder();
+      state.ladderIntro = false; // CUTSCENE: new ladder, show LADDER again
       arenaSelection();
+    } else if (isTournament()) {
+      startTournament();
     } else {
       state.selecting = "opponent";
       if (state.opponent === state.player)
@@ -287,7 +328,7 @@ function beginContinueCountdown() {
     const display = document.querySelector(".continue-seconds");
     if (display) display.textContent = remaining;
     if (remaining <= 0) {
-      title();
+      gameOver(); // CUTSCENE: DEFEAT, then title
       return;
     }
     continueTimer = setTimeout(tick, 1000);
@@ -300,6 +341,16 @@ function arcadeRoute() {
   bind();
 }
 async function fight() {
+  // CUTSCENE: LADDER plays once before the first arcade fight of a ladder.
+  if (state.mode === "arcade" && state.stage === 0 && !state.ladderIntro) {
+    state.ladderIntro = true;
+    cutscene(
+      "ladder",
+      { player: state.player, opponent: state.opponent, fighters: state.ladder, arena: state.arena, mode: "arcade" },
+      fight,
+    );
+    return;
+  }
   setScreen("versus");
   const p = characters[state.player],
     o = characters[state.opponent],
@@ -352,12 +403,26 @@ function result(data) {
   combat = null;
   const won = data.winner === "player";
   const local = isLocal();
+  // CUTSCENE: VICTORY before the arcade-complete screen (records update after it).
+  if (!data.cutscenePlayed && state.mode === "arcade" && won && state.stage >= state.ladder.length - 1) {
+    cutscene(
+      "victory",
+      { player: state.player, opponent: state.opponent, fighters: state.ladder, arena: state.arena, mode: "arcade" },
+      () => result({ ...data, cutscenePlayed: true }),
+    );
+    return;
+  }
   if (state.mode !== "training" && !local) {
     record.matches++;
     record.wins += won ? 1 : 0;
     record.streak = won ? record.streak + 1 : 0;
     record.best = Math.max(record.best, record.streak);
     save("mvm-record", record);
+  }
+  // Tournament matches take their own result flow (see TOURNAMENT MODE below).
+  if (isTournament() && state.tournament) {
+    tournamentResult(data, won);
+    return;
   }
   setScreen("result");
   const complete =
@@ -387,6 +452,155 @@ function result(data) {
   bind();
   if (state.mode === "arcade" && !won) beginContinueCountdown();
 }
+// ─── TOURNAMENT MODE ──────────────────────────────────────────────────────────
+// Eight-entrant single elimination. Pure bracket logic (random draw, seeding, CPU-vs-CPU
+// simulation, advancement) lives in src/tournament.js; this block only renders and routes.
+//
+// Flow: title TOURNAMENT → selection (player only) → startTournament()
+//   → showTournamentBracket() → fight() → result() → tournamentResult()
+//       match won, bracket continues → showTournamentMatchWon() → VIEW BRACKET → showTournamentBracket() …
+//       final won                    → onTournamentWon(data)  → showTournamentChampion(data)
+//       any loss (eliminated)        → onTournamentLost(data) → showTournamentDefeat(data)
+//
+// CUTSCENE HOOK POINTS — each plays through cutscene() and then continues to the named screen:
+//   "before tournament"   startTournament():        before showTournamentBracket()
+//   "tournament victory"  onTournamentWon(data):    before showTournamentChampion(data)
+//   "tournament defeat"   onTournamentLost(data):   before showTournamentDefeat(data)
+// state.tournament holds the bracket (entrants, rounds, champion) for use by cutscenes.
+function startTournament() {
+  state.mode = "tournament";
+  // Seven fresh random opponents on every start; never the player's own fighter.
+  state.tournament = createTournament({ player: state.player, rosterSize: characters.length });
+  prepareTournamentMatch(true);
+  // CUTSCENE: TOURNAMENT intro with the eight drawn entrants, then the bracket.
+  cutscene("tournament", { player: state.player, opponent: state.opponent, fighters: state.tournament.entrants, arena: state.arena, mode: "tournament" }, showTournamentBracket);
+}
+function onTournamentWon(data) {
+  // CUTSCENE: VICTORY (tournament wording), then the champion screen.
+  cutscene("victory", { player: state.player, opponent: state.opponent, fighters: state.tournament.entrants, arena: state.arena, mode: "tournament" }, () => showTournamentChampion(data));
+}
+function onTournamentLost(data) {
+  // CUTSCENE: DEFEAT (tournament wording), then the elimination screen.
+  cutscene("defeat", { player: state.player, opponent: state.opponent, fighters: state.tournament.entrants, arena: state.arena, mode: "tournament" }, () => showTournamentDefeat(data));
+}
+// Point state.opponent/state.arena at the player's pending match. Each match gets a random stage,
+// never the same one twice in a row. Idempotent unless forced, so re-rendering keeps the stage.
+function prepareTournamentMatch(force = false) {
+  const next = currentOpponent(state.tournament);
+  if (next == null || (!force && next === state.opponent)) return;
+  state.opponent = next;
+  const previous = state.arena;
+  state.arena = Math.floor(Math.random() * arenas.length);
+  if (arenas.length > 1 && state.arena === previous)
+    state.arena = (state.arena + 1) % arenas.length;
+}
+function tournamentResult(data, won) {
+  state.tournament = recordPlayerResult(
+    state.tournament,
+    { won, playerRounds: data.playerRounds, opponentRounds: data.opponentRounds },
+    characters,
+  );
+  if (isChampion(state.tournament)) onTournamentWon(data);
+  else if (isEliminated(state.tournament)) onTournamentLost(data);
+  else showTournamentMatchWon(data);
+}
+function tournamentKnockedOut(t, id) {
+  return t.rounds.some((r) => r.some((m) => (m.a === id || m.b === id) && m.winner != null && m.winner !== id));
+}
+function bracketSlot(t, id, match) {
+  if (id == null) return `<div class="bracket-slot tbd"><i></i><span>TO BE DECIDED</span><b></b></div>`;
+  const c = characters[id];
+  const decided = match && match.winner != null;
+  const cls = `${id === t.player ? " you" : ""}${decided ? (match.winner === id ? " won" : " lost") : ""}`;
+  const score = decided && match.score ? match.score[match.a === id ? 0 : 1] : "";
+  return `<div class="bracket-slot${cls}" style="--fighter-color:${esc(c.color || "#e95541")}">${portrait(c)}<span>${esc(c.name)}${id === t.player ? " <em>YOU</em>" : ""}</span><b>${score}</b></div>`;
+}
+function showTournamentBracket() {
+  const t = state.tournament;
+  if (!t) return title();
+  setScreen("bracket");
+  const active = t.status === "active";
+  if (active) prepareTournamentMatch();
+  const p = characters[state.player],
+    o = characters[state.opponent],
+    a = arenas[state.arena];
+  const columns = ROUND_NAMES.map((name, r) => {
+    const size = 4 >> r;
+    const matches = t.rounds[r] ?? Array.from({ length: size }, () => null);
+    return `<section class="bracket-round${active && r === t.round ? " current" : ""}" data-round="${r}"><h2>${esc(name)}</h2>${matches
+      .map((m) => {
+        const next = active && m && r === t.round && (m.a === t.player || m.b === t.player);
+        return `<div class="bracket-match${next ? " next" : ""}${m?.winner != null ? " decided" : ""}">${bracketSlot(t, m?.a, m)}${bracketSlot(t, m?.b, m)}${next ? "<small>YOUR MATCH</small>" : ""}</div>`;
+      })
+      .join("")}</section>`;
+  }).join("");
+  const champ = t.champion != null ? characters[t.champion] : null;
+  const crown = `<section class="bracket-round bracket-crown"><h2>CHAMPION</h2><div class="bracket-champion${t.champion === t.player ? " you" : ""}">${champ ? `${portrait(champ)}<strong>${esc(champ.name)}</strong>` : "<i>?</i><strong>ONE WILL RISE</strong>"}</div></section>`;
+  const entrants = `<ol class="bracket-entrants" aria-label="Tournament entrants">${t.entrants
+    .map((id, i) => {
+      const status = t.champion === id ? "CHAMPION" : tournamentKnockedOut(t, id) ? "OUT" : id === t.player ? "YOU" : "IN";
+      return `<li class="bracket-entrant${id === t.player ? " you" : ""}${status === "OUT" ? " out" : ""}${status === "CHAMPION" ? " champion" : ""}" data-index="${id}">${portrait(characters[id])}<span><small>SEED ${pad2(i + 1)}</small>${esc(characters[id].name)}</span><b>${status}</b></li>`;
+    })
+    .join("")}</ol>`;
+  const eyebrow = active
+    ? `TOURNAMENT · ${roundName(t.round)} · MATCH ${t.round + 1} OF ${ROUND_NAMES.length}`
+    : isChampion(t)
+      ? "TOURNAMENT COMPLETE · YOU TOOK THE CROWN"
+      : `TOURNAMENT OVER · ${champ ? esc(champ.name) : "ANOTHER YOU"} TOOK THE CROWN`;
+  const heading = active
+    ? isFinalRound(t)
+      ? "THE<br><em>FINAL.</em>"
+      : "THE<br><em>BRACKET.</em>"
+    : isChampion(t)
+      ? "UNDISPUTED<br><em>SELF.</em>"
+      : "BRACKET<br><em>CLOSED.</em>";
+  const next = active
+    ? `<div class="bracket-next route-location current" style="background-image:url('${esc(a.background)}')"><span>NEXT · ${ROUND_SHORT[t.round]} · ${esc(a.name)}</span><div class="bracket-next-fighters">${portrait(p)}<b>VS</b>${portrait(o, "flipped")}</div><strong>${esc(p.name)} <small>VS</small> ${esc(o.name)}</strong><b>${esc(a.subtitle || "NEXT DESTINATION")}</b></div><button class="button primary" data-action="fight">FACE ${esc(o.name)} <span>→</span></button>`
+    : `<div class="result-actions bracket-actions"><button class="button primary" data-action="tournament-new">NEW TOURNAMENT <span>↻</span></button><button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button></div>`;
+  app.innerHTML = `${chrome("EIGHT ENTER. ONE IS CROWNED.")}<main class="route-screen bracket-screen"><span class="eyebrow">${eyebrow}</span><h1>${heading}</h1>${entrants}<div class="bracket-tree">${columns}${crown}</div>${next}</main>${footer("EIGHT ENTRANTS. THREE ROUNDS. ONE CHAMPION.")}`;
+  bind();
+}
+function tournamentResultScreen(data, { won, eyebrow, heading, story, seal = "", actions }) {
+  setScreen("result");
+  const winner = characters[won ? state.player : state.opponent];
+  const quote = `<p class="victory-quote">“${esc(quoteFor(winner))}” <span>— ${esc(winner.name)}</span></p>`;
+  app.innerHTML = `${chrome("EIGHT ENTER. ONE IS CROWNED.")}<main class="result-screen tournament-result ${won ? "victory" : "defeat"}"><div class="result-art">${portrait(winner)}<div class="result-art-floor"></div></div><div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${heading}</h1><div class="result-score"><b>${data.playerRounds ?? (won ? 2 : 0)}</b><span>ROUNDS</span><b>${data.opponentRounds ?? (won ? 0 : 2)}</b></div>${quote}<p>${story}</p>${seal}<div class="result-actions">${actions}</div><div class="match-breakdown"><span><b>${data.stats?.hits ?? 0}</b> STRIKES LANDED</span><span><b>${data.stats?.specials ?? 0}</b> POWERS USED</span><span><b>${data.stats?.damageDealt ?? 0}</b> DAMAGE DEALT</span><span><b>${data.stats?.maxCombo ?? 0}</b> BEST COMBO</span></div><div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> FIGHTS</span><span><b>${record.best}</b> BEST STREAK</span></div></div></main>${footer("EIGHT ENTER. ONE IS CROWNED.")}`;
+  bind();
+}
+const TOURNAMENT_QUIT = '<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button>';
+function showTournamentMatchWon(data) {
+  const t = state.tournament;
+  const cleared = roundName(t.round - 1);
+  tournamentResultScreen(data, {
+    won: true,
+    eyebrow: `${cleared} WON · ADVANCING TO THE ${roundName(t.round)}`,
+    heading: isFinalRound(t) ? "ONE MORE<br>TO GO." : "STILL<br>STANDING.",
+    story: `${esc(characters[state.opponent].name)} is out. ${isFinalRound(t) ? "One fight left between you and the crown." : "The rest of the round has been decided — check the bracket."}`,
+    actions: `<button class="button primary" data-action="tournament-bracket">VIEW BRACKET <span>→</span></button>${TOURNAMENT_QUIT}`,
+  });
+}
+function showTournamentChampion(data) {
+  tournamentResultScreen(data, {
+    won: true,
+    eyebrow: "TOURNAMENT CHAMPION · THREE MATCHES · THREE WINS",
+    heading: "UNDISPUTED<br>SELF.",
+    story: "Eight versions entered. Only one walks out with the crown — and it's you.",
+    seal: `<div class="champion-seal">TOURNAMENT CHAMPION <span>${ROUND_NAMES.length} / ${ROUND_NAMES.length} ROUNDS WON · BRACKET CLEARED</span></div>`,
+    actions: `<button class="button primary" data-action="tournament-new">NEW TOURNAMENT <span>↻</span></button><button class="button outline" data-action="tournament-bracket">VIEW BRACKET</button>${TOURNAMENT_QUIT}`,
+  });
+}
+function showTournamentDefeat(data) {
+  const t = state.tournament;
+  const champ = characters[t.champion];
+  tournamentResultScreen(data, {
+    won: false,
+    eyebrow: `ELIMINATED IN THE ${roundName(playerFinish(t))}`,
+    heading: "KNOCKED<br>OUT.",
+    story: `${esc(champ.name)} went on to take the crown. A new bracket draws seven new rivals.`,
+    actions: `<button class="button primary" data-action="tournament-new">NEW TOURNAMENT <span>↻</span></button><button class="button outline" data-action="tournament-bracket">VIEW BRACKET</button>${TOURNAMENT_QUIT}`,
+  });
+}
+// ─── END TOURNAMENT MODE ──────────────────────────────────────────────────────
 function modal(content, cls = "", onClose) {
   document.querySelector(".modal-layer")?.dismiss?.(false);
   const trigger = document.activeElement;
@@ -455,7 +669,7 @@ function showHelp(onDone) {
 }
 function showSettings() {
   const layer = modal(
-    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
+    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>SKIP CUTSCENES</strong><small>Intro, ladder, tournament, victory & defeat scenes</small></div><button class="toggle ${settings.skipCutscenes ? "active" : ""}" data-setting="skipCutscenes" aria-pressed="${Boolean(settings.skipCutscenes)}">${settings.skipCutscenes ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
     "",
     refresh,
   );
@@ -546,7 +760,7 @@ function bindInputPanel(layer) {
 }
 function updateSettingsModal(layer) {
   layer.querySelectorAll("[data-setting]").forEach((b) => {
-    const active = settings[b.dataset.setting];
+    const active = Boolean(settings[b.dataset.setting]);
     b.classList.toggle("active", active);
     b.setAttribute("aria-pressed", active);
     b.textContent = active ? "ON" : "OFF";
@@ -572,6 +786,7 @@ function refresh() {
   else if (state.screen === "selection") selection();
   else if (state.screen === "arena") arenaSelection();
   else if (state.screen === "route") arcadeRoute();
+  else if (state.screen === "bracket") showTournamentBracket();
 }
 function bind() {
   app.querySelectorAll("[data-action]").forEach((el) =>
@@ -580,7 +795,9 @@ function bind() {
       const a = el.dataset.action;
       switch (a) {
         case "home":
-          title();
+          // CUTSCENE: leaving an arcade loss (continue offered) is a game over.
+          if (state.screen === "result" && app.querySelector(".continue-prompt")) gameOver();
+          else title();
           break;
         case "start":
           begin(el.dataset.mode);
@@ -634,7 +851,7 @@ function bind() {
           selection();
           break;
         case "back-fighters":
-          state.selecting = state.mode === "arcade" ? "player" : "opponent";
+          state.selecting = state.mode === "arcade" || isTournament() ? "player" : "opponent";
           selection();
           break;
         case "arena":
@@ -658,6 +875,12 @@ function bind() {
         case "next-stage":
           nextChallenger();
           break;
+        case "tournament-bracket":
+          showTournamentBracket();
+          break;
+        case "tournament-new":
+          startTournament();
+          break;
         case "full-circle":
           settings.fullCircle = !settings.fullCircle;
           applySettings();
@@ -670,6 +893,7 @@ function bind() {
   );
 }
 document.addEventListener("keydown", (e) => {
+  if (!state.screen) return; // CUTSCENE: intro is still playing
   if (document.querySelector(".modal-layer")) {
     if (e.key === "Escape") document.querySelector(".modal-layer").dismiss();
     return;
@@ -715,9 +939,16 @@ document.addEventListener("keydown", (e) => {
   } else if (state.screen === "route" && e.key === "Enter") {
     e.preventDefault();
     fight();
+  } else if (state.screen === "bracket" && e.key === "Enter") {
+    e.preventDefault();
+    if (state.tournament?.status === "active") fight();
+    else startTournament();
   } else if (state.screen === "title" && e.key === "Enter") {
     e.preventDefault();
     begin("duel");
   }
 });
-title();
+// CUTSCENE: INTRO once per page load, then the title screen.
+state.screen = "";
+document.body.dataset.screen = "intro";
+cutscene("intro", { player: 0 }, title);

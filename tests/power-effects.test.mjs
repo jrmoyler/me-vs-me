@@ -27,6 +27,10 @@ const expected = {
   eon: ['strokeTriangle', 'strokeEllipse'], juris: ['closePath', 'fillCircle', 'strokeRect'],
   nomad: ['fillTriangle', 'fillCircle'], sketch: ['lineBetween'],
   student: ['strokeRect', 'fillRect'],
+  patchrunner: ['lineBetween', 'fillCircle'], starscribe: ['strokeCircle', 'fillRect'],
+  sovereign: ['strokeRect', 'fillTriangle', 'fillRect'], circuitbreaker: ['strokeRect', 'fillRect', 'lineBetween'],
+  ironchef: ['strokeEllipse', 'lineBetween', 'fillCircle'], eventhorizon: ['strokeEllipse', 'fillCircle', 'lineBetween'],
+  crimsonoracle: ['strokeCircle', 'lineBetween', 'fillCircle'], dunevoyager: ['lineBetween', 'fillEllipse'],
 };
 for (const [id, methods] of Object.entries(expected)) test(`${id}: signature effect dispatches from its gameplay style in both directions`, () => {
   const character = characters.find(c => c.id === id);
@@ -36,9 +40,9 @@ for (const [id, methods] of Object.entries(expected)) test(`${id}: signature eff
     if (id !== 'aether') assert.ok(!calls.some(call => call[0] === 'arc'), 'must not use generic arc fallback');
   }
 });
-test('all sixteen expansion powers emit different graphics command sequences', () => {
+test('all twenty-four newer powers emit different graphics command sequences', () => {
   const signatures = Object.keys(expected).map(id => JSON.stringify(draw(characters.find(c => c.id === id), 1, true)));
-  assert.equal(new Set(signatures).size, 16);
+  assert.equal(new Set(signatures).size, 24);
 });
 test('every roster POWER style has its own painter, never the generic fallback arc', () => {
   const fallback = JSON.stringify(draw({ ...characters[0], id: 'unlisted' }, 1, true));
