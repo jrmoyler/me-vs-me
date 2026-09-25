@@ -6,6 +6,7 @@ import { Window } from 'happy-dom';
 import { characters, bodyScale } from '../src/characters.js';
 import { arenas } from '../src/arenas.js';
 import * as moves from '../src/moves.js';
+import * as tournament from '../src/tournament.js';
 const { MOVES } = moves;
 
 const source=(await readFile(new URL('../src/main.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'');
@@ -15,7 +16,7 @@ function setup(saved={}) {
   for(const [key,value] of Object.entries(saved))window.localStorage.setItem(key,JSON.stringify(value));
   let pending, latest, bonusLatest, bonuses=0, destroys=0;
   const context=vm.createContext({window,document:window.document,localStorage:window.localStorage,
-    matchMedia:()=>({matches:false}),characters,bodyScale,arenas,...moves,console,
+    matchMedia:()=>({matches:false}),characters,bodyScale,arenas,...moves,...tournament,console,
     setTimeout:fn=>(pending=fn,1),clearTimeout:()=>{pending=null;},
     startBonus:options=>{bonuses++;bonusLatest=options;return {destroy(){}};},
     startCombat:async options=>{latest=options;return {destroy(){destroys++;}};}});
@@ -183,7 +184,7 @@ test('Enter from title uses the same choose-both-fighters flow',()=>{
 test('title offers Versus; versus picks player one, then player two, a stage, and launches local',async()=>{
   const h=setup({'mvm-onboarded':true});
   const labels=[...h.document.querySelectorAll('.title-actions button')].map(b=>b.textContent);
-  assert.deepEqual(labels.map(l=>l.replace(/\s*↗$/,'')),['CHOOSE YOUR MATCH','VERSUS / TWO PLAYERS','ARCADE LADDER','TRAINING']);
+  assert.deepEqual(labels.map(l=>l.replace(/\s*↗$/,'')),['CHOOSE YOUR MATCH','VERSUS / TWO PLAYERS','ARCADE LADDER','TOURNAMENT','TRAINING']);
   assert.match(h.document.querySelector('.title-ticker').textContent,/ONE PLAYER OR TWO \/ SAME CABINET/);
   assert.doesNotMatch(h.document.body.textContent,/NO SECOND PLAYER REQUIRED/);
   h.click('[data-mode="local"]');
@@ -258,4 +259,54 @@ test('menu portraits of shorter-drawn fighters grow to the shared body height; t
   assert.ok(student.classList.contains('body-scaled'));
   assert.equal(student.getAttribute('style'),`--body-scale:${bodyScale(characters.find(c=>c.id==='student'))}`);
   assert.ok(Math.abs(bodyScale({bodyHeight:143})-176/143)<1e-3);
+});
+
+// Tournament mode: eight-entrant single elimination.
+function startTournamentUI(){
+  const h=setup({'mvm-onboarded':true});h.click('[data-mode="tournament"]');
+  assert.equal(h.screen(),'selection');assert.equal(h.document.querySelector('.selection-tabs'),null,'player picks only their own fighter');
+  assert.match(h.document.querySelector('[data-action="confirm-fighter"]').textContent,/ENTER THE TOURNAMENT/);
+  h.key('ArrowRight');h.key('Enter');return h;
+}
+const bracketIds=h=>[...h.document.querySelectorAll('.bracket-entrant')].map(li=>Number(li.dataset.index));
+test('title offers a tournament; the bracket shows eight entrants, three rounds and the next opponent',async()=>{
+  const h=startTournamentUI();
+  assert.equal(h.screen(),'bracket');
+  const ids=bracketIds(h);
+  assert.equal(ids.length,8);assert.equal(new Set(ids).size,8);assert.ok(ids.includes(1));
+  assert.equal(h.document.querySelectorAll('.bracket-entrant img').length,8,'every entrant has a portrait');
+  assert.deepEqual([...h.document.querySelectorAll('.bracket-round[data-round] h2')].map(e=>e.textContent),['QUARTERFINALS','SEMIFINALS','FINAL']);
+  assert.deepEqual([...h.document.querySelectorAll('.bracket-round[data-round]')].map(r=>r.querySelectorAll('.bracket-match').length),[4,2,1]);
+  assert.equal(h.document.querySelectorAll('.bracket-match.next').length,1);
+  assert.match(h.document.querySelector('[data-action="fight"]').textContent,/FACE/);
+  h.key('Enter');assert.equal(h.screen(),'versus');await h.launch();
+  assert.equal(h.latest.mode,'tournament');assert.equal(h.latest.player.id,characters[1].id);
+  assert.ok(ids.includes(characters.findIndex(c=>c.id===h.latest.opponent.id)));
+  assert.notEqual(h.latest.opponent.id,characters[1].id);
+});
+test('tournament: three wins crown the champion; every start draws a fresh bracket',async()=>{
+  const h=startTournamentUI();const first=bracketIds(h);const faced=[];
+  for(let round=0;round<3;round++){
+    h.click('[data-action="fight"]');await h.launch();faced.push(h.latest.opponent.id);h.end('player');
+    assert.equal(h.screen(),'result');
+    if(round<2){assert.match(h.document.body.textContent,/ADVANCING TO THE (SEMIFINALS|FINAL)/);h.click('[data-action="tournament-bracket"]');assert.equal(h.screen(),'bracket');
+      assert.equal(h.document.querySelectorAll('.bracket-slot.won').length,[4,6][round],'CPU matches of the round are resolved');}
+  }
+  assert.equal(new Set(faced).size,3);
+  assert.match(h.document.body.textContent,/TOURNAMENT CHAMPION/);assert.ok(h.document.querySelector('.champion-seal'));
+  assert.equal(JSON.parse(h.window.localStorage.getItem('mvm-record')).wins,3);
+  const draws=new Set([first.join()]);
+  h.click('[data-action="tournament-new"]');assert.equal(h.screen(),'bracket');draws.add(bracketIds(h).join());
+  for(let n=0;n<5;n++){h.click('[data-action="home"]');h.click('[data-mode="tournament"]');h.key('Enter');assert.equal(h.screen(),'bracket');const ids=bracketIds(h);assert.equal(ids.length,8);assert.ok(ids.includes(1));draws.add(ids.join());}
+  assert.ok(draws.size>1,'a new tournament re-randomizes the entrants');
+});
+test('tournament: a loss eliminates the player and offers a new tournament or quit',async()=>{
+  const h=startTournamentUI();h.click('[data-action="fight"]');await h.launch();h.end('opponent');
+  assert.equal(h.screen(),'result');assert.match(h.document.body.textContent,/ELIMINATED IN THE QUARTERFINALS/);
+  assert.equal(h.document.querySelector('[data-action="next-stage"]'),null);assert.equal(h.document.querySelector('.continue-prompt'),null);
+  h.click('[data-action="tournament-bracket"]');assert.equal(h.screen(),'bracket');
+  assert.ok(h.document.querySelector('.bracket-entrant.you.out'));assert.equal(h.document.querySelectorAll('.bracket-entrant.champion').length,1);
+  assert.equal(h.document.querySelector('[data-action="fight"]'),null);
+  h.click('[data-action="tournament-new"]');assert.equal(h.screen(),'bracket');assert.ok(h.document.querySelector('[data-action="fight"]'));
+  h.click('[data-action="home"]');assert.equal(h.screen(),'title');
 });

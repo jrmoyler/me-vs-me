@@ -2563,3 +2563,105 @@ button:focus-visible {
 .input-table .keycap{min-width:64px;min-height:32px;padding:4px 8px;cursor:pointer;font:700 10px monospace}.input-table .keycap.listening{border-color:#ffd257;color:#ffd257}
 .input-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;font:10px monospace;color:#d8dde6}
 @media(max-width:700px){.system-moves{grid-template-columns:1fr}.input-table .keycap{min-width:48px}}
+
+/* ─── Tournament mode: bracket screen (builds on .route-screen) ─── */
+.secondary-actions { flex-wrap: wrap; row-gap: 4px; }
+.bracket-entrants {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 24px;
+}
+.bracket-entrant { min-width: 0; opacity: 0.8; }
+.bracket-entrant img { width: 100%; height: 80px; object-fit: contain; }
+.bracket-entrant span { display: block; font: 700 12px var(--display); overflow-wrap: anywhere; }
+.bracket-entrant span small { display: block; font: 8px monospace; letter-spacing: 0.1em; color: #abb4c2; margin-bottom: 2px; }
+.bracket-entrant b { display: block; font-size: 8px; margin-top: 5px; letter-spacing: 0.1em; }
+.bracket-entrant.you { opacity: 1; color: #f5cc60; }
+.bracket-entrant.out { opacity: 0.4; }
+.bracket-entrant.out img { filter: grayscale(1); }
+.bracket-entrant.champion { opacity: 1; color: #f5cc60; }
+.bracket-tree {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 0.8fr);
+  gap: 14px;
+  text-align: left;
+  margin-bottom: 22px;
+}
+.bracket-round { display: flex; flex-direction: column; justify-content: space-around; gap: 10px; min-width: 0; }
+.bracket-round h2 { font: 700 11px monospace; letter-spacing: 0.14em; color: #abb4c2; margin: 0 0 4px; text-align: center; }
+.bracket-round.current h2 { color: #f5cc60; }
+.bracket-match {
+  position: relative;
+  border: 2px solid #66708055;
+  background: #0b0f17cc;
+  display: grid;
+  gap: 1px;
+}
+.bracket-match.next { border-color: #f5cc60; box-shadow: 0 0 18px #f5cc6033; }
+.bracket-match > small {
+  position: absolute;
+  top: -9px;
+  right: 8px;
+  padding: 1px 6px;
+  background: #f5cc60;
+  color: #101319;
+  font: 700 8px monospace;
+  letter-spacing: 0.1em;
+}
+.bracket-slot {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  min-height: 42px;
+  border-left: 3px solid var(--fighter-color, #66708055);
+}
+.bracket-slot img { width: 34px; height: 34px; object-fit: cover; object-position: top; }
+.bracket-slot span { font: 700 13px var(--display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bracket-slot span em { font: 700 8px monospace; font-style: normal; color: #101319; background: #f5cc60; padding: 1px 4px; margin-left: 4px; vertical-align: middle; }
+.bracket-slot b { font: 900 16px var(--display); text-align: right; }
+.bracket-slot.won { background: #98c49318; }
+.bracket-slot.won b { color: #98c493; }
+.bracket-slot.lost { opacity: 0.45; }
+.bracket-slot.lost img { filter: grayscale(1); }
+.bracket-slot.you span { color: #f5cc60; }
+.bracket-slot.tbd { border-left-color: #66708033; color: #66708099; }
+.bracket-slot.tbd i { width: 34px; height: 34px; border: 1px dashed #66708066; }
+.bracket-slot.tbd span { font: 9px monospace; letter-spacing: 0.1em; }
+.bracket-champion {
+  border: 2px solid #f5cc6066;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 10px;
+  text-align: center;
+  background: radial-gradient(circle at 50% 80%, #f5cc6022, transparent 70%);
+}
+.bracket-champion img { width: 100%; height: 110px; object-fit: contain; }
+.bracket-champion i { font: 900 64px var(--display); font-style: normal; color: #f5cc6055; }
+.bracket-champion strong { font: 700 15px var(--display); color: #f5cc60; margin-top: 6px; }
+.bracket-champion.you { border-color: #f5cc60; }
+.bracket-next { min-height: 150px; margin: 0 auto; max-width: 640px; }
+.bracket-next > span { font: 700 10px monospace; letter-spacing: 0.1em; }
+.bracket-next-fighters { display: flex; align-items: flex-end; gap: 10px; align-self: center; }
+.bracket-next-fighters img { width: 96px; height: 96px; object-fit: contain; }
+.bracket-next-fighters b { font: 900 26px var(--display); color: var(--red); padding-bottom: 30px; }
+.bracket-next strong small { font: 10px monospace; color: var(--red); margin: 0 4px; }
+.bracket-actions { justify-content: center; }
+@media (max-width: 700px) {
+  .secondary-actions button { flex: 1 1 calc(50% - 6px); }
+  .bracket-entrants { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .bracket-entrant img { height: 64px; }
+  .bracket-tree { grid-template-columns: 1fr; gap: 18px; }
+  .bracket-round { gap: 8px; }
+  .bracket-champion { min-height: 0; flex-direction: row; justify-content: center; gap: 12px; }
+  .bracket-champion img { width: 64px; height: 64px; }
+  .bracket-champion i { font-size: 36px; }
+  .bracket-next-fighters img { width: 72px; height: 72px; }
+}
