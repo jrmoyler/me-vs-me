@@ -24,6 +24,7 @@ function graphic(x = 0, y = 0) {
       if (key in target) return target[key];
       return (...args) => {
         if (key === "setFrame") target.frame = args[0];
+        if (key === "setScale") target.scale = args[0];
         if (key === "setPosition") {
           target.x = args[0];
           target.y = args[1];
@@ -219,6 +220,29 @@ test("walk, jump, guard and hurt select dedicated motion art; knockouts and vict
   assert.equal(o.visualState, "ko");
   assert.equal(o.sprite.frame, 19);
   h.control.destroy();
+});
+
+test("every fighter keeps one on-screen height across ready, attack and motion art", async () => {
+  for (const c of characters) {
+    const h = await setup(c);
+    const p = h.scene.fighters[0];
+    const heights = {};
+    for (const [patch, input, texture] of [
+      [{ attack: null }, {}, "ready0"],
+      [{ attack: rules.createAttack(p, "light") }, {}, "fighter0"],
+      [{ attack: null, stun: 0, guard: false, y: 450 }, { right: true }, "motion0"],
+      [{ guard: true }, {}, "motion0"],
+    ]) {
+      Object.assign(p, patch);
+      h.scene.renderFighter(p, input, 0.016, 0);
+      assert.equal(p.textureKey, texture);
+      // Drawn body height = the atlas's packed body height × the sprite scale.
+      const packed = texture === "motion0" ? c.motionBodyHeight : c.bodyHeight;
+      heights[`${texture}:${p.visualState}`] = Math.round(packed * p.sprite.scale);
+    }
+    assert.deepEqual(new Set(Object.values(heights)), new Set([190]), `${c.id}: ${JSON.stringify(heights)}`);
+    h.control.destroy();
+  }
 });
 
 test('all fighters return to original ready art when idle and after round reset', async () => {
