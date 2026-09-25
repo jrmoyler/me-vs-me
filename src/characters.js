@@ -1,10 +1,11 @@
 // Every fighter shares one atlas layout: a 16-frame ready sheet (frame 0 is the idle pose),
 // a 4×7 combat atlas, a 4×6 motion atlas and a portrait, all on 320×320 cells grounded at y=296.
 // bodyHeight is the visible ready-pose height; combat scales every fighter to the same on-screen size.
+// motionBodyHeight is the height the motion atlas was packed at, when that differs from the combat atlas.
 export const REFERENCE_BODY = 176;
 // Menu art draws the raw 320px cells; this factor brings a shorter-drawn body up to the shared height.
 export const bodyScale = (c) => Math.round((REFERENCE_BODY / (c?.bodyHeight || REFERENCE_BODY)) * 1000) / 1000;
-const fighter = ({ id, bodyHeight = REFERENCE_BODY, ...identity }) => ({
+const fighter = ({ id, bodyHeight = REFERENCE_BODY, motionBodyHeight = bodyHeight, ...identity }) => ({
   id,
   ...identity,
   sheet: `/assets/characters/${id}-sheet.png`,
@@ -18,6 +19,7 @@ const fighter = ({ id, bodyHeight = REFERENCE_BODY, ...identity }) => ({
   combatFrameCount: 28,
   motionFrameCount: 24,
   bodyHeight,
+  motionBodyHeight,
   anchorX: 160,
   anchorY: 296,
 });
@@ -303,6 +305,7 @@ export const characters = [
     power: 8,
     reach: 9,
     bodyHeight: 156,
+    motionBodyHeight: 176, // motion atlas was packed under juris in the supplied export
   }),
   fighter({
     id: "juris",
@@ -315,6 +318,7 @@ export const characters = [
     speed: 6,
     power: 10,
     reach: 6,
+    motionBodyHeight: 143, // motion atlas was packed under student in the supplied export
   }),
   fighter({
     id: "nomad",
@@ -353,6 +357,7 @@ export const characters = [
     power: 6,
     reach: 8,
     bodyHeight: 143,
+    motionBodyHeight: 156, // motion atlas was packed under eon in the supplied export
   }),
 ];
 export default characters;

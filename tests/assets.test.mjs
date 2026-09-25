@@ -265,3 +265,57 @@ for (const fighter of characters)
       }
     assert.equal(new Set(states).size, 6);
   });
+
+// A 512-bin colour histogram of the opaque pixels in the given 320×320 cells.
+function palette(file, cells) {
+  const { width, pixels } = png(asset(file), true);
+  const bins = new Float64Array(512);
+  let total = 0;
+  for (const [row, col] of cells)
+    for (let y = 0; y < 320; y++)
+      for (let x = 0; x < 320; x++) {
+        const at = ((row * 320 + y) * width + col * 320 + x) * 4;
+        if (pixels[at + 3] <= 128) continue;
+        bins[(pixels[at] >> 5) * 64 + (pixels[at + 1] >> 5) * 8 + (pixels[at + 2] >> 5)]++;
+        total++;
+      }
+  return bins.map((n) => n / total);
+}
+const paletteDistance = (a, b) => a.reduce((sum, v, i) => sum + Math.abs(v - b[i]), 0);
+
+test("every motion atlas shows the same fighter as its combat atlas", () => {
+  // Walk and guard poses against the effect-free anticipation pose of each attack.
+  const combat = characters.map((c) => palette(c.combatSheet, [0, 1, 2, 3, 4, 5, 6].map((r) => [r, 0])));
+  const motion = characters.map((c) => palette(c.motionSheet, [0, 1, 2, 3].flatMap((col) => [[0, col], [2, col]])));
+  const d = (m, c) => paletteDistance(motion[m], combat[c]);
+  characters.forEach((fighter, i) => {
+    const nearest = characters[combat.reduce((best, _, j) => (d(i, j) < d(i, best) ? j : best), 0)];
+    assert.equal(nearest.id, fighter.id, `${fighter.motionSheet} looks like ${nearest.id}, not ${fighter.id}`);
+  });
+  characters.forEach((fighter, i) => {
+    for (let j = i + 1; j < characters.length; j++)
+      assert.ok(d(i, i) + d(j, j) < d(i, j) + d(j, i),
+        `${fighter.id} and ${characters[j].id} motion atlases match better swapped`);
+  });
+});
+
+test("expansion motion atlases scale to the same height as the ready pose", () => {
+  const visible = (file, row, col) => {
+    const { width, pixels } = png(asset(file), true);
+    let top = 320, bottom = -1;
+    for (let y = 0; y < 320; y++)
+      for (let x = 0; x < 320; x++)
+        if (pixels[((row * 320 + y) * width + col * 320 + x) * 4 + 3] > 128) {
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y);
+        }
+    return bottom - top + 1;
+  };
+  // The originals were hand-drawn with crouched guards; both packed expansions stand tall.
+  for (const c of characters.slice(11)) {
+    const ready = visible(c.combatSheet, 0, 0) / c.bodyHeight;
+    const guard = visible(c.motionSheet, 2, 0) / c.motionBodyHeight;
+    assert.ok(Math.abs(guard - ready) < 0.03,
+      `${c.id}: guard ${guard.toFixed(3)} vs ready ${ready.toFixed(3)} — motionBodyHeight is wrong`);
+  }
+});

@@ -435,6 +435,7 @@ export async function startCombat({
           sprite,
           shadow,
           scale,
+          motionScale: 190 / (c.motionBodyHeight || c.bodyHeight || 176),
           x: sprite.x,
           y: 450,
           vy: 0,
@@ -945,7 +946,8 @@ export async function startCombat({
         .setRotation(0)
         .setPosition(f.x, f.y + bob)
         .setFlipX(f.face < 0)
-        .setScale(f.scale);
+        // The motion atlas can be packed at a different height from the ready and combat art.
+        .setScale(texture === `motion${index}` ? f.motionScale : f.scale);
       f.shadow.setPosition(f.x, 452).setScale(1 - (450 - f.y) / 600);
       this.tint(f);
     }
