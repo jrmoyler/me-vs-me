@@ -1,0 +1,66 @@
+{
+  "id": "juris",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 176,
+  "scales": {
+    "combat": 0.8380952380952381,
+    "motion": 0.7537473233404711
+  },
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "signatureGifDurationMs": 1120,
+  "gifTimingNote": "GIF uses 10ms ticks; equal held poses may be stored as one frame with combined duration.",
+  "signatureDescription": "16 timeline cells using ready plus four authored power key poses, with holds; not 16 unique poses.",
+  "sources": {
+    "combat": {
+      "file": "juris-combat.png",
+      "sha256": "63c452d0f3d676ef52c4257f0b0b8dc6596807e29c9b0843857c2ef4692c2d32"
+    },
+    "motion": {
+      "file": "juris-motion.png",
+      "sha256": "3fdbed7b1b148ab76033266e27336b64cf084ca0ca6128d94bf22bf329f1a72a"
+    }
+  },
+  "alpha": "Packing trims outer padding using alpha >16 bounds, preserving all authored RGBA inside each crop. PNG retains source alpha; GIF uses binary alpha at threshold128."
+}

@@ -1,5 +1,5 @@
 import "./style.css";
-import { characters } from "./characters.js";
+import { characters, bodyScale } from "./characters.js";
 import { arenas } from "./arenas.js";
 import { MOVES, SYSTEM_MOVES, BINDABLE, kitFor, bindingsFor, keyLabel } from "./moves.js";
 import { startCombat } from "./combat.js";
@@ -55,32 +55,9 @@ const esc = (s) =>
       ],
   );
 const pad2 = (n) => String(n).padStart(2, "0");
-// Arcade: eight mixed-role reflections, then your own shadow. FULL CIRCLE faces all nineteen.
+// Arcade: eight mixed-role reflections, then your own shadow. FULL CIRCLE faces every other identity.
 const LADDER_SHORT = 8;
-const VICTORY_QUOTES = {
-  hataalii: "Every version of me started as this one.",
-  urban: "The night was quiet until you made a sound.",
-  gauntlet: "Charged, aimed and finished before you moved.",
-  tote: "I let you speak first; that was the mistake.",
-  vector: "Angles do not lie, and your footwork did.",
-  kinetic: "A green light means I never stop.",
-  corvette: "Plenty of miles left on this kick.",
-  curly: "You never saw the sweep because I never planned it.",
-  pixel: "Instinct is just a memory you forgot you had.",
-  tweed: "Manners are for after the fight.",
-  varsity: "Championship habits: grab, drop, repeat.",
-  hybrid: "Two disciplines, one outcome.",
-  civic: "Peace comes easier once you stop swinging.",
-  nexus: "Signal received; connection terminated.",
-  glyph: "That was my signature, so keep it.",
-  quilt: "Unruffled, and now you know why.",
-  binary: "Your pattern broke on the first input.",
-  aether: "I was already at the finish line.",
-  gaia: "The formula was stable; you were not.",
-  zenith: "I planned this three rounds ago.",
-};
-const quoteFor = (c) =>
-  VICTORY_QUOTES[c.id] || "The reflection never lies.";
+const quoteFor = (c) => c.quote || "The reflection never lies.";
 const isLocal = () => state.mode === "local";
 const isFinal = () =>
   state.mode === "arcade" &&
@@ -148,8 +125,10 @@ function applySettings() {
   save("mvm-settings", settings);
 }
 applySettings();
-function portrait(c, classes = "", style = "") {
-  return `<img class="fighter-art ${classes}" src="${esc(c.portrait)}" alt="${esc(c.name)}" draggable="false" style="${style}">`;
+function portrait(c, classes = "") {
+  const scale = bodyScale(c);
+  const scaled = scale === 1 ? "" : ` style="--body-scale:${scale}"`;
+  return `<img class="fighter-art ${classes}${scaled ? " body-scaled" : ""}"${scaled} src="${esc(c.portrait)}" alt="${esc(c.name)}" draggable="false">`;
 }
 function chrome(label = "THE ONLY RIVAL IS YOU") {
   return `<header class="topbar"><button class="brand" data-action="home" aria-label="Me vs Me home">M<span>×</span>M<span class="brand-dot">™</span></button><div class="topbar-center"><span class="live-dot"></span>${label}</div><nav class="utility"><button class="icon-button" data-action="sound" aria-label="${settings.sound ? "Mute" : "Enable"} sound" title="Sound ${settings.sound ? "on" : "off"}">${icon(settings.sound ? "sound" : "muted")}<span class="sound-state">${settings.sound ? "ON" : "OFF"}</span></button><button class="icon-button fullscreen-button" data-action="fullscreen" aria-label="Toggle fullscreen">${icon("fullscreen")}</button><button class="icon-button" data-action="settings" aria-label="Settings">${icon("gear")}</button></nav></header>`;

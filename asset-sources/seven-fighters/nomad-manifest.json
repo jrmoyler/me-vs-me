@@ -1,0 +1,66 @@
+{
+  "id": "nomad",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 176,
+  "scales": {
+    "combat": 0.9214659685863874,
+    "motion": 0.7981859410430839
+  },
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "signatureGifDurationMs": 1120,
+  "gifTimingNote": "GIF uses 10ms ticks; equal held poses may be stored as one frame with combined duration.",
+  "signatureDescription": "16 timeline cells using ready plus four authored power key poses, with holds; not 16 unique poses.",
+  "sources": {
+    "combat": {
+      "file": "nomad-combat.png",
+      "sha256": "60ffb2a51d2701f96956585dc638a761bbb6a111f84f4890c6e7178a4f807086"
+    },
+    "motion": {
+      "file": "nomad-motion.png",
+      "sha256": "54632da487f5d53df333a89ce5d25e8240273ea5e5a482ec972debed5c5ca400"
+    }
+  },
+  "alpha": "Packing trims outer padding using alpha >16 bounds, preserving all authored RGBA inside each crop. PNG retains source alpha; GIF uses binary alpha at threshold128."
+}

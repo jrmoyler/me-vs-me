@@ -8,7 +8,7 @@ Each sheet is 5120×320 pixels: sixteen horizontal 320×320 frames. Frame zero i
 
 The five arena SVGs are original game backgrounds created for this implementation. They are not screenshots or extracted artwork from the linked reference video. Reference-video fidelity requires direct visual comparison; this asset pipeline does not establish that claim.
 
-Run `node --test tests/assets.test.mjs` to verify roster and arena counts, path availability, distinct identities, PNG dimensions, stats, transparency margins, and grounded bounds for all 176 animation frames. The test uses only Node built-ins and decodes the PNG alpha channel to inspect actual frame bounds.
+Run `node --test tests/assets.test.mjs` to verify roster and arena counts, path availability, distinct identities, PNG dimensions, stats, transparency margins, and grounded bounds for every ready-sheet, combat and motion frame (27 fighters × 16 + 28 + 24). The test uses only Node built-ins and decodes the PNG alpha channel to inspect actual frame bounds.
 
 ## Combat edition — September 20, 2026
 
@@ -82,5 +82,30 @@ Five new 1536×864 WebP stage backgrounds join the original five: Terminal Nine 
 `scripts/render-arenas.mjs` turns a source image into the shipped asset: cover-fit onto an opaque 1536×864 canvas in Playwright's Chromium, export as lossy WebP, and rewrite the RIFF wrapper to the simple `VP8 ` container when Chromium emits `VP8X` without alpha. `--check` validates container, dimensions, size and distinct hashes for all ten; `--sheet docs/qa/ten-arenas.jpg` renders the contact sheet. Each stage also has a bounded atmosphere painter in `src/stage-effects.js` (train sweep and tube flicker, dawn shafts and pollen, camera flashes and confetti, heat shimmer and headlights, rack LEDs and a scan sweep).
 
 The touch controller (`src/controller.js`) draws its own keycap-style pad, cluster and bars in CSS; no bitmap assets were added for it. Screenshots in `docs/qa/controller-*.jpg` are headless Chromium captures produced by `scripts/qa-screens.mjs`.
+
+These are stylized generated illustrations; art direction acceptance is a human review, separate from the automated structural checks.
+
+
+## Seven-fighter expansion — September 25, 2026
+
+Seven more fighters bring the roster to 27. They were supplied already packed (`Me-vs-Me-Seven-Fighter-Sprites-and-GIFs.zip`) in the same export format as the nine-fighter expansion: a 1280×2240 combat atlas (28 authored key poses), a 1280×1920 motion atlas (24 authored key poses), a 5120×320 ready sheet and a 320×320 portrait each, all on 320×320 cells with feet at y=296. The twenty existing fighters, their art and their order are unchanged; the new seven are appended as roster slots 21–27.
+
+| ID | Name | Look | Power | Role / POWER class |
+|---|---|---|---|---|
+| archer | EVERGREEN | Leaf cloak, longbow | Verdant Volley: green arrow fan | Zoner / projectile |
+| cyborg | OVERCLOCK | Black trench coat, gold circuitry, cyan fist | Plasma Rush: cyan comet blast | Rushdown / command dash |
+| eon | EON | Cream sweats, gray beanie | Hourglass Rift: violet hourglass beam | Counter / sweep |
+| juris | JURIS | Navy beret, jacket with gold crest | Verdict Shield: crest shield charge | Grappler / command dash |
+| nomad | NOMAD | Black tracksuit with gold stripes, gray beanie | Caravan Flare: gold fireball | Zoner / projectile |
+| sketch | SKETCH | Graphite-grayscale suit | Graphite Stroke: white pencil streak | Balanced / sweep |
+| student | STUDENT | Black hoodie, backpack, open book | Page Storm: flurry of pages | Balanced / projectile |
+
+Names, titles, stats, quotes and POWER profiles are game interpretations of the supplied art; each profile's reach matches the illustrated impact pose (dashes) or follows the existing sweep and projectile ranges.
+
+**Scale.** Four fighters were packed smaller in their cells (visible ready-pose height: cyborg 169, eon 156, sketch 168, student 143, against 176). Each fighter's `bodyHeight` comes from its export manifest, so combat scales all 27 to the same on-screen height, and menu portraits and the bonus stage apply the matching `--body-scale` from the feet. `tests/assets.test.mjs` checks the manifests against the roster and the visible portrait height against `bodyHeight`.
+
+**Provenance.** Each export's `manifest.json` is kept as `asset-sources/seven-fighters/{id}-manifest.json`. Its `sources` SHA-256 values identify the raw pre-pack generations, which were not part of the supplied archive, so they do not match the packed atlases. The per-move GIFs, signature sheets and 4×4 signature grids in the archive are review exports and are not committed, matching how the nine-fighter exports were handled (`asset-exports/` is ignored). Contact sheets: [`docs/qa/seven-fighter-combat-peaks.jpg`](docs/qa/seven-fighter-combat-peaks.jpg) (impact pose of all seven attacks) and [`docs/qa/seven-fighter-motion-peaks.jpg`](docs/qa/seven-fighter-motion-peaks.jpg) (walk, jump, guard, hurt, KO, victory).
+
+**Effects.** Each new POWER has its own painter in `src/stage-effects.js`. Projectile POWERs now also travel as their own shape through `paintProjectile` (arrows, fireball, pages, and matching shapes for Ion Burst, Mirror Shatter, Pulse Relay and Apex Pulse) instead of one shared orb; hit detection is unchanged.
 
 These are stylized generated illustrations; art direction acceptance is a human review, separate from the automated structural checks.

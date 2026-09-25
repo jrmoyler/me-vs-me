@@ -241,6 +241,78 @@ export function paintPower(g, f, time, reducedMotion) {
       }
       break;
     }
+    // Seven-fighter expansion.
+    case "volley": {
+      const bow = x + face * 58;
+      for (let i = -2; i <= 2; i++) {
+        const tip = bow + face * (r + 30 - Math.abs(i) * 12);
+        const ty = y + i * 13;
+        g.lineBetween(bow, y + i * 5, tip, ty);
+        g.fillStyle(0xd8ff8a, strength);
+        g.fillTriangle(tip + face * 9, ty, tip, ty - 4, tip, ty + 4);
+      }
+      break;
+    }
+    case "plasma": {
+      const fist = x + face * 62;
+      g.fillStyle(0x9ff4ff, strength * 0.35);
+      g.fillEllipse(fist + face * r * 0.45, y, r * 1.1 + 30, 34);
+      g.strokeCircle(fist, y, 16 + r * 0.08);
+      g.fillStyle(0xe8fdff, strength);
+      g.fillCircle(fist, y, 9);
+      break;
+    }
+    case "hourglass": {
+      const glass = x + face * (70 + r * 0.25);
+      g.strokeTriangle(glass - 22, y - 42, glass + 22, y - 42, glass, y);
+      g.strokeTriangle(glass - 22, y + 42, glass + 22, y + 42, glass, y);
+      g.strokeEllipse(glass, y, 76 + r * 0.3, 96 + r * 0.3);
+      g.lineBetween(x + face * 30, y, glass - face * 38, y);
+      break;
+    }
+    case "verdict": {
+      const shield = x + face * 66;
+      g.beginPath();
+      g.moveTo(shield - 26, y - 44);
+      g.lineTo(shield + 26, y - 44);
+      g.lineTo(shield + 26, y + 6);
+      g.lineTo(shield, y + 46);
+      g.lineTo(shield - 26, y + 6);
+      g.closePath();
+      g.strokePath();
+      g.fillStyle(0xfff0b8, strength);
+      g.fillCircle(shield, y - 8, 8);
+      g.strokeRect(shield - face * 8 - 4, y - 32, 8, 50);
+      break;
+    }
+    case "flare": {
+      const core = x + face * (60 + r * 0.2);
+      g.fillStyle(0xff8a1f, strength * 0.5);
+      g.fillTriangle(core, y - 20, core, y + 20, core - face * (48 + r * 0.4), y);
+      g.fillStyle(0xffc84a, strength * 0.8);
+      g.fillCircle(core, y, 22);
+      g.fillStyle(0xfff4c9, strength);
+      g.fillCircle(core + face * 4, y - 3, 10);
+      break;
+    }
+    case "graphite":
+      for (let i = 0; i < 9; i++) {
+        const hx = x + face * (50 + i * (r + 60) / 9);
+        g.lineBetween(hx - face * 7, y + 18 - (i % 3) * 5, hx + face * 7, y - 18 + (i % 2) * 6);
+      }
+      g.lineBetween(x + face * 46, y, x + face * (r + 110), y);
+      break;
+    case "pages": {
+      const book = x + face * 56;
+      g.strokeRect(book - 14, y - 16, 28, 34);
+      for (let i = 0; i < 6; i++) {
+        const px = book + face * (22 + i * (r + 40) / 6);
+        const py = y - 24 + ((i * 17) % 48);
+        g.fillStyle(i % 2 ? 0xfff6dc : 0xffe29a, strength);
+        g.fillRect(px - 6, py - 8, 12, 16);
+      }
+      break;
+    }
     case "crown":
       g.beginPath();
       g.moveTo(x - 65, y);
@@ -303,5 +375,79 @@ export function paintPower(g, f, time, reducedMotion) {
   if (!reducedMotion && m.t < m.start + m.active) {
     g.lineStyle(2, 0xffffff, strength * 0.5);
     g.lineBetween(x - face * 100, y + 15, x - face * 35, y + 15);
+  }
+}
+
+// Projectile POWERs travel as their own shape; unknown styles keep the classic energy orb.
+export function paintProjectile(g, shot, time = 0) {
+  const color = parseInt(shot.owner.c.color.slice(1), 16);
+  const { x, y, face } = shot;
+  switch (shot.move?.style) {
+    case "volley":
+      g.lineStyle(2, color, 0.95);
+      for (let i = -1; i <= 1; i++) {
+        const ax = x - Math.abs(i) * face * 14;
+        g.lineBetween(ax - face * 40, y + i * 12, ax, y + i * 12);
+        g.fillStyle(0xe6ff9e, 0.95);
+        g.fillTriangle(ax + face * 11, y + i * 12, ax, y + i * 12 - 5, ax, y + i * 12 + 5);
+      }
+      return;
+    case "flare":
+      g.fillStyle(0xff7a1a, 0.35);
+      g.fillTriangle(x, y - 18, x, y + 18, x - face * 70, y);
+      g.fillStyle(color, 0.9);
+      g.fillCircle(x, y, 18);
+      g.fillStyle(0xfff4c9, 0.95);
+      g.fillCircle(x + face * 4, y - 2, 8);
+      return;
+    case "pages":
+      for (let i = 0; i < 5; i++) {
+        const px = x - face * i * 15;
+        const py = y + Math.sin(time * 9 + i * 1.7) * 14;
+        g.fillStyle(i % 2 ? 0xfff6dc : color, 0.9 - i * 0.12);
+        g.fillRect(px - 7, py - 9, 14, 18);
+      }
+      return;
+    case "ion":
+      g.fillStyle(color, 0.2);
+      g.fillEllipse(x - face * 26, y, 96, 30);
+      g.lineStyle(3, 0xe9ffff, 0.9);
+      g.strokeCircle(x, y, 19);
+      g.fillStyle(color, 0.85);
+      g.fillCircle(x, y, 13);
+      return;
+    case "shatter":
+      g.lineStyle(2, color, 0.9);
+      for (let i = 0; i < 4; i++) {
+        const a = i * 1.57 + time * 6;
+        g.strokeTriangle(
+          x + Math.cos(a) * 20, y + Math.sin(a) * 20,
+          x + Math.cos(a + 0.5) * 8, y + Math.sin(a + 0.5) * 8,
+          x + Math.cos(a - 0.5) * 8, y + Math.sin(a - 0.5) * 8,
+        );
+      }
+      g.fillStyle(0xffffff, 0.85);
+      g.fillCircle(x, y, 6);
+      return;
+    case "relay":
+      g.lineStyle(3, color, 0.85);
+      for (let i = 0; i < 3; i++) g.strokeEllipse(x - face * i * 16, y, 12 + i * 6, 26 + i * 12);
+      return;
+    case "apex":
+      g.lineStyle(2, color, 0.9);
+      g.strokeEllipse(x, y, 44, 16);
+      g.strokeEllipse(x, y, 16, 44);
+      g.fillStyle(0xf1dbff, 0.95);
+      g.fillCircle(x, y, 7);
+      return;
+    default:
+      g.fillStyle(color, 0.18);
+      g.fillEllipse(x - face * 20, y, 86, 36);
+      g.lineStyle(3, color, 0.9);
+      g.strokeCircle(x, y, 21);
+      g.fillStyle(color, 0.8);
+      g.fillCircle(x, y, 15);
+      g.fillStyle(0xffffff, 0.9);
+      g.fillRect(x - 8, y - 5, 16, 10);
   }
 }

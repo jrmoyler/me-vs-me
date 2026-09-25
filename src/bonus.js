@@ -67,6 +67,12 @@ export function startBonus({
     stage.style.backgroundImage = `url("${String(arena.background).replace(/["\\\n\r]/g, "")}")`;
   const fighter = root.querySelector(".mvm-bonus-fighter");
   fighter.style.backgroundImage = `url("${String(character.combatSheet || character.portrait).replace(/["\\\n\r]/g, "")}")`;
+  // Same body normalisation as characters.js bodyScale; this module stays import-free.
+  const scale = 176 / (character.bodyHeight || 176);
+  if (scale !== 1) {
+    fighter.style.scale = String(scale);
+    fighter.style.transformOrigin = "50% 92.5%";
+  }
   const target = root.querySelector(".mvm-bonus-target"),
     feedback = root.querySelector("[role=status]"),
     meter = root.querySelector("meter");

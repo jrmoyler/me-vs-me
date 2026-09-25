@@ -14,7 +14,7 @@ import {
   bindingsFor,
   keyLabel,
 } from "./moves.js";
-import { paintAtmosphere, paintPower } from "./stage-effects.js";
+import { paintAtmosphere, paintPower, paintProjectile } from "./stage-effects.js";
 import {
   SPECIAL_COST,
   KNOCKDOWN_TIME,
@@ -1304,15 +1304,7 @@ export async function startCombat({
       for (const shot of this.projectiles) {
         shot.life -= dt;
         shot.x += shot.face * (shot.move.projectileSpeed || 580) * dt;
-        const color = parseInt(shot.owner.c.color.slice(1), 16);
-        this.fx.fillStyle(color, 0.18);
-        this.fx.fillEllipse(shot.x - shot.face * 20, shot.y, 86, 36);
-        this.fx.lineStyle(3, color, 0.9);
-        this.fx.strokeCircle(shot.x, shot.y, 21);
-        this.fx.fillStyle(color, 0.8);
-        this.fx.fillCircle(shot.x, shot.y, 15);
-        this.fx.fillStyle(0xffffff, 0.9);
-        this.fx.fillRect(shot.x - 8, shot.y - 5, 16, 10);
+        paintProjectile(this.fx, shot, settings.reducedMotion ? 0 : this.elapsed);
         if (
           canBeHit(shot.target) &&
           Math.abs(shot.x - shot.target.x) < 45 &&

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { Window } from 'happy-dom';
-import { characters } from '../src/characters.js';
+import { characters, bodyScale } from '../src/characters.js';
 import { arenas } from '../src/arenas.js';
 import * as moves from '../src/moves.js';
 const { MOVES } = moves;
@@ -15,7 +15,7 @@ function setup(saved={}) {
   for(const [key,value] of Object.entries(saved))window.localStorage.setItem(key,JSON.stringify(value));
   let pending, latest, bonusLatest, bonuses=0, destroys=0;
   const context=vm.createContext({window,document:window.document,localStorage:window.localStorage,
-    matchMedia:()=>({matches:false}),characters,arenas,...moves,console,
+    matchMedia:()=>({matches:false}),characters,bodyScale,arenas,...moves,console,
     setTimeout:fn=>(pending=fn,1),clearTimeout:()=>{pending=null;},
     startBonus:options=>{bonuses++;bonusLatest=options;return {destroy(){}};},
     startCombat:async options=>{latest=options;return {destroy(){destroys++;}};}});
@@ -82,7 +82,7 @@ test('arcade final is titled YOUR SHADOW on the route and versus screens',async(
   assert.match(h.document.querySelector('.versus-top').textContent,/YOUR SHADOW/);
   await h.launch();assert.equal(h.latest.opponent.shadow,true);assert.equal(h.latest.opponent.id,characters[0].id);
 });
-test('FULL CIRCLE persists and yields all nineteen reflections plus the shadow',async()=>{
+test('FULL CIRCLE persists and yields every other reflection plus the shadow',async()=>{
   const h=setup({'mvm-onboarded':true});h.click('[data-mode="arcade"]');h.key('Enter');
   h.click('[data-action="full-circle"]');
   assert.equal(JSON.parse(h.window.localStorage.getItem('mvm-settings')).fullCircle,true);
@@ -91,7 +91,7 @@ test('FULL CIRCLE persists and yields all nineteen reflections plus the shadow',
   const {faced}=await runArcade(h);
   assert.equal(faced.length,characters.length);assert.equal(new Set(faced.slice(0,-1)).size,characters.length-1);
   assert.equal(faced.at(-1),characters[0].id);
-  assert.equal(h.bonuses,6);
+  assert.equal(h.bonuses,Math.floor((characters.length-1)/3),'a bonus after every third win');
   assert.match(h.document.body.textContent,new RegExp(`ARCADE COMPLETE · ${characters.length-1} REFLECTIONS`));
   const again=setup({'mvm-onboarded':true,'mvm-settings':{fullCircle:true}});again.click('[data-mode="arcade"]');again.key('Enter');
   assert.match(again.document.querySelector('.mode-info').textContent,new RegExp(`OF ${characters.length}`));
@@ -247,4 +247,15 @@ test('the bonus stage borrows the upcoming arena',async()=>{
   for(let n=0;n<3;n++){h.end();h.click('[data-action="next-stage"]');if(n<2){h.click('[data-action="fight"]');await h.launch();}}
   assert.equal(h.screen(),'bonus');const bonusArena=h.bonusArena.id;h.finishBonus();h.click('[data-action="fight"]');await h.launch();
   assert.equal(h.latest.arena.id,bonusArena);
+});
+
+test('menu portraits of shorter-drawn fighters grow to the shared body height; the originals are untouched',()=>{
+  const h=setup({'mvm-onboarded':true});h.click('[data-mode="duel"]');
+  const art=id=>h.document.querySelector(`.roster-fighter[data-index="${characters.findIndex(c=>c.id===id)}"] img`);
+  assert.ok(!art('hataalii').classList.contains('body-scaled'));assert.equal(art('hataalii').getAttribute('style'),null);
+  for(const c of characters.slice(0,20))assert.equal(bodyScale(c),1,c.id);
+  const student=art('student');
+  assert.ok(student.classList.contains('body-scaled'));
+  assert.equal(student.getAttribute('style'),`--body-scale:${bodyScale(characters.find(c=>c.id==='student'))}`);
+  assert.ok(Math.abs(bodyScale({bodyHeight:143})-176/143)<1e-3);
 });

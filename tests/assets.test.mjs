@@ -58,9 +58,9 @@ function png(data, decode = false) {
   return { width, height, pixels };
 }
 
-test("roster contains twenty distinct identities and signature attacks", () => {
-  assert.equal(characters.length, 20);
-  for (const key of ["id", "name", "move", "sheet", "portrait"])
+test("roster contains twenty-seven distinct identities and signature attacks", () => {
+  assert.equal(characters.length, 27);
+  for (const key of ["id", "name", "move", "quote", "sheet", "portrait"])
     assert.equal(
       new Set(characters.map((c) => c[key])).size,
       characters.length,
@@ -69,6 +69,7 @@ test("roster contains twenty distinct identities and signature attacks", () => {
 });
 
 test("expansion ready poses ground visible feet and match runtime body scale", () => {
+  // Both expansions: the nine at index 11-19 and the seven at 20-26.
   for (const fighter of characters.slice(11)) {
     const { width, height, pixels } = png(asset(fighter.portrait), true);
     let top = height, bottom = -1;
@@ -82,6 +83,30 @@ test("expansion ready poses ground visible feet and match runtime body scale", (
       `${fighter.id}: visible feet, not faint padding, must meet the ground`);
     assert.ok(Math.abs(bottom - top + 1 - fighter.bodyHeight) <= 4,
       `${fighter.id}: runtime scale must match the visible body`);
+  }
+});
+
+test("the original twenty fighters keep their order, ids and art paths", () => {
+  const original = "hataalii urban gauntlet tote vector kinetic corvette curly pixel tweed varsity hybrid civic nexus glyph quilt binary aether gaia zenith".split(" ");
+  assert.deepEqual(characters.slice(0, 20).map((c) => c.id), original);
+  for (const c of characters.slice(0, 20)) {
+    assert.equal(c.bodyHeight, 176);
+    for (const key of ["sheet", "combatSheet", "motionSheet", "portrait"])
+      assert.match(c[key], new RegExp(`^/assets/characters/${c.id}-`));
+  }
+});
+
+test("seven-fighter expansion matches its export manifests", () => {
+  for (const c of characters.slice(20)) {
+    const manifest = JSON.parse(
+      readFileSync(new URL(`../asset-sources/seven-fighters/${c.id}-manifest.json`, import.meta.url)),
+    );
+    assert.equal(manifest.id, c.id);
+    assert.equal(manifest.bodyHeight, c.bodyHeight, `${c.id}: runtime scale follows the manifest`);
+    assert.deepEqual(manifest.anchor, [c.anchorX, c.anchorY]);
+    assert.equal(manifest.cellSize, c.frameWidth);
+    assert.equal(manifest.combatAuthoredPoses, c.combatFrameCount);
+    assert.equal(manifest.motionAuthoredPoses, c.motionFrameCount);
   }
 });
 
