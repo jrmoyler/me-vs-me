@@ -56,6 +56,12 @@ img {
 .flipped {
   transform: scaleX(-1);
 }
+/* Shorter-drawn bodies grow from their feet (y=296 of the 320 cell) to the shared menu height. */
+.body-scaled {
+  scale: var(--body-scale, 1);
+  transform-origin: 50% 92.5%;
+  pointer-events: none;
+}
 .topbar {
   height: 83px;
   display: flex;
@@ -625,7 +631,8 @@ img {
 }
 .roster {
   display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
+  /* 27 fighters: three full rows of nine. */
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 7px;
 }
 .roster-fighter {
@@ -2389,7 +2396,8 @@ button:focus-visible {
   list-style: none;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
+  /* One row for the short ladder (eight + shadow), three for FULL CIRCLE. */
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 8px;
   margin: 28px 0;
 }

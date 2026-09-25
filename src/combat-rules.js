@@ -157,18 +157,9 @@ export function freshFighterState() {
 export const comboScale = (hitsBefore) => Math.max(0.5, 1 - 0.1 * hitsBefore);
 export const hitstunDecay = (hitsBefore) => Math.max(0.75, 1 - 0.04 * hitsBefore);
 
+// Every roster fighter has an authored POWER profile; an unlisted id falls back to the sweep.
 export function specialVariant(character) {
-  if (POWERS[character.id]) return POWERS[character.id].variant;
-  const identity = `${character.id} ${character.name} ${character.move}`;
-  if (/gauntlet|blast|hataalii/i.test(identity)) return 3;
-  if (/kick|sweep/i.test(identity)) return 2;
-  if (/shoulder|elbow/i.test(identity)) return 1;
-  return (
-    [...String(character.id || character.name)].reduce(
-      (n, c) => n + c.charCodeAt(0),
-      0,
-    ) % 4
-  );
+  return POWERS[character?.id]?.variant ?? 0;
 }
 
 function buildMove(fighter, type, { crouch, air } = {}) {
@@ -186,16 +177,8 @@ function buildMove(fighter, type, { crouch, air } = {}) {
     variant,
   };
   if (type === "special") {
-    Object.assign(
-      move,
-      [
-        { damage: 22, reach: 225, start: 0.23 },
-        { damage: 24, reach: 125, start: 0.18 },
-        { damage: 20, reach: 155, start: 0.15 },
-        { damage: 19, reach: 280, start: 0.32 },
-      ][variant],
-    );
-    if (POWERS[fighter.c.id]) Object.assign(move, POWERS[fighter.c.id]);
+    // An unlisted id gets a plain sweep so custom fighters still have a POWER.
+    Object.assign(move, POWERS[fighter.c.id] ?? { damage: 22, reach: 225, start: 0.23 });
     move.start += mods.powerStart || 0;
     move.damage += mods.powerDamage || 0;
     move.knockback.block += mods.powerBlockPush || 0;

@@ -1,0 +1,66 @@
+{
+  "id": "sketch",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 168,
+  "scales": {
+    "combat": 0.8328445747800586,
+    "motion": 0.7544152650474073
+  },
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "signatureGifDurationMs": 1120,
+  "gifTimingNote": "GIF uses 10ms ticks; equal held poses may be stored as one frame with combined duration.",
+  "signatureDescription": "16 timeline cells using ready plus four authored power key poses, with holds; not 16 unique poses.",
+  "sources": {
+    "combat": {
+      "file": "sketch-combat.png",
+      "sha256": "c7fc4cfa7f38230f126e803b78c5ad0ac97a1de18419a93efb535ddc729b8ec9"
+    },
+    "motion": {
+      "file": "sketch-motion.png",
+      "sha256": "bff7fb1bc0f4231cbc41566ec913cb14bd2ff413385ddf46b0437f67c1bd3913"
+    }
+  },
+  "alpha": "Packing trims outer padding using alpha >16 bounds, preserving all authored RGBA inside each crop. PNG retains source alpha; GIF uses binary alpha at threshold128."
+}

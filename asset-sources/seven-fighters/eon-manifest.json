@@ -1,0 +1,66 @@
+{
+  "id": "eon",
+  "cellSize": 320,
+  "anchor": [
+    160,
+    296
+  ],
+  "bodyHeight": 156,
+  "scales": {
+    "combat": 0.8658536585365854,
+    "motion": 0.6688998220454307
+  },
+  "combatAuthoredPoses": 28,
+  "motionAuthoredPoses": 24,
+  "combatRows": [
+    "jab",
+    "cross",
+    "uppercut",
+    "low-kick",
+    "sidekick",
+    "roundhouse",
+    "power"
+  ],
+  "motionRows": [
+    "walk",
+    "jump",
+    "guard",
+    "hurt",
+    "ko",
+    "victory"
+  ],
+  "signatureTimelineCombatIndices": [
+    0,
+    0,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    26,
+    26,
+    27,
+    27,
+    27,
+    0,
+    0,
+    0
+  ],
+  "signatureFrameDurationMs": 65,
+  "signatureGifTimelineFrameDurationMs": 70,
+  "signatureGifDurationMs": 1120,
+  "gifTimingNote": "GIF uses 10ms ticks; equal held poses may be stored as one frame with combined duration.",
+  "signatureDescription": "16 timeline cells using ready plus four authored power key poses, with holds; not 16 unique poses.",
+  "sources": {
+    "combat": {
+      "file": "eon-combat.png",
+      "sha256": "e728ddc755c77d9f3eb2c65595382e6f002df8d6dcc74d3bacf305f91bc13500"
+    },
+    "motion": {
+      "file": "eon-motion.png",
+      "sha256": "23c0041a3f3128453632b57dc5a092489e0e496cd839449c0404a661c7f989a9"
+    }
+  },
+  "alpha": "Packing trims outer padding using alpha >16 bounds, preserving all authored RGBA inside each crop. PNG retains source alpha; GIF uses binary alpha at threshold128."
+}

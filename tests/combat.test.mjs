@@ -33,9 +33,10 @@ test('higher power causes more damage and heavy exceeds light',()=>{
   assert.ok(hitOutcome(stronger,fighter(),createAttack(stronger,'light')).damage>low.damage);
   assert.ok(hitOutcome(f,fighter(),createAttack(f,'heavy')).damage>low.damage);
 });
-test('supplied character identities select distinct projectile, dash and rising specials',()=>{
-  const identities=['gauntlet','elbow','sweep'];
+test('authored POWER profiles select distinct projectile, dash and rising specials',()=>{
+  const identities=['gauntlet','kinetic','hataalii'];
   assert.deepEqual(identities.map(id=>specialVariant({id})),[3,1,2]);
+  assert.equal(specialVariant({id:'unlisted'}),0);
   const moves=identities.map(id=>createAttack(fighter({c:{id}}),'special'));
   assert.equal(new Set(moves.map(m=>m.reach)).size,3);
   assert.equal(inMeleeRange(fighter(),fighter({x:210}),moves[0]),false);
@@ -194,11 +195,12 @@ test('wakeup window is the last 0.18 s of the 0.75 s knockdown (grapplers get 0.
 test('kits: every fighter has a role derived from its POWER profile and a printable job',()=>{
   assert.equal(Object.keys(KITS).length,characters.length);
   for(const c of characters){const k=kitFor(c);assert.ok(ROLES[k.role]);assert.ok(k.job.length>5);assert.ok(k.powerClass);}
-  for(const id of ['gauntlet','pixel','nexus','zenith']){assert.equal(kitFor({id}).role,'zoner');assert.equal(POWERS[id].variant,3);assert.equal(kitFor({id}).job,'projectile zoning');}
-  for(const id of ['tote','quilt','civic'])assert.equal(kitFor({id}).role,'counter');
-  for(const id of ['hataalii','corvette','tweed','glyph','kinetic'])assert.equal(kitFor({id}).role,'rushdown');
-  for(const id of ['curly','binary','urban','vector','aether','hybrid','gaia'])assert.equal(kitFor({id}).role,'balanced');
-  assert.equal(kitFor({id:'varsity'}).role,'grappler-lite');
+  for(const id of ['gauntlet','pixel','nexus','zenith','archer','nomad']){assert.equal(kitFor({id}).role,'zoner');assert.equal(POWERS[id].variant,3);assert.equal(kitFor({id}).job,'projectile zoning');}
+  for(const id of ['tote','quilt','civic','eon'])assert.equal(kitFor({id}).role,'counter');
+  for(const id of ['hataalii','corvette','tweed','glyph','kinetic','cyborg'])assert.equal(kitFor({id}).role,'rushdown');
+  for(const id of ['curly','binary','urban','vector','aether','hybrid','gaia','sketch','student'])assert.equal(kitFor({id}).role,'balanced');
+  for(const id of ['varsity','juris'])assert.equal(kitFor({id}).role,'grappler-lite');
+  assert.equal(kitFor({id:'cyborg'}).job,'command dash');
   assert.equal(kitFor({id:'kinetic'}).job,'command dash');
   assert.deepEqual(SYSTEM_MOVES.map(m=>m.tag),['THROW','LOW','OVERHEAD','AIR','WAKEUP']);
 });
