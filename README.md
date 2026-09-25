@@ -96,6 +96,29 @@ Hits and blocks now follow shared frame data in `src/combat-rules.js`:
 
 Arcade advances one stage per fight; the bonus stage borrows the upcoming arena's atmosphere id and colour. Stage select shows two rows on desktop and a swipeable strip on phones.
 
+## Cutscenes
+
+`src/cutscenes.js` (styles in the `CUTSCENES` section of `src/style.css`) plays short cinematics built entirely in code from the shipped fighter sheets (`-sheet`, `-motion`, `-combat`, `-portrait`) and arena backgrounds: DOM + CSS animation, stepped sprite frames, procedural light rays, speed lines, letterbox bars, glass shards, SVG cracks, confetti, typed captions, and small WebAudio cues. No video or new image files.
+
+| Kind | When (wiring in `src/main.js`) | What happens |
+|---|---|---|
+| `intro` | Once per page load, before the title screen | Mirror cracks and shatters, four fighters flash across real arenas, Hataalii faces his reflection, "ME VS ME" slams in |
+| `ladder` | Before the first fight of a new arcade ladder | Your fighter walks into the chosen arena, the ladder of reflections flickers behind, your shadow appears |
+| `tournament` | When a new tournament is drawn, before the bracket screen | The eight drawn fighters fill a bracket, first matchup highlighted |
+| `victory` | Arcade complete, or tournament final won (before the champion screen) | Champion victory pose in the final arena, light rays, confetti, fighter quote |
+| `defeat` | Arcade game over (the continue timer runs out, or the player leaves the loss screen via BACK TO TITLE), or tournament elimination | Winning blow, fall, screen cracks and desaturates, the winner stands over, winner quote |
+
+```js
+import { playCutscene } from "./cutscenes.js";
+await playCutscene("tournament", { fighters: [0, "urban", 5, 7, 11, 14, 18, 19], arena: 3, mode: "tournament" }, { reducedMotion, sound });
+await playCutscene("victory", { player: champ, opponent: finalist, arena, mode: "tournament" });
+await playCutscene("defeat", { player: you, opponent: winner, arena, mode: "tournament" });
+```
+
+Context fields: `player`, `opponent`, `fighters` (roster indices, character ids, or character objects), `arena` (index, id, or arena object), `mode` (`"arcade"` or `"tournament"`, which changes the victory/defeat wording). The promise always resolves with `{ kind, skipped }`. The quote is `character.quote`, or the character `description` when no quote exists.
+
+Every cutscene lasts 5–10 s. Skip with a click or tap, Enter, Space, Escape, or gamepad A/Start. While a cutscene plays it takes all keyboard input and makes the page behind it inert. When it ends, it removes its DOM, timers, listeners, and audio. Reduced motion shortens each scene and removes shake, flashes, particles, and sprite loops. A missing image leaves a gradient in its place and does not stop the scene. Players can turn cutscenes off with **Settings → Skip cutscenes**. Add `?nocutscenes` to the URL to disable them for automated runs.
+
 ## Develop and build
 
 ```sh

@@ -5,6 +5,7 @@ import { MOVES, SYSTEM_MOVES, BINDABLE, kitFor, bindingsFor, keyLabel } from "./
 import { startCombat } from "./combat.js";
 import { startBonus } from "./bonus.js";
 import { createTournament, recordPlayerResult, currentOpponent, isChampion, isEliminated, isFinalRound, roundName, playerFinish, ROUND_NAMES, ROUND_SHORT } from "./tournament.js";
+import { playCutscene } from "./cutscenes.js";
 
 const app = document.querySelector("#app");
 const read = (key, fallback) => {
@@ -148,6 +149,35 @@ function setScreen(screen) {
   document.body.dataset.screen = screen;
   if (changed) window.scrollTo(0, 0);
 }
+// --- CUTSCENE HOOKS (see src/cutscenes.js) --------------------------------
+// Runs `then` after the cutscene, or immediately when cutscenes are unavailable
+// (tests evaluate this file without its imports), disabled in settings, or the
+// page URL carries ?nocutscenes.
+function cutscene(kind, context, then) {
+  let enabled = false;
+  try {
+    enabled =
+      typeof playCutscene === "function" &&
+      !settings.skipCutscenes &&
+      !/[?&]nocutscenes\b/.test(window.location?.search || "");
+  } catch {}
+  if (!enabled) return then();
+  playCutscene(kind, context, {
+    reducedMotion: settings.reducedMotion,
+    sound: settings.sound,
+  }).then(then, then);
+}
+function gameOver() {
+  // DEFEAT cutscene: arcade continue declined or expired.
+  clearTimeout(continueTimer);
+  continueTimer = null;
+  cutscene(
+    "defeat",
+    { player: state.player, opponent: state.opponent, arena: state.arena, mode: "arcade" },
+    title,
+  );
+}
+// --- END CUTSCENE HOOKS ------------------------------------------------------
 function title() {
   setScreen("title");
   const lead = characters[0],
@@ -160,6 +190,7 @@ function begin(mode) {
   state.selecting = "player";
   state.stage = 0;
   state.ladder = [];
+  state.ladderIntro = false; // CUTSCENE: replay LADDER for each new ladder
   if (!read("mvm-onboarded", false)) {
     showHelp(() => {
       save("mvm-onboarded", true);
@@ -236,6 +267,7 @@ function confirmFighter() {
       state.stage = 0;
       state.ladder = [];
       buildLadder();
+      state.ladderIntro = false; // CUTSCENE: new ladder, show LADDER again
       arenaSelection();
     } else if (isTournament()) {
       startTournament();
@@ -296,7 +328,7 @@ function beginContinueCountdown() {
     const display = document.querySelector(".continue-seconds");
     if (display) display.textContent = remaining;
     if (remaining <= 0) {
-      title();
+      gameOver(); // CUTSCENE: DEFEAT, then title
       return;
     }
     continueTimer = setTimeout(tick, 1000);
@@ -309,6 +341,16 @@ function arcadeRoute() {
   bind();
 }
 async function fight() {
+  // CUTSCENE: LADDER plays once before the first arcade fight of a ladder.
+  if (state.mode === "arcade" && state.stage === 0 && !state.ladderIntro) {
+    state.ladderIntro = true;
+    cutscene(
+      "ladder",
+      { player: state.player, opponent: state.opponent, fighters: state.ladder, arena: state.arena, mode: "arcade" },
+      fight,
+    );
+    return;
+  }
   setScreen("versus");
   const p = characters[state.player],
     o = characters[state.opponent],
@@ -361,6 +403,15 @@ function result(data) {
   combat = null;
   const won = data.winner === "player";
   const local = isLocal();
+  // CUTSCENE: VICTORY before the arcade-complete screen (records update after it).
+  if (!data.cutscenePlayed && state.mode === "arcade" && won && state.stage >= state.ladder.length - 1) {
+    cutscene(
+      "victory",
+      { player: state.player, opponent: state.opponent, fighters: state.ladder, arena: state.arena, mode: "arcade" },
+      () => result({ ...data, cutscenePlayed: true }),
+    );
+    return;
+  }
   if (state.mode !== "training" && !local) {
     record.matches++;
     record.wins += won ? 1 : 0;
@@ -411,7 +462,7 @@ function result(data) {
 //       final won                    → onTournamentWon(data)  → showTournamentChampion(data)
 //       any loss (eliminated)        → onTournamentLost(data) → showTournamentDefeat(data)
 //
-// CUTSCENE HOOK POINTS — insert the cutscene call where marked, then continue to the named screen:
+// CUTSCENE HOOK POINTS — each plays through cutscene() and then continues to the named screen:
 //   "before tournament"   startTournament():        before showTournamentBracket()
 //   "tournament victory"  onTournamentWon(data):    before showTournamentChampion(data)
 //   "tournament defeat"   onTournamentLost(data):   before showTournamentDefeat(data)
@@ -421,16 +472,16 @@ function startTournament() {
   // Seven fresh random opponents on every start; never the player's own fighter.
   state.tournament = createTournament({ player: state.player, rosterSize: characters.length });
   prepareTournamentMatch(true);
-  // HOOK "before tournament": play the intro cutscene here, then call showTournamentBracket().
-  showTournamentBracket();
+  // CUTSCENE: TOURNAMENT intro with the eight drawn entrants, then the bracket.
+  cutscene("tournament", { player: state.player, opponent: state.opponent, fighters: state.tournament.entrants, arena: state.arena, mode: "tournament" }, showTournamentBracket);
 }
 function onTournamentWon(data) {
-  // HOOK "tournament victory": play the champion cutscene here, then call showTournamentChampion(data).
-  showTournamentChampion(data);
+  // CUTSCENE: VICTORY (tournament wording), then the champion screen.
+  cutscene("victory", { player: state.player, opponent: state.opponent, fighters: state.tournament.entrants, arena: state.arena, mode: "tournament" }, () => showTournamentChampion(data));
 }
 function onTournamentLost(data) {
-  // HOOK "tournament defeat": play the elimination cutscene here, then call showTournamentDefeat(data).
-  showTournamentDefeat(data);
+  // CUTSCENE: DEFEAT (tournament wording), then the elimination screen.
+  cutscene("defeat", { player: state.player, opponent: state.opponent, fighters: state.tournament.entrants, arena: state.arena, mode: "tournament" }, () => showTournamentDefeat(data));
 }
 // Point state.opponent/state.arena at the player's pending match. Each match gets a random stage,
 // never the same one twice in a row. Idempotent unless forced, so re-rendering keeps the stage.
@@ -618,7 +669,7 @@ function showHelp(onDone) {
 }
 function showSettings() {
   const layer = modal(
-    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
+    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>SKIP CUTSCENES</strong><small>Intro, ladder, tournament, victory & defeat scenes</small></div><button class="toggle ${settings.skipCutscenes ? "active" : ""}" data-setting="skipCutscenes" aria-pressed="${Boolean(settings.skipCutscenes)}">${settings.skipCutscenes ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
     "",
     refresh,
   );
@@ -709,7 +760,7 @@ function bindInputPanel(layer) {
 }
 function updateSettingsModal(layer) {
   layer.querySelectorAll("[data-setting]").forEach((b) => {
-    const active = settings[b.dataset.setting];
+    const active = Boolean(settings[b.dataset.setting]);
     b.classList.toggle("active", active);
     b.setAttribute("aria-pressed", active);
     b.textContent = active ? "ON" : "OFF";
@@ -744,7 +795,9 @@ function bind() {
       const a = el.dataset.action;
       switch (a) {
         case "home":
-          title();
+          // CUTSCENE: leaving an arcade loss (continue offered) is a game over.
+          if (state.screen === "result" && app.querySelector(".continue-prompt")) gameOver();
+          else title();
           break;
         case "start":
           begin(el.dataset.mode);
@@ -840,6 +893,7 @@ function bind() {
   );
 }
 document.addEventListener("keydown", (e) => {
+  if (!state.screen) return; // CUTSCENE: intro is still playing
   if (document.querySelector(".modal-layer")) {
     if (e.key === "Escape") document.querySelector(".modal-layer").dismiss();
     return;
@@ -894,4 +948,7 @@ document.addEventListener("keydown", (e) => {
     begin("duel");
   }
 });
-title();
+// CUTSCENE: INTRO once per page load, then the title screen.
+state.screen = "";
+document.body.dataset.screen = "intro";
+cutscene("intro", { player: 0 }, title);
