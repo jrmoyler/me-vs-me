@@ -132,9 +132,7 @@ Shorter packed bodies (starscribe 148, sovereign 136, ironchef 172, eventhorizon
 
 ## Fourteen-fighter pack — September 27, 2026
 
-Fourteen more fighters bring the roster to 49. They were supplied already packed (`Me-vs-Me-Fourteen-Playable-Sprite-Sets.zip`): a 1280×2240 combat atlas, a 1280×1920 motion atlas, a 5120×320 ready sheet and a 320×320 portrait each, plus review GIFs. The previous thirty-five fighters, their art, order, ids, stats and POWER profiles are unchanged; the new fourteen are appended as roster slots 36–49.
-
-The supplied cells were the right grid (320×320, four columns) but the pixels were not on the shared contract: standing bodies were 264–304 px tall instead of 176, feet sat at y=304 instead of y=296, and extended poses touched the right edge. `public/assets/characters/` holds a nearest-neighbor repack of those four PNGs onto the existing atlas rules (standing height 176, feet at y=296, transparent margins). Pose identity is preserved; the pixels are not resampled to new drawings. Review GIFs and the 4×4 signature grids stay out of the repo, same as the earlier expansions. Provenance manifests are in `asset-sources/fourteen-fighters/`.
+Fourteen more fighters bring the roster to 49. The first upload (`Me-vs-Me-Fourteen-Playable-Sprite-Sets.zip`) was one blocky paper-doll body with a pixelated photo crop for a head. That pack is replaced by illustrated sheets (`Me-vs-Me-Fourteen-Illustrated-Fighter-Sets.zip`): each pose is drawn on its own, then cropped onto the shared 320 grid. `public/assets/characters/` holds those four PNGs per fighter (1280×2240 combat, 1280×1920 motion, 5120×320 ready sheet, 320×320 portrait). Cells already had interior margins; a vertical translation puts the lowest opaque pixel on y=296 so jumps, knockdowns and signature poses share the engine's foot anchor. Nothing was resampled. Review GIFs and the 4×4 signature grids stay out of the repo. Provenance manifests are in `asset-sources/fourteen-fighters/`. Guard poses are shorter than the ready stance, so each fighter's `motionBodyHeight` follows that guard height.
 
 | ID | Name | Power | Role |
 |---|---|---|---|

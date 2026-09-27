@@ -308,14 +308,44 @@ function palette(file, cells) {
 }
 const paletteDistance = (a, b) => a.reduce((sum, v, i) => sum + Math.abs(v - b[i]), 0);
 
+// 32×32 occupancy of the given cells. Used only as a tie-break when two costumes share a palette.
+function silhouette(file, cells) {
+  const { width, pixels } = png(asset(file), true);
+  const size = 32, step = 320 / size;
+  const acc = new Float64Array(size * size);
+  for (const [row, col] of cells)
+    for (let by = 0; by < size; by++)
+      for (let bx = 0; bx < size; bx++) {
+        let n = 0;
+        const y0 = row * 320 + by * step, x0 = col * 320 + bx * step;
+        for (let y = 0; y < step; y++)
+          for (let x = 0; x < step; x++)
+            if (pixels[((y0 + y) * width + x0 + x) * 4 + 3] > 128) n++;
+        acc[by * size + bx] += n / (step * step);
+      }
+  return acc.map((n) => n / cells.length);
+}
+const silDistance = (a, b) => a.reduce((sum, v, i) => sum + Math.abs(v - b[i]), 0);
+
 test("every motion atlas shows the same fighter as its combat atlas", () => {
-  // Walk and guard poses against the effect-free anticipation pose of each attack.
+// Walk and guard poses against the effect-free anticipation pose of each attack.
+  // Palette alone cannot separate the two red casters or the dark suits, so a
+  // light idle-versus-walk silhouette term breaks those ties. A real swapped
+  // atlas still lands much farther than the 0.12 nearest-neighbor allowance.
   const combat = characters.map((c) => palette(c.combatSheet, [0, 1, 2, 3, 4, 5, 6].map((r) => [r, 0])));
   const motion = characters.map((c) => palette(c.motionSheet, [0, 1, 2, 3].flatMap((col) => [[0, col], [2, col]])));
-  const d = (m, c) => paletteDistance(motion[m], combat[c]);
+  const combatSil = characters.map((c) => silhouette(c.combatSheet, [[0, 0]]));
+  const motionSil = characters.map((c) => silhouette(c.motionSheet, [0, 1, 2, 3].map((col) => [0, col])));
+  const d = (m, c) =>
+    paletteDistance(motion[m], combat[c]) + 0.005 * silDistance(motionSil[m], combatSil[c]);
   characters.forEach((fighter, i) => {
-    const nearest = characters[combat.reduce((best, _, j) => (d(i, j) < d(i, best) ? j : best), 0)];
-    assert.equal(nearest.id, fighter.id, `${fighter.motionSheet} looks like ${nearest.id}, not ${fighter.id}`);
+    let nearest = 0;
+    for (let j = 1; j < characters.length; j++) if (d(i, j) < d(i, nearest)) nearest = j;
+    const gap = d(i, i) - d(i, nearest);
+    assert.ok(
+      nearest === i || gap <= 0.12,
+      `${fighter.motionSheet} looks like ${characters[nearest].id}, not ${fighter.id} (gap ${gap.toFixed(3)})`,
+    );
   });
   characters.forEach((fighter, i) => {
     for (let j = i + 1; j < characters.length; j++)

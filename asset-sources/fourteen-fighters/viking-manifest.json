@@ -45,8 +45,9 @@
   ],
   "bodyHeight": 176,
   "format": "transparent RGBA PNG; GIF preview loops",
-  "note": "Pose art is a stylized pixel interpretation with a pixelated face crop from the supplied reference. The 16 ready cells intentionally hold five key poses.",
+  "note": "Independently illustrated poses from the supplied references, cropped and normalized onto the shared atlas. Every cell is translated so the lowest opaque pixel sits on the ground line (y=296) with the existing transparent margins. The ready strip holds the signature timeline.",
   "combatAuthoredPoses": 28,
   "motionAuthoredPoses": 24,
-  "packedForGame": "Nearest-neighbor repack onto 320 cells, standing height 176, feet at y=296. Source pixels were taller and low in the cell, and extended poses touched the right edge."
+  "packedForGame": "Illustrated replacement for the paper-doll pack. Cells were already 320px with interior margins; only a vertical grounding translation was applied so jumps, knockdowns and signature poses share the engine foot anchor. No resample.",
+  "artProcess": "Each pose independently illustrated from supplied character references; source grids cropped and normalized. Grounded onto y=296 without resampling."
 }
