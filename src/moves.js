@@ -173,9 +173,9 @@ export const POWERS = {
     travel: 135,
   },
   // Every later profile stays inside the original eleven's damage, startup, active and
-  // duration ranges, and lands at least as many true combo routes into POWER as the
-  // thinnest original of its kind (same role and POWER class). tests/roster-parity and
-  // the runtime "roster parity" test hold this.
+  // duration ranges, and lands at least as many true combo routes into POWER as Hataalii
+  // and as the thinnest original of its kind (same role and POWER class). tests/roster-parity
+  // and the runtime "roster parity" test hold this.
   hybrid: {
     variant: 0,
     style: "fusion",
@@ -262,10 +262,10 @@ export const POWERS = {
     style: "apex",
     damage: 24,
     reach: 280,
-    start: 0.42,
-    active: 0.2,
-    duration: 0.98,
-    projectileSpeed: 505,
+    start: 0.39,
+    active: 0.22,
+    duration: 0.95,
+    projectileSpeed: 630,
   },
   // Seven-fighter expansion: each profile follows its illustrated POWER row.
   archer: {
@@ -273,10 +273,10 @@ export const POWERS = {
     style: "volley",
     damage: 21,
     reach: 280,
-    start: 0.42,
+    start: 0.39,
     active: 0.22,
-    duration: 0.97,
-    projectileSpeed: 560,
+    duration: 0.95,
+    projectileSpeed: 640,
   },
   cyborg: {
     variant: 1,
@@ -340,11 +340,11 @@ export const POWERS = {
   },
 
   patchrunner: { variant: 1, style: "circuitcascade", damage: 24, reach: 164, start: 0.35, active: 0.2, duration: 0.94, travel: 118 },
-  starscribe: { variant: 3, style: "orbitcollapse", damage: 22, reach: 278, start: 0.42, active: 0.23, duration: 0.99, projectileSpeed: 560 },
+  starscribe: { variant: 3, style: "orbitcollapse", damage: 22, reach: 278, start: 0.39, active: 0.22, duration: 0.95, projectileSpeed: 620 },
   sovereign: { variant: 1, style: "royalgambit", damage: 27, reach: 145, start: 0.37, active: 0.2, duration: 0.93, travel: 85 },
   circuitbreaker: { variant: 3, style: "systemoverride", damage: 21, reach: 280, start: 0.39, active: 0.22, duration: 0.96, projectileSpeed: 575 },
   ironchef: { variant: 0, style: "infernoplatter", damage: 23, reach: 223, start: 0.36, active: 0.22, duration: 0.89, travel: 48 },
-  eventhorizon: { variant: 3, style: "singularitydrive", damage: 24, reach: 280, start: 0.42, active: 0.25, duration: 1, projectileSpeed: 520 },
+  eventhorizon: { variant: 3, style: "singularitydrive", damage: 24, reach: 280, start: 0.39, active: 0.22, duration: 0.95, projectileSpeed: 615 },
   crimsonoracle: { variant: 0, style: "bloodmoonseal", damage: 25, reach: 235, start: 0.37, active: 0.23, duration: 0.96, travel: 32 },
   dunevoyager: { variant: 1, style: "sandstormbreak", damage: 23, reach: 158, start: 0.38, active: 0.22, duration: 0.96, travel: 104 },
   // Fourteen-fighter pack. Frame data is copied from a passing fighter of the same class,

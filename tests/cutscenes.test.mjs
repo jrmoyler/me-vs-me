@@ -265,6 +265,7 @@ function app(saved = {}) {
     startBonus: (o) => { bonus = o; return { destroy() {} }; },
     startCombat: async (o) => { latest = o; return { destroy() {} }; },
     playCutscene: (kind, ctx) => { calls.push({ kind, ctx }); return Promise.resolve({ kind, skipped: false }); },
+    registerPWA() {}, installState: () => 'none', onInstallChange() {}, promptInstall: async () => 'unavailable',
   });
   vm.runInContext(mainSource, context);
   const flush = () => new Promise((r) => setImmediate(r));

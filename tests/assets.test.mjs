@@ -252,6 +252,34 @@ for (const fighter of characters) {
   });
 }
 
+// Exports sliced off their source grid left POWERs split over two rows: legs alone in one cell
+// with a solid cut across the top, the upper body in another. scripts/repair-cut-cells.py
+// stitched them back; this keeps every combat frame a whole pose with no cut edge on top.
+for (const fighter of characters)
+  test(`${fighter.name}: every combat frame is a whole pose, none cut off at the top`, () => {
+    const { width, pixels } = png(asset(fighter.combatSheet), true);
+    let ready = 0;
+    for (let row = 0; row < 7; row++)
+      for (let col = 0; col < 4; col++) {
+        let top = 320, bottom = -1, edge = -1;
+        for (let y = 0; y < 320; y++)
+          for (let x = 0; x < 320; x++) {
+            const a = pixels[((row * 320 + y) * width + col * 320 + x) * 4 + 3];
+            if (a > 8 && edge < 0) edge = y;
+            if (a > 128) {
+              top = Math.min(top, y);
+              bottom = Math.max(bottom, y);
+            }
+          }
+        const height = bottom - top + 1;
+        ready ||= height;
+        assert.ok(height >= 0.6 * ready, `row ${row} pose ${col}: ${height}px tall against a ${ready}px ready pose`);
+        let solid = 0;
+        for (let x = 0; x < 320; x++) if (pixels[((row * 320 + edge) * width + col * 320 + x) * 4 + 3] >= 250) solid++;
+        assert.ok(solid < 24, `row ${row} pose ${col}: ${solid} solid pixels along its top edge`);
+      }
+  });
+
 for (const fighter of characters)
   test(`${fighter.name}: 24 motion frames have alpha margins and six distinct state illustrations`, () => {
     const { width, height, pixels } = png(asset(fighter.motionSheet), true);

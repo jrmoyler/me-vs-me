@@ -6,6 +6,7 @@ import { startCombat } from "./combat.js";
 import { startBonus } from "./bonus.js";
 import { createTournament, recordPlayerResult, currentOpponent, isChampion, isEliminated, isFinalRound, roundName, playerFinish, ROUND_NAMES, ROUND_SHORT } from "./tournament.js";
 import { playCutscene } from "./cutscenes.js";
+import { registerPWA, installState, onInstallChange, promptInstall } from "./pwa.js";
 
 const app = document.querySelector("#app");
 const read = (key, fallback) => {
@@ -178,11 +179,23 @@ function gameOver() {
   );
 }
 // --- END CUTSCENE HOOKS ------------------------------------------------------
+// The title screen offers to install the game wherever the browser can (or, on iOS, explains how).
+function installButton() {
+  const how = installState();
+  return how === "prompt" || how === "ios" ? '<button class="install-button" data-action="install">INSTALL THE GAME <span>⤓</span></button>' : "";
+}
+function showInstallHelp() {
+  const layer = modal(
+    `<span class="eyebrow">PLAY IT LIKE AN APP</span><h2>INSTALL<br><em>ME VS ME.</em></h2><p class="modal-intro">On iPhone or iPad, open this page in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>. The game opens full screen from its own icon and keeps the fighters you have played for offline rounds.</p><button class="button primary modal-done">GOT IT. <span>→</span></button>`,
+    "install-modal",
+  );
+  layer.querySelector(".modal-done").onclick = () => layer.dismiss();
+}
 function title() {
   setScreen("title");
   const lead = characters[0],
     second = characters[Math.min(5, characters.length - 1)];
-  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="local">VERSUS / TWO PLAYERS <span>↗</span></button><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="tournament">TOURNAMENT <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button></div></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>ONE PLAYER OR TWO / SAME CABINET</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
+  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="local">VERSUS / TWO PLAYERS <span>↗</span></button><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="tournament">TOURNAMENT <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button>${installButton()}</div></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>ONE PLAYER OR TWO / SAME CABINET</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
   bind();
 }
 function begin(mode) {
@@ -894,6 +907,10 @@ function bind() {
         case "help":
           showHelp();
           break;
+        case "install":
+          if (installState() === "prompt") promptInstall();
+          else showInstallHelp();
+          break;
         case "settings":
           showSettings();
           break;
@@ -1033,6 +1050,10 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     begin("duel");
   }
+});
+registerPWA();
+onInstallChange(() => {
+  if (state.screen === "title") title();
 });
 // CUTSCENE: INTRO once per page load, then the title screen.
 state.screen = "";
