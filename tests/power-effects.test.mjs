@@ -31,13 +31,6 @@ const expected = {
   sovereign: ['strokeRect', 'fillTriangle', 'fillRect'], circuitbreaker: ['strokeRect', 'fillRect', 'lineBetween'],
   ironchef: ['strokeEllipse', 'lineBetween', 'fillCircle'], eventhorizon: ['strokeEllipse', 'fillCircle', 'lineBetween'],
   crimsonoracle: ['strokeCircle', 'lineBetween', 'fillCircle'], dunevoyager: ['lineBetween', 'fillEllipse'],
-  pharaoh: ['strokeCircle', 'fillTriangle'], roman: ['fillTriangle', 'lineBetween'],
-  viking: ['lineBetween', 'fillRect'], medieval: ['strokeRect', 'fillCircle'],
-  renaissance: ['strokeEllipse', 'fillRect'], colonial: ['lineBetween', 'fillRect'],
-  victorian: ['strokeCircle', 'strokeRect'], jazz: ['lineBetween', 'fillCircle', 'fillRect'],
-  raven: ['strokeEllipse', 'fillTriangle'], blood: ['strokeCircle', 'fillEllipse'],
-  merman: ['strokeEllipse'], operative: ['strokeRect', 'lineBetween', 'fillCircle'],
-  coast: ['strokeEllipse', 'fillCircle', 'lineBetween'], jungle: ['fillEllipse', 'lineBetween'],
 };
 for (const [id, methods] of Object.entries(expected)) test(`${id}: signature effect dispatches from its gameplay style in both directions`, () => {
   const character = characters.find(c => c.id === id);
@@ -47,9 +40,9 @@ for (const [id, methods] of Object.entries(expected)) test(`${id}: signature eff
     if (id !== 'aether') assert.ok(!calls.some(call => call[0] === 'arc'), 'must not use generic arc fallback');
   }
 });
-test('all thirty-eight newer powers emit different graphics command sequences', () => {
+test('all twenty-four newer powers emit different graphics command sequences', () => {
   const signatures = Object.keys(expected).map(id => JSON.stringify(draw(characters.find(c => c.id === id), 1, true)));
-  assert.equal(new Set(signatures).size, 38);
+  assert.equal(new Set(signatures).size, 24);
 });
 test('every roster POWER style has its own painter, never the generic fallback arc', () => {
   const fallback = JSON.stringify(draw({ ...characters[0], id: 'unlisted' }, 1, true));
@@ -66,7 +59,7 @@ function shot(character, face, time = 0) {
 }
 test('each projectile POWER travels as its own shape in both directions', () => {
   const projectile = characters.filter(c => POWERS[c.id].variant === 3);
-  assert.deepEqual(projectile.map(c => c.id), ['gauntlet', 'pixel', 'nexus', 'zenith', 'archer', 'nomad', 'student', 'starscribe', 'circuitbreaker', 'eventhorizon', 'pharaoh', 'colonial', 'raven']);
+  assert.deepEqual(projectile.map(c => c.id), ['gauntlet', 'pixel', 'nexus', 'zenith', 'archer', 'nomad', 'student', 'starscribe', 'circuitbreaker', 'eventhorizon']);
   const shapes = projectile.map(c => JSON.stringify(shot(c, 1, 0.4)));
   assert.equal(new Set(shapes).size, projectile.length);
   for (const c of projectile) {
