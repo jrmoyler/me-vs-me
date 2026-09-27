@@ -136,19 +136,46 @@ Fourteen more fighters bring the roster to 49. The first upload (`Me-vs-Me-Fourt
 
 | ID | Name | Power | Role |
 |---|---|---|---|
-| pharaoh | PHARAOH SELF | Solar Dominion | Zoner / projectile |
-| roman | ROMAN SELF | Aquila Strike | Rushdown / command dash |
-| viking | VIKING SELF | Frost Axe | Rushdown / rising launcher |
-| medieval | MEDIEVAL SELF | Iron Oath | Grappler |
-| renaissance | RENAISSANCE SELF | Gilded Flourish | Balanced / sweep |
-| colonial | COLONIAL SELF | Liberty Volley | Zoner / projectile |
-| victorian | VICTORIAN SELF | Clockwork Reversal | Counter / sweep |
-| jazz | JAZZ AGE SELF | Midnight Tempo | Rushdown / command dash |
-| raven | RAVEN ARCHITECT | Murder of Crows | Zoner / projectile |
-| blood | BLOOD ORACLE | Crimson Eclipse | Counter / sweep |
+| pharaoh | SUNCROWN | Solar Dominion | Zoner / projectile |
+| roman | CENTURION | Aquila Strike | Rushdown / command dash |
+| viking | NORTHWIND | Frost Axe | Rushdown / rising launcher |
+| medieval | OATHKEEPER | Iron Oath | Grappler |
+| renaissance | MAESTRO | Gilded Flourish | Balanced / sweep |
+| colonial | FLINTLOCK | Liberty Volley | Zoner / projectile |
+| victorian | GEARWRIGHT | Clockwork Reversal | Counter / sweep |
+| jazz | BLUE NOTE | Midnight Tempo | Rushdown / command dash |
+| raven | BLACKFEATHER | Murder of Crows | Zoner / projectile |
+| blood | NIGHTVEIL | Crimson Eclipse | Counter / sweep |
 | merman | TIDEBORN | Riptide Spiral | Balanced / sweep |
-| operative | BLACK OPS SELF | Breach Point | Rushdown / command dash |
-| coast | COASTLINE SELF | Sunset Drive | Balanced / sweep |
-| jungle | PRIMAL SELF | Canopy Pounce | Rushdown / rising launcher |
+| operative | DEADBOLT | Breach Point | Rushdown / command dash |
+| coast | GOLDEN HOUR | Sunset Drive | Balanced / sweep |
+| jungle | WILDHEART | Canopy Pounce | Rushdown / rising launcher |
 
 Each new POWER has its own painter. Solar Dominion, Liberty Volley and Murder of Crows travel as their own projectile shapes. Frame data stays inside the original eleven's ranges and follows a passing fighter of the same role and POWER class, with reach or projectile speed shifted so every profile stays unique.
+
+## Atlas repair — cut-off poses and POWERs
+
+The fourteen-fighter and eight-fighter exports were sliced from their source grids on the wrong row boundaries. In game, a POWER showed only its legs (the upper body and effect sat in the roundhouse row), some kicks stopped at the shins, victory poses lost their heads, effects stopped at hard vertical lines, and slivers of neighbouring cells appeared beside the fighter. A few stray pixels at the floor also grounded some frames, so the fighter floated (Iron Chef's roundhouse start sat about 80 px up).
+
+`scripts/repair-cut-cells.py` fixes this using only the shipped atlases; the source zips are not in the repo. For each column it finds pieces whose hard cut edges continue each other (matching opaque profile and colour along the seam) and stitches them back into whole poses. It drops slivers and stray dust, repacks the poses in source order with the lowest opaque pixel on y=296, and fades any remaining hard cut out over 14 px so effects taper off instead of stopping. Poses taller than the cell are scaled down from the feet.
+
+Where the export lost art outright:
+
+- Eleven of the fourteen lost one kick row, so the low kick and sidekick showed the same poses. The low kick is now that kick dropped into a crouch (compressed to 84% from the feet), so each fighter has seven distinct moves.
+- Suncrown's hurt row was missing, so it recoils from the knockdown's first (stagger) pose, and the two victory frames that were legs only use his complete victory poses.
+
+Every ready sheet with a manifest timeline was rebuilt from the repaired combat atlas. Sketch had one floating frame and got the light pass (`--light`: slivers, dust and hard cuts only).
+
+```sh
+git checkout HEAD -- public/assets/characters   # always start from the exported atlases
+python3 scripts/repair-cut-cells.py pharaoh roman viking medieval renaissance colonial victorian jazz raven blood merman operative coast jungle patchrunner starscribe sovereign circuitbreaker ironchef eventhorizon crimsonoracle dunevoyager
+python3 scripts/repair-cut-cells.py --light sketch
+```
+
+Before and after: [docs/qa/atlas-repair-before-after.jpg](docs/qa/atlas-repair-before-after.jpg). A few frames lost art that no other cell holds: the top of Iron Chef's POWER frames 2–3 stays cut (now faded), and Centurion's last POWER frame reuses his ready pose.
+
+`tests/assets.test.mjs` now requires every combat frame to be a whole pose: at least 60% of the ready height, with no solid cut along its top edge.
+
+The fourteen were also renamed so no name leans on "SELF" and none collides with an existing one: Pharaoh Self → **Suncrown**, Roman Self → **Centurion**, Viking Self → **Northwind**, Medieval Self → **Oathkeeper**, Renaissance Self → **Maestro**, Colonial Self → **Flintlock**, Victorian Self → **Gearwright**, Jazz Age Self → **Blue Note**, Raven Architect → **Blackfeather**, Blood Oracle → **Nightveil** (it clashed with Crimson Oracle), Black Ops Self → **Deadbolt**, Coastline Self → **Golden Hour**, Primal Self → **Wildheart**. Tideborn keeps its name. Ids, titles, moves and quotes are unchanged.
+
+`public/icons/` holds the install icons, drawn by `scripts/make-icons.py` from Hataalii's portrait.

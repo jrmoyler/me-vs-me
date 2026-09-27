@@ -10,20 +10,21 @@ import * as tournament from '../src/tournament.js';
 const { MOVES } = moves;
 
 const source=(await readFile(new URL('../src/main.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'');
-function setup(saved={}) {
+function setup(saved={},install='none') {
   const window=new Window({url:'http://localhost:5173'});
   window.document.body.innerHTML='<div id="app"></div>';
   for(const [key,value] of Object.entries(saved))window.localStorage.setItem(key,JSON.stringify(value));
-  let pending, latest, bonusLatest, bonuses=0, destroys=0;
+  let pending, latest, bonusLatest, bonuses=0, destroys=0, prompts=0, installListener;
+  const pwa={registerPWA(){},installState:()=>install,onInstallChange:fn=>{installListener=fn;},promptInstall:async()=>{prompts++;install='none';installListener?.();return 'accepted';}};
   const context=vm.createContext({window,document:window.document,localStorage:window.localStorage,
     matchMedia:()=>({matches:false}),characters,bodyScale,arenas,...moves,...tournament,console,
     setTimeout:fn=>(pending=fn,1),clearTimeout:()=>{pending=null;},
     startBonus:options=>{bonuses++;bonusLatest=options;return {destroy(){}};},
-    startCombat:async options=>{latest=options;return {destroy(){destroys++;}};}});
+    startCombat:async options=>{latest=options;return {destroy(){destroys++;}};},...pwa});
   vm.runInContext(source,context);
   const click=selector=>{const el=window.document.querySelector(selector);assert.ok(el,`Missing ${selector}`);el.click();};
   const key=key=>window.document.dispatchEvent(new window.KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
-  return {window,document:window.document,click,key,get latest(){return latest;},get destroys(){return destroys;},get bonuses(){return bonuses;},
+  return {window,document:window.document,click,key,get prompts(){return prompts;},setInstall(v){install=v;installListener?.();},get latest(){return latest;},get destroys(){return destroys;},get bonuses(){return bonuses;},
     async launch(){assert.ok(pending,'Expected pending versus transition');await pending();},
     end(winner='player'){latest.onEnd({winner,playerRounds:winner==='player'?2:0,opponentRounds:winner==='player'?0:2});},
     get bonusArena(){return bonusLatest.arena;},finishBonus(){assert.ok(bonusLatest);bonusLatest.onEnd({score:1000,destroyed:1,skipped:false});},
@@ -309,4 +310,16 @@ test('tournament: a loss eliminates the player and offers a new tournament or qu
   assert.equal(h.document.querySelector('[data-action="fight"]'),null);
   h.click('[data-action="tournament-new"]');assert.equal(h.screen(),'bracket');assert.ok(h.document.querySelector('[data-action="fight"]'));
   h.click('[data-action="home"]');assert.equal(h.screen(),'title');
+});
+
+test('title offers to install the game where the browser can, and explains Add to Home Screen on iOS',async()=>{
+  const none=setup();assert.equal(none.document.querySelector('[data-action="install"]'),null,'nothing to offer without a prompt');
+  const h=setup({},'prompt');h.click('[data-action="install"]');await new Promise(r=>setImmediate(r));
+  assert.equal(h.prompts,1,'the browser prompt opens');
+  assert.equal(h.document.querySelector('[data-action="install"]'),null,'the offer goes once the prompt is used');
+  h.setInstall('prompt');assert.ok(h.document.querySelector('[data-action="install"]'),'a new prompt brings the offer back');
+  h.setInstall('installed');assert.equal(h.document.querySelector('[data-action="install"]'),null,'an installed copy offers nothing');
+  const ios=setup({},'ios');ios.click('[data-action="install"]');
+  assert.match(ios.document.querySelector('[role="dialog"]').textContent,/Add to Home Screen/);
+  ios.click('.modal-done');assert.equal(ios.document.querySelector('[role="dialog"]'),null);
 });

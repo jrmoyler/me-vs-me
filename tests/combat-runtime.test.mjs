@@ -859,7 +859,7 @@ async function comboRoutes(c) {
   h.control.destroy();
   return landed;
 }
-test("roster parity: no newer fighter has fewer true combo routes into POWER than the thinnest original of its kind", async () => {
+test("roster parity: no newer fighter has fewer true combo routes into POWER than Hataalii or the thinnest original of its kind", async () => {
   assert.equal(powerRoutes().length, 31);
   const originals = characters.slice(0, 11);
   const count = {};
@@ -875,6 +875,8 @@ test("roster parity: no newer fighter has fewer true combo routes into POWER tha
       : Math.min(floor((o) => kind(o).role === role), floor((o) => kind(o).variant === variant));
     assert.ok(Number.isFinite(baseline), `${c.id}: has an original baseline`);
     assert.ok(count[c.id] >= baseline, `${c.id}: ${count[c.id]} combo routes into POWER, originals of its kind land ${baseline}`);
+    // And none lands fewer than the original, Hataalii.
+    assert.ok(count[c.id] >= count.hataalii, `${c.id}: ${count[c.id]} combo routes into POWER, Hataalii lands ${count.hataalii}`);
   }
   // The originals keep their measured route counts.
   assert.deepEqual(
