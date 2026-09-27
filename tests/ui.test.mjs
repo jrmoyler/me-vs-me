@@ -51,7 +51,7 @@ test('settings persist into the next combat and reduce motion',async()=>{
 });
 async function runArcade(h){
   const faced=[],versus=[];
-  for(let n=0;n<40;n++){
+  for(let n=0;n<characters.length+2;n++){
     faced.push(h.latest.opponent.id);versus.push(h.latest.opponent.name);h.end();
     if(/ARCADE COMPLETE/.test(h.document.body.textContent))break;
     h.click('[data-action="next-stage"]');if(h.screen()==='bonus')h.finishBonus();

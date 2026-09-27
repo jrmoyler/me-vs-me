@@ -347,6 +347,22 @@ export const POWERS = {
   eventhorizon: { variant: 3, style: "singularitydrive", damage: 24, reach: 280, start: 0.42, active: 0.25, duration: 1, projectileSpeed: 520 },
   crimsonoracle: { variant: 0, style: "bloodmoonseal", damage: 25, reach: 235, start: 0.37, active: 0.23, duration: 0.96, travel: 32 },
   dunevoyager: { variant: 1, style: "sandstormbreak", damage: 23, reach: 158, start: 0.38, active: 0.22, duration: 0.96, travel: 104 },
+  // Fourteen-fighter pack. Frame data is copied from a passing fighter of the same class,
+  // with reach or projectile speed nudged so each profile stays unique. Existing profiles are unchanged.
+  pharaoh: { variant: 3, style: "solardominion", damage: 22, reach: 280, start: 0.39, active: 0.22, duration: 0.95, projectileSpeed: 625 },
+  roman: { variant: 1, style: "aquilastrike", damage: 24, reach: 165, start: 0.35, active: 0.2, duration: 0.94, travel: 118 },
+  viking: { variant: 2, style: "frostaxe", damage: 27, reach: 154, start: 0.42, active: 0.22, duration: 1.02, travel: 64, lift: 245 },
+  medieval: { variant: 1, style: "ironoath", damage: 27, reach: 146, start: 0.37, active: 0.2, duration: 0.93, travel: 85 },
+  renaissance: { variant: 0, style: "gildedflourish", damage: 23, reach: 224, start: 0.36, active: 0.22, duration: 0.89, travel: 48 },
+  colonial: { variant: 3, style: "libertyvolley", damage: 22, reach: 280, start: 0.39, active: 0.22, duration: 0.95, projectileSpeed: 635 },
+  victorian: { variant: 0, style: "clockworkreversal", damage: 25, reach: 236, start: 0.37, active: 0.23, duration: 0.96, travel: 32 },
+  jazz: { variant: 1, style: "midnighttempo", damage: 24, reach: 166, start: 0.35, active: 0.2, duration: 0.94, travel: 118 },
+  raven: { variant: 3, style: "murderofcrows", damage: 22, reach: 280, start: 0.39, active: 0.22, duration: 0.95, projectileSpeed: 645 },
+  blood: { variant: 0, style: "crimsoneclipse", damage: 25, reach: 234, start: 0.37, active: 0.23, duration: 0.96, travel: 32 },
+  merman: { variant: 0, style: "riptidespiral", damage: 23, reach: 225, start: 0.36, active: 0.22, duration: 0.89, travel: 48 },
+  operative: { variant: 1, style: "breachpoint", damage: 24, reach: 167, start: 0.35, active: 0.2, duration: 0.94, travel: 118 },
+  coast: { variant: 0, style: "sunsetdrive", damage: 23, reach: 226, start: 0.36, active: 0.22, duration: 0.89, travel: 48 },
+  jungle: { variant: 2, style: "canopypounce", damage: 27, reach: 155, start: 0.42, active: 0.22, duration: 1.02, travel: 64, lift: 245 },
 };
 
 export function moveFrame(move) {
@@ -469,6 +485,20 @@ export const KITS = {
   eventhorizon: "zoner",
   crimsonoracle: "counter",
   dunevoyager: "rushdown",
+  pharaoh: "zoner",
+  roman: "rushdown",
+  viking: "rushdown",
+  medieval: "grappler-lite",
+  renaissance: "balanced",
+  colonial: "zoner",
+  victorian: "counter",
+  jazz: "rushdown",
+  raven: "zoner",
+  blood: "counter",
+  merman: "balanced",
+  operative: "rushdown",
+  coast: "balanced",
+  jungle: "rushdown",
 };
 // Data-only modifiers; combat-rules clamps them so the cancel tree still holds.
 export const KIT_MODS = {

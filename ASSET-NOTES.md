@@ -8,7 +8,7 @@ Each sheet is 5120×320 pixels: sixteen horizontal 320×320 frames. Frame zero i
 
 The five arena SVGs are original game backgrounds created for this implementation. They are not screenshots or extracted artwork from the linked reference video. Reference-video fidelity requires direct visual comparison; this asset pipeline does not establish that claim.
 
-Run `node --test tests/assets.test.mjs` to verify roster and arena counts, path availability, distinct identities, PNG dimensions, stats, transparency margins, and grounded bounds for every ready-sheet, combat and motion frame (35 fighters × 16 + 28 + 24). The test uses only Node built-ins and decodes the PNG alpha channel to inspect actual frame bounds.
+Run `node --test tests/assets.test.mjs` to verify roster and arena counts, path availability, distinct identities, PNG dimensions, stats, transparency margins, and grounded bounds for every ready-sheet, combat and motion frame (49 fighters × 16 + 28 + 24). The test uses only Node built-ins and decodes the PNG alpha channel to inspect actual frame bounds.
 
 ## Combat edition — September 20, 2026
 
@@ -128,3 +128,29 @@ Eight more fighters bring the roster to 35. They were supplied already packed (`
 | dunevoyager | DUNE VOYAGER | Sandstorm Break | Rushdown |
 
 Shorter packed bodies (starscribe 148, sovereign 136, ironchef 172, eventhorizon 172, crimsonoracle 157) use `bodyHeight` from `asset-sources/eight-fighters/{id}-manifest.json`. The per-move GIFs and source sheets stay out of the repo, same as the earlier expansions. Each new POWER has its own painter; the three projectile styles travel as their own shapes.
+
+
+## Fourteen-fighter pack — September 27, 2026
+
+Fourteen more fighters bring the roster to 49. They were supplied already packed (`Me-vs-Me-Fourteen-Playable-Sprite-Sets.zip`): a 1280×2240 combat atlas, a 1280×1920 motion atlas, a 5120×320 ready sheet and a 320×320 portrait each, plus review GIFs. The previous thirty-five fighters, their art, order, ids, stats and POWER profiles are unchanged; the new fourteen are appended as roster slots 36–49.
+
+The supplied cells were the right grid (320×320, four columns) but the pixels were not on the shared contract: standing bodies were 264–304 px tall instead of 176, feet sat at y=304 instead of y=296, and extended poses touched the right edge. `public/assets/characters/` holds a nearest-neighbor repack of those four PNGs onto the existing atlas rules (standing height 176, feet at y=296, transparent margins). Pose identity is preserved; the pixels are not resampled to new drawings. Review GIFs and the 4×4 signature grids stay out of the repo, same as the earlier expansions. Provenance manifests are in `asset-sources/fourteen-fighters/`.
+
+| ID | Name | Power | Role |
+|---|---|---|---|
+| pharaoh | PHARAOH SELF | Solar Dominion | Zoner / projectile |
+| roman | ROMAN SELF | Aquila Strike | Rushdown / command dash |
+| viking | VIKING SELF | Frost Axe | Rushdown / rising launcher |
+| medieval | MEDIEVAL SELF | Iron Oath | Grappler |
+| renaissance | RENAISSANCE SELF | Gilded Flourish | Balanced / sweep |
+| colonial | COLONIAL SELF | Liberty Volley | Zoner / projectile |
+| victorian | VICTORIAN SELF | Clockwork Reversal | Counter / sweep |
+| jazz | JAZZ AGE SELF | Midnight Tempo | Rushdown / command dash |
+| raven | RAVEN ARCHITECT | Murder of Crows | Zoner / projectile |
+| blood | BLOOD ORACLE | Crimson Eclipse | Counter / sweep |
+| merman | TIDEBORN | Riptide Spiral | Balanced / sweep |
+| operative | BLACK OPS SELF | Breach Point | Rushdown / command dash |
+| coast | COASTLINE SELF | Sunset Drive | Balanced / sweep |
+| jungle | PRIMAL SELF | Canopy Pounce | Rushdown / rising launcher |
+
+Each new POWER has its own painter. Solar Dominion, Liberty Volley and Murder of Crows travel as their own projectile shapes. Frame data stays inside the original eleven's ranges and follows a passing fighter of the same role and POWER class, with reach or projectile speed shifted so every profile stays unique.
