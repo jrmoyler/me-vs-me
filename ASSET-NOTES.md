@@ -172,6 +172,8 @@ python3 scripts/repair-cut-cells.py pharaoh roman viking medieval renaissance co
 python3 scripts/repair-cut-cells.py --light sketch
 ```
 
+Before and after: [docs/qa/atlas-repair-before-after.jpg](docs/qa/atlas-repair-before-after.jpg). A few frames lost art that no other cell holds: the top of Iron Chef's POWER frames 2–3 stays cut (now faded), and Centurion's last POWER frame reuses his ready pose.
+
 `tests/assets.test.mjs` now requires every combat frame to be a whole pose: at least 60% of the ready height, with no solid cut along its top edge.
 
 The fourteen were also renamed so no name leans on "SELF" and none collides with an existing one: Pharaoh Self → **Suncrown**, Roman Self → **Centurion**, Viking Self → **Northwind**, Medieval Self → **Oathkeeper**, Renaissance Self → **Maestro**, Colonial Self → **Flintlock**, Victorian Self → **Gearwright**, Jazz Age Self → **Blue Note**, Raven Architect → **Blackfeather**, Blood Oracle → **Nightveil** (it clashed with Crimson Oracle), Black Ops Self → **Deadbolt**, Coastline Self → **Golden Hour**, Primal Self → **Wildheart**. Tideborn keeps its name. Ids, titles, moves and quotes are unchanged.
