@@ -14,12 +14,16 @@ const casesIn = (from, to) =>
 const powerCases = casesIn("export function paintPower", "export function paintProjectile");
 const projectileCases = casesIn("export function paintProjectile");
 
-test("roster parity: the original eleven and twenty-four newer fighters", () => {
+test("roster parity: the original eleven and thirty-eight newer fighters", () => {
   assert.deepEqual(
     originals.map((c) => c.id),
     "hataalii urban gauntlet tote vector kinetic corvette curly pixel tweed varsity".split(" "),
   );
-  assert.equal(newer.length, 24);
+  assert.equal(newer.length, 38);
+  assert.deepEqual(
+    characters.slice(35).map((c) => c.id),
+    "pharaoh roman viking medieval renaissance colonial victorian jazz raven blood merman operative coast jungle".split(" "),
+  );
 });
 
 test("roster parity: every newer fighter carries the same identity and atlas fields as the originals", () => {
@@ -79,7 +83,8 @@ test("roster parity: every fighter has a kit role, a job line and a POWER class"
     assert.ok(ROLES[kit.role], c.id);
     assert.ok(kit.job && kit.powerClass !== "SIGNATURE" && kit.style, c.id);
   }
-  const roles = Object.fromEntries(newer.slice(-8).map((c) => [c.id, kitFor(c).role]));
+  const eight = "patchrunner starscribe sovereign circuitbreaker ironchef eventhorizon crimsonoracle dunevoyager".split(" ");
+  const roles = Object.fromEntries(eight.map((id) => [id, kitFor({ id }).role]));
   assert.deepEqual(roles, {
     patchrunner: "rushdown",
     starscribe: "zoner",
@@ -92,6 +97,27 @@ test("roster parity: every fighter has a kit role, a job line and a POWER class"
   });
   for (const id of ["patchrunner", "dunevoyager"]) assert.equal(kitFor({ id }).job, "command dash");
   for (const id of ["starscribe", "circuitbreaker", "eventhorizon"]) assert.equal(kitFor({ id }).job, "projectile zoning");
+  const fourteen = Object.fromEntries(characters.slice(35).map((c) => [c.id, kitFor(c).role]));
+  assert.deepEqual(fourteen, {
+    pharaoh: "zoner",
+    roman: "rushdown",
+    viking: "rushdown",
+    medieval: "grappler-lite",
+    renaissance: "balanced",
+    colonial: "zoner",
+    victorian: "counter",
+    jazz: "rushdown",
+    raven: "zoner",
+    blood: "counter",
+    merman: "balanced",
+    operative: "rushdown",
+    coast: "balanced",
+    jungle: "rushdown",
+  });
+  for (const id of ["roman", "jazz", "operative"]) assert.equal(kitFor({ id }).job, "command dash");
+  for (const id of ["viking", "jungle"]) assert.equal(kitFor({ id }).job, "rising launcher pressure");
+  for (const id of ["pharaoh", "colonial", "raven"]) assert.equal(kitFor({ id }).job, "projectile zoning");
+  for (const id of ["medieval"]) assert.equal(kitFor({ id }).job, "close-range throws");
 });
 
 test("roster parity: every newer POWER style has its own case in each effect switch it reaches", () => {

@@ -58,8 +58,8 @@ function png(data, decode = false) {
   return { width, height, pixels };
 }
 
-test("roster contains thirty-five distinct identities and signature attacks", () => {
-  assert.equal(characters.length, 35);
+test("roster contains forty-nine distinct identities and signature attacks", () => {
+  assert.equal(characters.length, 49);
   for (const key of ["id", "name", "move", "quote", "sheet", "portrait"])
     assert.equal(
       new Set(characters.map((c) => c[key])).size,
@@ -97,13 +97,27 @@ test("the original twenty fighters keep their order, ids and art paths", () => {
 });
 
 test("eight-fighter pack matches its export manifests", () => {
-  for (const c of characters.slice(27)) {
+  for (const c of characters.slice(27, 35)) {
     const manifest = JSON.parse(readFileSync(new URL(`../asset-sources/eight-fighters/${c.id}-manifest.json`, import.meta.url)));
     assert.equal(manifest.id, c.id);
     assert.equal(manifest.bodyHeight, c.bodyHeight);
     assert.deepEqual(manifest.anchor, [c.anchorX, c.anchorY]);
     assert.equal(manifest.combatAuthoredPoses, 28);
     assert.equal(manifest.motionAuthoredPoses, 24);
+  }
+});
+
+test("fourteen-fighter pack matches its export manifests", () => {
+  for (const c of characters.slice(35)) {
+    const manifest = JSON.parse(readFileSync(new URL(`../asset-sources/fourteen-fighters/${c.id}-manifest.json`, import.meta.url)));
+    assert.equal(manifest.id, c.id);
+    assert.equal(manifest.name, c.name);
+    assert.equal(manifest.signature, c.move);
+    assert.equal(manifest.bodyHeight, c.bodyHeight);
+    assert.deepEqual(manifest.anchor, [c.anchorX, c.anchorY]);
+    assert.equal(manifest.cellSize, c.frameWidth);
+    assert.equal(manifest.combatAuthoredPoses, c.combatFrameCount);
+    assert.equal(manifest.motionAuthoredPoses, c.motionFrameCount);
   }
 });
 
