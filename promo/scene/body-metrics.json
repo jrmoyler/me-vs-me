@@ -1,0 +1,247 @@
+{
+"aether": {
+"sheet": 174,
+"combat": 174,
+"motion": 174
+},
+"archer": {
+"sheet": 174,
+"combat": 174,
+"motion": 176
+},
+"binary": {
+"sheet": 175,
+"combat": 175,
+"motion": 174
+},
+"blood": {
+"sheet": 174,
+"combat": 174,
+"motion": 174
+},
+"circuitbreaker": {
+"sheet": 174,
+"combat": 174,
+"motion": 170
+},
+"civic": {
+"sheet": 174,
+"combat": 174,
+"motion": 175
+},
+"coast": {
+"sheet": 174,
+"combat": 174,
+"motion": 166
+},
+"colonial": {
+"sheet": 174,
+"combat": 174,
+"motion": 172
+},
+"corvette": {
+"sheet": 176,
+"combat": 163,
+"motion": 171
+},
+"crimsonoracle": {
+"sheet": 155,
+"combat": 155,
+"motion": 157
+},
+"curly": {
+"sheet": 176,
+"combat": 169,
+"motion": 160
+},
+"cyborg": {
+"sheet": 167,
+"combat": 167,
+"motion": 168
+},
+"dunevoyager": {
+"sheet": 174,
+"combat": 174,
+"motion": 174
+},
+"eon": {
+"sheet": 155,
+"combat": 155,
+"motion": 176
+},
+"eventhorizon": {
+"sheet": 170,
+"combat": 170,
+"motion": 172
+},
+"gaia": {
+"sheet": 174,
+"combat": 174,
+"motion": 175
+},
+"gauntlet": {
+"sheet": 177,
+"combat": 160,
+"motion": 153
+},
+"glyph": {
+"sheet": 174,
+"combat": 174,
+"motion": 175
+},
+"hataalii": {
+"sheet": 176,
+"combat": 166,
+"motion": 142
+},
+"hybrid": {
+"sheet": 174,
+"combat": 174,
+"motion": 175
+},
+"ironchef": {
+"sheet": 170,
+"combat": 170,
+"motion": 170
+},
+"jazz": {
+"sheet": 176,
+"combat": 176,
+"motion": 160
+},
+"jungle": {
+"sheet": 175,
+"combat": 175,
+"motion": 171
+},
+"juris": {
+"sheet": 174,
+"combat": 174,
+"motion": 143
+},
+"kinetic": {
+"sheet": 176,
+"combat": 166,
+"motion": 165
+},
+"medieval": {
+"sheet": 174,
+"combat": 174,
+"motion": 162
+},
+"merman": {
+"sheet": 175,
+"combat": 175,
+"motion": 173
+},
+"nexus": {
+"sheet": 175,
+"combat": 175,
+"motion": 176
+},
+"nomad": {
+"sheet": 175,
+"combat": 175,
+"motion": 178
+},
+"operative": {
+"sheet": 176,
+"combat": 176,
+"motion": 160
+},
+"patchrunner": {
+"sheet": 174,
+"combat": 174,
+"motion": 170
+},
+"pharaoh": {
+"sheet": 176,
+"combat": 176,
+"motion": 149
+},
+"pixel": {
+"sheet": 176,
+"combat": 161,
+"motion": 158
+},
+"quilt": {
+"sheet": 174,
+"combat": 174,
+"motion": 174
+},
+"raven": {
+"sheet": 175,
+"combat": 175,
+"motion": 169
+},
+"renaissance": {
+"sheet": 175,
+"combat": 175,
+"motion": 158
+},
+"roman": {
+"sheet": 176,
+"combat": 176,
+"motion": 153
+},
+"sketch": {
+"sheet": 165,
+"combat": 165,
+"motion": 168
+},
+"sovereign": {
+"sheet": 134,
+"combat": 134,
+"motion": 135
+},
+"starscribe": {
+"sheet": 147,
+"combat": 147,
+"motion": 150
+},
+"student": {
+"sheet": 141,
+"combat": 141,
+"motion": 154
+},
+"tote": {
+"sheet": 176,
+"combat": 165,
+"motion": 161
+},
+"tweed": {
+"sheet": 176,
+"combat": 163,
+"motion": 132
+},
+"urban": {
+"sheet": 177,
+"combat": 170,
+"motion": 161
+},
+"varsity": {
+"sheet": 176,
+"combat": 167,
+"motion": 161
+},
+"vector": {
+"sheet": 176,
+"combat": 171,
+"motion": 167
+},
+"victorian": {
+"sheet": 176,
+"combat": 176,
+"motion": 157
+},
+"viking": {
+"sheet": 175,
+"combat": 175,
+"motion": 170
+},
+"zenith": {
+"sheet": 173,
+"combat": 173,
+"motion": 173
+}
+}
