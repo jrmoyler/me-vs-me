@@ -1,0 +1,937 @@
+{
+ "size": 768,
+ "note": "Head-and-shoulders crops of each ready-pose portrait, upscaled by a whole-number nearest-neighbour factor. Built by scripts/make-busts.py.",
+ "fighters": [
+  {
+   "id": "hataalii",
+   "source": "hataalii-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    129,
+    136,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 154,
+   "headX": 205.8,
+   "opaqueTop": 93,
+   "bytes": 36182
+  },
+  {
+   "id": "urban",
+   "source": "urban-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    128,
+    116,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 134,
+   "headX": 204.1,
+   "opaqueTop": 93,
+   "bytes": 34187
+  },
+  {
+   "id": "gauntlet",
+   "source": "gauntlet-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    132,
+    182,
+    128,
+    128
+   ],
+   "scale": 6,
+   "headTop": 197,
+   "headX": 195.5,
+   "opaqueTop": 90,
+   "bytes": 44966
+  },
+  {
+   "id": "tote",
+   "source": "tote-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    128,
+    144,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 162,
+   "headX": 204.6,
+   "opaqueTop": 93,
+   "bytes": 32790
+  },
+  {
+   "id": "vector",
+   "source": "vector-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    117,
+    143,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 161,
+   "headX": 193.3,
+   "opaqueTop": 93,
+   "bytes": 46517
+  },
+  {
+   "id": "kinetic",
+   "source": "kinetic-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    133,
+    142,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 160,
+   "headX": 209.4,
+   "opaqueTop": 93,
+   "bytes": 40763
+  },
+  {
+   "id": "corvette",
+   "source": "corvette-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    126,
+    111,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 129,
+   "headX": 202.2,
+   "opaqueTop": 93,
+   "bytes": 46707
+  },
+  {
+   "id": "curly",
+   "source": "curly-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    134,
+    108,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 126,
+   "headX": 210.2,
+   "opaqueTop": 93,
+   "bytes": 50958
+  },
+  {
+   "id": "pixel",
+   "source": "pixel-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    109,
+    136,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 154,
+   "headX": 185.5,
+   "opaqueTop": 93,
+   "bytes": 18750
+  },
+  {
+   "id": "tweed",
+   "source": "tweed-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    110,
+    125,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 143,
+   "headX": 187.0,
+   "opaqueTop": 93,
+   "bytes": 40111
+  },
+  {
+   "id": "varsity",
+   "source": "varsity-portrait.png",
+   "sourceSize": [
+    384,
+    448
+   ],
+   "crop": [
+    104,
+    117,
+    153,
+    153
+   ],
+   "scale": 5,
+   "headTop": 135,
+   "headX": 180.5,
+   "opaqueTop": 93,
+   "bytes": 46812
+  },
+  {
+   "id": "hybrid",
+   "source": "hybrid-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    123,
+    109,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 121,
+   "headX": 170.7,
+   "opaqueTop": 96,
+   "bytes": 28635
+  },
+  {
+   "id": "civic",
+   "source": "civic-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    124,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 172.4,
+   "opaqueTop": 96,
+   "bytes": 29203
+  },
+  {
+   "id": "nexus",
+   "source": "nexus-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    126,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 173.9,
+   "opaqueTop": 96,
+   "bytes": 26970
+  },
+  {
+   "id": "glyph",
+   "source": "glyph-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    127,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 174.9,
+   "opaqueTop": 96,
+   "bytes": 26180
+  },
+  {
+   "id": "quilt",
+   "source": "quilt-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    117,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 165.0,
+   "opaqueTop": 96,
+   "bytes": 28860
+  },
+  {
+   "id": "binary",
+   "source": "binary-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    120,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 168.4,
+   "opaqueTop": 96,
+   "bytes": 28738
+  },
+  {
+   "id": "aether",
+   "source": "aether-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    123,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 170.9,
+   "opaqueTop": 96,
+   "bytes": 29361
+  },
+  {
+   "id": "gaia",
+   "source": "gaia-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    124,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 171.9,
+   "opaqueTop": 96,
+   "bytes": 31434
+  },
+  {
+   "id": "zenith",
+   "source": "zenith-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    121,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 168.9,
+   "opaqueTop": 96,
+   "bytes": 27841
+  },
+  {
+   "id": "archer",
+   "source": "archer-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    110,
+    122,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 134,
+   "headX": 158.5,
+   "opaqueTop": 96,
+   "bytes": 29695
+  },
+  {
+   "id": "cyborg",
+   "source": "cyborg-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    123,
+    117,
+    85,
+    85
+   ],
+   "scale": 9,
+   "headTop": 127,
+   "headX": 165.9,
+   "opaqueTop": 93,
+   "bytes": 26235
+  },
+  {
+   "id": "eon",
+   "source": "eon-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    127,
+    130,
+    85,
+    85
+   ],
+   "scale": 9,
+   "headTop": 140,
+   "headX": 169.5,
+   "opaqueTop": 93,
+   "bytes": 26295
+  },
+  {
+   "id": "juris",
+   "source": "juris-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    123,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 170.9,
+   "opaqueTop": 96,
+   "bytes": 28657
+  },
+  {
+   "id": "nomad",
+   "source": "nomad-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    137,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 185.1,
+   "opaqueTop": 96,
+   "bytes": 27826
+  },
+  {
+   "id": "sketch",
+   "source": "sketch-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    130,
+    118,
+    85,
+    85
+   ],
+   "scale": 9,
+   "headTop": 128,
+   "headX": 172.8,
+   "opaqueTop": 93,
+   "bytes": 26460
+  },
+  {
+   "id": "student",
+   "source": "student-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    123,
+    144,
+    76,
+    76
+   ],
+   "scale": 10,
+   "headTop": 153,
+   "headX": 160.5,
+   "opaqueTop": 98,
+   "bytes": 22024
+  },
+  {
+   "id": "patchrunner",
+   "source": "patchrunner-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    125,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 172.9,
+   "opaqueTop": 96,
+   "bytes": 30233
+  },
+  {
+   "id": "starscribe",
+   "source": "starscribe-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    139,
+    142,
+    109,
+    109
+   ],
+   "scale": 7,
+   "headTop": 160,
+   "headX": 177.7,
+   "opaqueTop": 54,
+   "bytes": 38679
+  },
+  {
+   "id": "sovereign",
+   "source": "sovereign-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    151,
+    154,
+    69,
+    69
+   ],
+   "scale": 11,
+   "headTop": 162,
+   "headX": 177.1,
+   "opaqueTop": 75,
+   "bytes": 17510
+  },
+  {
+   "id": "circuitbreaker",
+   "source": "circuitbreaker-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    129,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 176.7,
+   "opaqueTop": 96,
+   "bytes": 28820
+  },
+  {
+   "id": "ironchef",
+   "source": "ironchef-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    131,
+    114,
+    85,
+    85
+   ],
+   "scale": 9,
+   "headTop": 124,
+   "headX": 173.9,
+   "opaqueTop": 93,
+   "bytes": 25085
+  },
+  {
+   "id": "eventhorizon",
+   "source": "eventhorizon-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    130,
+    114,
+    85,
+    85
+   ],
+   "scale": 9,
+   "headTop": 124,
+   "headX": 172.5,
+   "opaqueTop": 93,
+   "bytes": 28276
+  },
+  {
+   "id": "crimsonoracle",
+   "source": "crimsonoracle-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    122,
+    129,
+    85,
+    85
+   ],
+   "scale": 9,
+   "headTop": 139,
+   "headX": 164.7,
+   "opaqueTop": 93,
+   "bytes": 24058
+  },
+  {
+   "id": "dunevoyager",
+   "source": "dunevoyager-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    113,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 160.8,
+   "opaqueTop": 96,
+   "bytes": 31197
+  },
+  {
+   "id": "pharaoh",
+   "source": "pharaoh-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    130,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 178.3,
+   "opaqueTop": 96,
+   "bytes": 30027
+  },
+  {
+   "id": "roman",
+   "source": "roman-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    116,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 163.7,
+   "opaqueTop": 96,
+   "bytes": 29913
+  },
+  {
+   "id": "viking",
+   "source": "viking-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    122,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 169.5,
+   "opaqueTop": 96,
+   "bytes": 30885
+  },
+  {
+   "id": "medieval",
+   "source": "medieval-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    128,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 176.3,
+   "opaqueTop": 96,
+   "bytes": 31040
+  },
+  {
+   "id": "renaissance",
+   "source": "renaissance-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    124,
+    109,
+    109,
+    109
+   ],
+   "scale": 7,
+   "headTop": 122,
+   "headX": 172.1,
+   "opaqueTop": 82,
+   "bytes": 35480
+  },
+  {
+   "id": "colonial",
+   "source": "colonial-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    113,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 160.5,
+   "opaqueTop": 96,
+   "bytes": 29490
+  },
+  {
+   "id": "victorian",
+   "source": "victorian-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    142,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 190.5,
+   "opaqueTop": 96,
+   "bytes": 23880
+  },
+  {
+   "id": "jazz",
+   "source": "jazz-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    119,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 167.3,
+   "opaqueTop": 96,
+   "bytes": 27442
+  },
+  {
+   "id": "raven",
+   "source": "raven-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    114,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 161.9,
+   "opaqueTop": 96,
+   "bytes": 29441
+  },
+  {
+   "id": "blood",
+   "source": "blood-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    116,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 164.4,
+   "opaqueTop": 96,
+   "bytes": 30496
+  },
+  {
+   "id": "merman",
+   "source": "merman-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    144,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 191.9,
+   "opaqueTop": 96,
+   "bytes": 27885
+  },
+  {
+   "id": "operative",
+   "source": "operative-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    115,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 162.6,
+   "opaqueTop": 96,
+   "bytes": 32018
+  },
+  {
+   "id": "coast",
+   "source": "coast-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    121,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 168.7,
+   "opaqueTop": 96,
+   "bytes": 29375
+  },
+  {
+   "id": "jungle",
+   "source": "jungle-portrait.png",
+   "sourceSize": [
+    320,
+    320
+   ],
+   "crop": [
+    135,
+    108,
+    96,
+    96
+   ],
+   "scale": 8,
+   "headTop": 120,
+   "headX": 183.0,
+   "opaqueTop": 96,
+   "bytes": 31729
+  }
+ ]
+}

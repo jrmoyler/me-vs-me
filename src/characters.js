@@ -12,6 +12,8 @@ const fighter = ({ id, bodyHeight = REFERENCE_BODY, motionBodyHeight = bodyHeigh
   combatSheet: `/assets/characters/${id}-combat.png`,
   motionSheet: `/assets/characters/${id}-motion.png`,
   portrait: `/assets/characters/${id}-portrait.png`,
+  // 768×768 head-and-shoulders close-up for cutscenes (scripts/make-busts.py).
+  bust: `/assets/characters/${id}-bust.png`,
   frameWidth: 320,
   frameHeight: 320,
   frameCount: 16,

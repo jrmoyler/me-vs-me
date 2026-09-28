@@ -314,9 +314,20 @@ export function playCutscene(kind, context = {}, options = {}) {
         sp.s.style.backgroundSize = `${sp.cols * 100}% ${sp.rows * 100}%`;
         drawSprite(sp);
       },
+      // Full-body portrait art: the ladder's ghost rungs and the mirror.
       portrait(character, cls = "cs-portrait") {
         const n = el("div", cls);
         n.style.backgroundImage = cssUrl(character.portrait);
+        n.style.setProperty("--fighter-color", character.color || "#ee5943");
+        n.setAttribute("role", "img");
+        n.setAttribute("aria-label", character.name);
+        return n;
+      },
+      // Head-and-shoulders close-up: a 768px bust with headroom, shoulders on the bottom
+      // edge. CSS frames it bottom-aligned and contained so the whole head always shows.
+      bust(character, cls = "cs-ecu") {
+        const n = el("div", `${cls} cs-bust`);
+        n.style.backgroundImage = cssUrl(character.bust || character.portrait);
         n.style.setProperty("--fighter-color", character.color || "#ee5943");
         n.setAttribute("role", "img");
         n.setAttribute("aria-label", character.name);
@@ -1005,7 +1016,7 @@ const SCENES = {
     const arena = ctx.arena(context.arena ?? 0);
     const T = reduced ? { cards: 0, gap: 0, title: 500, match: 1500, end: 4600 } : { cards: 350, gap: 330, title: 3450, match: 5200, end: 8600 };
     ctx.root.setAttribute("aria-label", `Tournament begins: ${eight.map((c) => c.name).join(", ")}`);
-    ctx.preload(eight.map((c) => c.portrait));
+    ctx.preload(eight.map((c) => c.bust));
 
     const shot = ctx.shot("cs-tournament-shot");
     const back = el("div", "cs-cam");
@@ -1022,7 +1033,7 @@ const SCENES = {
           const card = el("div", "cs-seat");
           card.style.setProperty("--fighter-color", c.color || "#ee5943");
           card.dataset.fighter = c.id;
-          card.append(ctx.portrait(c, "cs-seat-art"));
+          card.append(ctx.bust(c, "cs-seat-art"));
           card.append(el("div", "cs-seat-copy", `<small>SEED ${pad2(seed + 1)}</small><strong>${esc(c.name)}</strong>`));
           pair.append(card);
         });
@@ -1424,7 +1435,7 @@ const SCENES = {
       ? { eyesA: 900, eyesB: 1700, wide: 2500, title: 3500, end: 5600 }
       : { eyesA: 2800, eyesB: 4500, wide: 6200, guard: 8100, charge: 9100, clash: 10900, title: 11300, end: 14200 };
     ctx.root.setAttribute("aria-label", `Quick duel: ${me.name} versus ${rival.name} at ${arena.name}`);
-    ctx.preload([arena.background, me.portrait, rival.portrait, me.motionSheet, rival.motionSheet, me.combatSheet, rival.combatSheet]);
+    ctx.preload([arena.background, me.bust, rival.bust, me.motionSheet, rival.motionSheet, me.combatSheet, rival.combatSheet]);
 
     // Shot 1: the place, before anyone is in it.
     const est = ctx.shot("cs-establish");
@@ -1449,7 +1460,7 @@ const SCENES = {
     const eyes = (c, side, label) => {
       const shot = ctx.shot(`cs-eyeline side-${side}`);
       const cam = el("div", "cs-cam");
-      const face = ctx.portrait(c, "cs-ecu");
+      const face = ctx.bust(c, "cs-ecu");
       cam.append(face);
       shot.append(cam, el("div", "cs-eyeline-tag", `<small>${esc(label)}</small><strong>${esc(c.name)}</strong>`));
       shot.style.setProperty("--fighter-color", c.color || "#ee5943");
@@ -1460,7 +1471,7 @@ const SCENES = {
     [[eyeMe, T.eyesA, 1], [eyeRival, T.eyesB, -1]].forEach(([e, at, dir]) =>
       ctx.at(at, () => {
         ctx.cut(e.shot, "cut");
-        ctx.bars("34vh");
+        ctx.bars("26vh");
         ctx.cam(e.cam, { s: 1.08, x: 3 * dir });
         ctx.at(40, () => ctx.cam(e.cam, { s: 1.14, x: -3 * dir }, T.eyesB - T.eyesA + 400, "linear"));
         ctx.sfx.heartbeat();
@@ -1772,7 +1783,7 @@ const SCENES = {
     } catch {}
     const T = reduced ? { reveal: 400, dossier: 700, face: 2400, end: 5000 } : { walk: 300, reveal: 3000, dossier: 3500, pips: 4500, face: 6800, end: 10200 };
     ctx.root.setAttribute("aria-label", `Challenger ${stage + 1} of ${ladder.length}: ${rival.name}`);
-    ctx.preload([arena.background, rival.motionSheet, rival.sheet, hero.portrait, rival.portrait]);
+    ctx.preload([arena.background, rival.motionSheet, rival.sheet, hero.bust, rival.bust, ...ladder.map((c) => c.bust)]);
 
     const shot = ctx.shot("cs-challenger-shot");
     const cam = el("div", "cs-cam");
@@ -1793,7 +1804,7 @@ const SCENES = {
     pips.setAttribute("aria-hidden", "true");
     ladder.forEach((c, i) => {
       const li = el("li", i < stage ? "cleared" : i === stage ? "current" : i === ladder.length - 1 ? "shadow" : "");
-      li.append(ctx.portrait(c, "cs-pip-art"));
+      li.append(ctx.bust(c, "cs-pip-art"));
       pips.append(li);
     });
     shot.append(cam, slug, dossier, pips);
@@ -1840,7 +1851,7 @@ const SCENES = {
     const half = (c, side) => {
       const h = el("div", `cs-half side-${side}`);
       h.style.setProperty("--fighter-color", c.color || "#ee5943");
-      h.append(ctx.portrait(c, "cs-ecu"));
+      h.append(ctx.bust(c, "cs-ecu"));
       face.append(h);
       return h;
     };
@@ -1876,7 +1887,7 @@ const SCENES = {
     const remain = entrants.length - out.size;
     const T = reduced ? { title: 700, face: 2000, end: 5000 } : { burn: 1300, gap: 220, close: 3300, title: 4200, face: 6400, clash: 8600, end: 10400 };
     ctx.root.setAttribute("aria-label", `Tournament ${name.toLowerCase()}: ${me.name} versus ${rival.name}`);
-    ctx.preload([arena.background, me.sheet, rival.sheet, ...entrants.map((c) => c.portrait)]);
+    ctx.preload([arena.background, me.sheet, rival.sheet, ...entrants.map((c) => c.bust)]);
 
     const shot = ctx.shot("cs-round-shot");
     const back = el("div", "cs-cam");
@@ -1886,7 +1897,7 @@ const SCENES = {
       const t = el("div", `cs-tile${c.id === me.id ? " you" : ""}${c.id === rival.id ? " next" : ""}`);
       t.style.setProperty("--fighter-color", c.color || "#ee5943");
       t.dataset.fighter = c.id;
-      t.append(ctx.portrait(c, "cs-seat-art"), el("span", "", esc(c.name)));
+      t.append(ctx.bust(c, "cs-seat-art"), el("span", "", esc(c.name)));
       wall.append(t);
       return t;
     });

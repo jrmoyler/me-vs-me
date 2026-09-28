@@ -2812,7 +2812,7 @@ body.cutscene-open { overflow: hidden; }
 .cs-right .cs-seat { flex-direction: row-reverse; text-align: right; border-left: 0; border-right: 4px solid var(--fighter-color); translate: 8vw 0; padding: 0 0 0 1vw; background: linear-gradient(270deg, color-mix(in srgb, var(--fighter-color) 38%, #0000), #0008); }
 .cs-seat.on { opacity: 1; translate: 0 0; }
 .cs-seat.cs-up { box-shadow: 0 0 0 2px #ffe8a3, 0 0 30px #ffe8a366; }
-.cs-seat-art { height: 100%; aspect-ratio: 384 / 448; flex: none; background: 50% 34% / 230% auto no-repeat; image-rendering: pixelated; }
+.cs-seat-art { height: 100%; aspect-ratio: 1; flex: none; background: 50% 100% / contain no-repeat; image-rendering: pixelated; }
 .cs-right .cs-seat-art { transform: scaleX(-1); }
 .cs-seat-copy { min-width: 0; }
 .cs-seat-copy small { display: block; font-size: 9px; letter-spacing: .2em; color: #ffe8a3; }
@@ -3035,8 +3035,18 @@ body.cutscene-open { overflow: hidden; }
 .cs-slug strong { display: block; min-height: 1.3em; font-size: clamp(11px, 1.6vw, 17px); letter-spacing: .26em; color: #eee9d9; }
 .cs-slug small { display: block; margin-top: .6vh; font-size: clamp(9px, 1.05vw, 12px); letter-spacing: .32em; color: #9a9b97; }
 
-/* extreme close-ups: a portrait blown up to the eyes, seen through scope bars */
-.cs-ecu { position: absolute; inset: -6%; background-repeat: no-repeat; background-size: max(130vw, 170vh) auto; background-position: 50% 30%; image-rendering: pixelated; }
+/* close-ups: the fighter's head-and-shoulders bust, sized to the band between the scope
+   bars and bottom-aligned on the lower bar, so hats, crowns, hoods and hair always have
+   headroom whatever the viewport. max-width keeps the whole bust inside narrow halves. */
+.cs-ecu {
+  position: absolute; left: 50%; bottom: var(--cs-bar); translate: -50% 0;
+  height: calc((100% - 2 * var(--cs-bar)) * .94); aspect-ratio: 1; max-width: 100%;
+  background: 50% 100% / contain no-repeat; image-rendering: pixelated;
+  --cs-fade: linear-gradient(180deg, #000 86%, transparent), linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  -webkit-mask-image: var(--cs-fade); -webkit-mask-composite: source-in; mask-image: var(--cs-fade); mask-composite: intersect;
+}
+/* Portrait halves are narrow: let the shoulders run past the edges; the head sits in the middle half. */
+@media (max-aspect-ratio: 1/1) { .cs-half .cs-ecu { max-width: 128%; } }
 .cs-eyeline, .cs-half { background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--fighter-color) 26%, #0b0f1c), #05060a 70%); }
 .cs-eyeline .cs-ecu { filter: contrast(1.15) saturate(1.1); }
 .cs-eyeline.side-r .cs-ecu { transform: scaleX(-1); filter: contrast(1.2) saturate(.9) sepia(.2) hue-rotate(-12deg); }
@@ -3100,7 +3110,7 @@ body.cutscene-open { overflow: hidden; }
 .cs-pips { position: absolute; z-index: 4; left: 50%; bottom: calc(var(--cs-bar) + 2vh); translate: -50% 0; display: flex; gap: .7vw; margin: 0; padding: 0; list-style: none; opacity: 0; transition: opacity .5s ease; }
 .cs-pips.on { opacity: 1; }
 .cs-pips li { position: relative; width: clamp(22px, 3.2vw, 44px); aspect-ratio: 1; overflow: hidden; border: 1px solid #ffffff33; background: #000a; }
-.cs-pip-art { position: absolute; inset: 0; background: 50% 30% / 220% auto no-repeat; image-rendering: pixelated; }
+.cs-pip-art { position: absolute; inset: 0; background: 50% 100% / contain no-repeat; image-rendering: pixelated; }
 .cs-pips li.cleared .cs-pip-art { filter: grayscale(1) brightness(.45); }
 .cs-pips li.cleared::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 46%, #ee5943 47% 53%, transparent 54%); }
 .cs-pips li.current { border-color: #ffe8a3; box-shadow: 0 0 14px #ffe8a366; animation: cs-pulse 1s ease-in-out infinite; }
@@ -3110,16 +3120,16 @@ body.cutscene-open { overflow: hidden; }
 .cs-half { position: absolute; top: 0; bottom: 0; width: 50%; overflow: hidden; opacity: 0; transition: opacity .2s ease, translate .5s cubic-bezier(.2,.9,.2,1); }
 .cs-half.side-l { left: 0; translate: -12vw 0; } .cs-half.side-r { right: 0; translate: 12vw 0; }
 .cs-half.on { opacity: 1; translate: 0 0; }
-.cs-half .cs-ecu { background-size: max(110vw, 150vh) auto; background-position: 50% 34%; }
 .cs-half.side-r .cs-ecu { transform: scaleX(-1); }
 .cs-half::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, color-mix(in srgb, var(--fighter-color) 35%, transparent), transparent 50%); mix-blend-mode: screen; }
 .cs-halves-vs { position: absolute; z-index: 2; left: 50%; top: 50%; translate: -50% -50%; font-family: "MVM Pixel", var(--display, Impact, sans-serif); font-size: clamp(48px, 9vw, 130px); color: var(--red, #ee5943); text-shadow: -3px 0 #2ae8ff, 3px 0 #ff2a4a, 0 0 40px #ee5943; }
 
 /* tournament middle rounds */
-.cs-wall { position: absolute; left: 50%; top: 56%; translate: -50% -50%; width: min(86vw, 1100px); display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2vw; opacity: 0; transition: opacity .6s ease; }
+/* Two rows of 5:4 tiles stand 0.4× the wall width tall: cap the width so both rows (and every head) clear the bars. */
+.cs-wall { position: absolute; left: 50%; top: 56%; translate: -50% -50%; width: min(86vw, 1100px, (100vh - 2 * var(--cs-bar) - 14vh) * 2.4); display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2vw; opacity: 0; transition: opacity .6s ease; }
 .cs-wall.on { opacity: 1; }
 .cs-tile { position: relative; aspect-ratio: 5 / 4; overflow: hidden; border-bottom: 4px solid var(--fighter-color); background: linear-gradient(180deg, color-mix(in srgb, var(--fighter-color) 30%, #0000), #000a); transition: opacity .8s ease, translate 1s cubic-bezier(.5,0,.8,.4), filter .4s ease, box-shadow .5s ease; }
-.cs-tile .cs-seat-art { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; background-size: 130% auto; background-position: 50% 26%; }
+.cs-tile .cs-seat-art { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; background-size: contain; background-position: 50% 100%; }
 .cs-tile > span { position: absolute; left: 6%; bottom: 5%; font-family: var(--display, Impact, sans-serif); font-size: clamp(12px, 1.8vw, 24px); text-shadow: 0 2px 0 #000; }
 .cs-tile.out { filter: grayscale(1) brightness(.4); translate: 0 60vh; opacity: 0; }
 .cs-tile .cs-crack path { stroke: #fff; }
@@ -3139,7 +3149,7 @@ body.cutscene-open { overflow: hidden; }
 
 @media (max-aspect-ratio: 1/1) {
   .cs-dossier { top: calc(var(--cs-bar) + 12vh); translate: 0 0; width: 80vw; }
-  .cs-wall { grid-template-columns: repeat(2, 1fr); width: 70vw; }
+  .cs-wall { grid-template-columns: repeat(2, 1fr); width: min(70vw, (100vh - 2 * var(--cs-bar) - 14vh) * .6); }
   .cs-split-tag strong { font-size: clamp(18px, 5.6vw, 28px); }
   .cs-split-tag span { display: none; }
   .cs-hud { min-width: 0; right: 4vw; }
