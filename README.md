@@ -66,6 +66,20 @@ Hard also punishes whiffs in range and fires POWER only when it can land: projec
 
 `beep()` and the oscillator sound path are unchanged. Hitstop is weighted: light 0.04 s, medium 0.06 s, heavy/HK 0.09 s, POWER 0.12 s, throw 0.10 s. Blocks freeze for 60% of that. A clean hit flashes the struck sprite white for one render tick. Sparks grow with the strike's tier. Blocks get a smaller cyan-grey spark and a smaller shake. The combo counter pops each time it grows. Reduced motion skips the shake, flash and rumble but keeps hitstop, so frame advantage never changes.
 
+Sparks are layered: a hot white core that collapses, the tiered rays, and an expanding ring on heavy strikes and POWERs. Landings and knockdowns kick up floor dust (at most 16 puffs). A clean POWER hit gives the camera a brief 1.05× push toward the impact; every K.O. pushes 1.12× toward the loser with a warm flash, and the match-winning K.O. plays out at 30% speed for about a second. Reduced motion turns off the dust, zoom, flash and slow motion.
+
+### HUD and results
+
+Each health bar carries the fighter's head-and-shoulders art, and a pale damage trail that waits until a combo ends, then drains down to the new health. Bars turn amber at half health and red at a quarter, where they pulse. The POWER meter shimmers once it passes the 35 mark, and the clock turns red for the last ten seconds. Rounds open with ROUND n (FINAL ROUND at one round each), then FIGHT!, and close with K.O., TIME!, DRAW or PERFECT (the winner never lost health), each with a sub-line naming the winner. Pause uses the game's own type and shows the arena, round and score.
+
+The result screen puts the winner in front of the arena they won in and reports six stats: strikes landed, best combo, damage dealt, damage taken, POWERs used and hits blocked. Every mode except training also gets a letter grade from S to D (`src/match-stats.js`): winning, straight rounds, combos, damage per round, guarding and POWERs/throws add to it, and damage taken per round subtracts from it.
+
+### Menus
+
+Screens fade and rise in when they change; re-rendering the same screen (picking a fighter or a stage) stays still. Roster cards and stage tiles lift and glow in the fighter's colour on hover and keyboard focus, and the roster frames each fighter larger. Arrow keys move through the roster and stage grids in all four directions, and on the title, result, route and bracket screens and inside dialogs they move focus to the nearest button. A connected pad drives every menu: the d-pad or left stick moves, A confirms, B backs out or closes a dialog, and Start confirms. Bracket slots show each entrant's face. Reduced motion stops every menu animation.
+
+Screenshots: [title](docs/qa/polish-title.jpg), [HUD](docs/qa/polish-hud.jpg), [character select](docs/qa/polish-select.jpg), [result grade](docs/qa/polish-result.jpg) and [phone](docs/qa/polish-phone.jpg) (headless Chromium).
+
 ### Touch controller
 
 The on-screen controller lives in `src/controller.js` and follows the game's keycap styling. The left pad is a single slide surface: one thumb walks, crouches and jumps, and diagonals give jump-forward without lifting. The right side is a staggered six-key arcade cluster with POWER and GUARD bars beneath. Targets scale with the viewport (at least 44 px on phones, 64 px and up on tablets) and respect safe-area insets. In portrait the canvas sits at the top and the controller fills the free band below it; in landscape the pads overlay the bottom corners on translucent plates. `node scripts/qa-screens.mjs` (after `npm run build`) drives a match on five phone and tablet viewports, screenshots the controller into `docs/qa/controller-*.jpg`, and fails if any target is too small, leaves the viewport, or overlaps Pause or the HUD.

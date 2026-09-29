@@ -89,7 +89,7 @@ export async function startCombat({
     );
   wrapper.insertAdjacentHTML(
     "beforeend",
-    `<div class="mvm-hud"><div><div class="mvm-hud-name">${safe(player.name)}</div><div class="mvm-health"><i data-health="0"></i></div><div class="mvm-energy"><i data-energy="0"></i></div><div class="mvm-rounds" data-rounds="0">○ ○</div></div><div class="mvm-clock"><small>TIME</small><span data-time>60</span><button class="mvm-pause-button" aria-label="Pause match">Ⅱ PAUSE</button></div><div class="mvm-hud-right"><div class="mvm-hud-name">${safe(opponent.name)}</div><div class="mvm-health"><i data-health="1"></i></div><div class="mvm-energy"><i data-energy="1"></i></div><div class="mvm-rounds" data-rounds="1">○ ○</div></div></div><div class="mvm-message"></div><div class="mvm-help">${helpLine(0)}${mode === "local" ? ` / P2 ${helpLine(1)}` : " · ESC PAUSE · CHAIN LP→MP→HP ON HIT"}</div>`,
+    `<div class="mvm-hud"><div><img class="mvm-hud-face" src="${safe(player.bust || player.portrait)}" alt="" draggable="false"><div class="mvm-hud-name">${safe(player.name)}</div><div class="mvm-health"><b data-chip="0"></b><i data-health="0"></i></div><div class="mvm-energy"><i data-energy="0"></i></div><div class="mvm-rounds" data-rounds="0">○ ○</div></div><div class="mvm-clock"><small>TIME</small><span data-time>60</span><button class="mvm-pause-button" aria-label="Pause match">Ⅱ PAUSE</button></div><div class="mvm-hud-right"><img class="mvm-hud-face${opponent.shadow ? " shadow" : ""}" src="${safe(opponent.bust || opponent.portrait)}" alt="" draggable="false"><div class="mvm-hud-name">${safe(opponent.name)}</div><div class="mvm-health"><b data-chip="1"></b><i data-health="1"></i></div><div class="mvm-energy"><i data-energy="1"></i></div><div class="mvm-rounds" data-rounds="1">○ ○</div></div></div><div class="mvm-message"></div><div class="mvm-help">${helpLine(0)}${mode === "local" ? ` / P2 ${helpLine(1)}` : " · ESC PAUSE · CHAIN LP→MP→HP ON HIT"}</div>`,
   );
   container.append(wrapper);
   wrapper.insertAdjacentHTML(
@@ -106,6 +106,12 @@ export async function startCombat({
     el.setAttribute("aria-valuemax", "100");
   });
   const message = wrapper.querySelector(".mvm-message");
+  // Round banners: a headline plus an optional sub-line, re-animated on every change.
+  const banner = (kind, title = "", sub = "") => {
+    message.dataset.kind = kind;
+    message.dataset.pop = message.dataset.pop === "a" ? "b" : "a";
+    message.innerHTML = title ? `<b>${safe(title)}</b>${sub ? `<small>${safe(sub)}</small>` : ""}` : "";
+  };
   wrapper.dataset.mode = mode;
   let assetFailed = false;
   wrapper.insertAdjacentHTML(
@@ -287,11 +293,14 @@ export async function startCombat({
     clearInputs();
     overlay = document.createElement("div");
     overlay.className = "mvm-overlay";
-    overlay.innerHTML =
-      "<h2>MATCH PAUSED</h2><p>Take a breath. Your rival can wait.</p><button>RESUME FIGHT</button><button>LEAVE MATCH</button>";
+    const [p, o] = scene?.fighters ?? [];
+    const score = p ? `ROUND ${Math.min(3, 1 + p.rounds + o.rounds)} · ${p.rounds} – ${o.rounds}` : "";
+    overlay.innerHTML = `<small class="mvm-overlay-eyebrow">${safe(arena.name)}${score ? ` · ${score}` : ""}</small><h2>MATCH PAUSED</h2><p>Take a breath. Your rival can wait.</p><button class="mvm-resume">RESUME FIGHT</button><button class="mvm-leave">LEAVE MATCH</button>`;
     wrapper.append(overlay);
-    overlay.children[2].onclick = resume;
-    overlay.children[3].onclick = () => {
+    const resumeButton = overlay.querySelector(".mvm-resume"),
+      leaveButton = overlay.querySelector(".mvm-leave");
+    resumeButton.onclick = resume;
+    leaveButton.onclick = () => {
       destroy();
       onExit?.();
     };
@@ -300,8 +309,9 @@ export async function startCombat({
     overlay.setAttribute("aria-label", "Match paused");
     const movesButton = document.createElement("button");
     movesButton.textContent = "MOVE LIST";
+    movesButton.className = "mvm-moves";
     movesButton.onclick = () => onMoves?.();
-    if (onMoves) overlay.insertBefore(movesButton, overlay.children[3]);
+    if (onMoves) overlay.insertBefore(movesButton, leaveButton);
     overlay.addEventListener("keydown", (e) => {
       if (e.key !== "Tab") return;
       const buttons = [...overlay.querySelectorAll("button")];
@@ -313,7 +323,7 @@ export async function startCombat({
         buttons[0].focus();
       }
     });
-    overlay.children[2].focus();
+    resumeButton.focus();
   }
   wrapper.querySelector(".mvm-pause-button").onclick = pause;
   bind(window, "keydown", (e) => {
@@ -463,9 +473,14 @@ export async function startCombat({
       this.log = [];
       this.training = training;
       this.sparks = [];
+      this.dust = [];
       this.projectiles = [];
       this.pendingHits = [];
-      message.textContent = "ROUND 1";
+      this.slowMo = 0;
+      this.punch = null;
+      // Zoom punches stay inside the 960×540 stage.
+      this.cameras.main.setBounds?.(0, 0, 960, 540);
+      banner("round", "ROUND 1");
       this.sync();
     }
     sync() {
@@ -476,8 +491,15 @@ export async function startCombat({
             "aria-valuenow",
             String(Math.round(f.hp)),
           );
-        wrapper.querySelector(`[data-health="${i}"]`).style.width =
-          `${Math.max(0, f.hp)}%`;
+        const width = `${Math.max(0, f.hp)}%`;
+        wrapper.querySelector(`[data-health="${i}"]`).style.width = width;
+        // The chip layer trails the bar (CSS delays its drain until a combo ends).
+        wrapper.querySelector(`[data-chip="${i}"]`).style.width = width;
+        const tone = f.hp <= 25 ? "low" : f.hp <= 50 ? "warn" : "ok";
+        if (f.hudTone !== tone) {
+          f.hudTone = tone;
+          wrapper.querySelector(`[data-health="${i}"]`).parentElement.dataset.tone = tone;
+        }
         wrapper.querySelector(`[data-energy="${i}"]`).style.width =
           `${f.energy}%`;
         wrapper.querySelector(`[data-rounds="${i}"]`).textContent =
@@ -490,6 +512,7 @@ export async function startCombat({
             ? `POWER READY · ${Math.floor(f.energy)}`
             : `CHARGING ${Math.floor(f.energy)} / ${SPECIAL_COST}`;
         label.dataset.ready = String(f.energy >= SPECIAL_COST);
+        label.previousElementSibling.dataset.ready = label.dataset.ready;
       });
       const ready = this.fighters[0].energy >= SPECIAL_COST;
       controller.setPowerReady(
@@ -497,9 +520,11 @@ export async function startCombat({
         this.fighters[0].energy,
         `${player.move}. ${ready ? "Ready" : `Requires ${SPECIAL_COST} meter`}`,
       );
-      wrapper.querySelector("[data-time]").textContent = String(
-        Math.ceil(this.timer),
-      ).padStart(2, "0");
+      const clock = wrapper.querySelector("[data-time]");
+      clock.textContent = String(Math.ceil(this.timer)).padStart(2, "0");
+      clock.parentElement.dataset.low = String(
+        mode !== "training" && this.phase === "fight" && this.timer <= 10,
+      );
       onHud?.({
         player: this.fighters[0].hp,
         opponent: this.fighters[1].hp,
@@ -1056,6 +1081,8 @@ export async function startCombat({
       });
       if (this.sparks.length > SPARK_CAP)
         this.sparks.splice(0, this.sparks.length - SPARK_CAP);
+      if (!blocking && m.type === "special" && e.hp > 0)
+        this.cameraPunch(1.05, (f.x + e.x) / 2, Math.min(f.y, e.y) - 90, 0.42);
       if (!settings.reducedMotion) {
         if (blocking) this.cameras.main.shake(30, 0.0015);
         else
@@ -1129,17 +1156,54 @@ export async function startCombat({
         f.visualState = null;
       });
       this.phaseTime = 2.5;
-      message.textContent = win
-        ? (this.timer <= 0 ? "TIME! " : "K.O. ") +
-          (mode === "local"
-            ? win === p
-              ? "PLAYER ONE WINS"
-              : "PLAYER TWO WINS"
-            : win === p
-              ? "YOU WIN"
-              : "RIVAL WINS")
-        : "DRAW — REMATCH";
+      const who =
+        mode === "local"
+          ? win === p
+            ? "PLAYER ONE WINS"
+            : "PLAYER TWO WINS"
+          : win === p
+            ? "YOU WIN"
+            : "RIVAL WINS";
+      const ko = win && this.timer > 0;
+      if (!win) banner("draw", "DRAW", "REMATCH");
+      else if (ko && win.hp >= 100) banner("perfect", "PERFECT", `K.O. · ${who}`);
+      else banner(ko ? "ko" : "time", ko ? "K.O." : "TIME!", who);
+      if (ko && !settings.reducedMotion) {
+        const loser = win === p ? o : p;
+        this.cameraPunch(1.12, loser.x, loser.y - 90, 0.9);
+        this.cameras.main.flash?.(160, 255, 244, 214);
+        // The match-winning blow plays out in slow motion.
+        if (p.rounds >= 2 || o.rounds >= 2) this.slowMo = 1.1;
+      }
       this.sync();
+    }
+    // A short zoom toward (x, y) that eases back out; driven per frame in update().
+    cameraPunch(zoom, x, y, duration) {
+      if (settings.reducedMotion) return;
+      this.punch = { t: 0, zoom, x, y, duration };
+    }
+    updateCamera(dt) {
+      const cam = this.cameras.main;
+      if (!this.punch || !cam.setZoom) return;
+      const k = this.punch;
+      k.t += dt;
+      const u = Math.min(1, k.t / k.duration);
+      // Fast in (first 15%), smooth hold and release.
+      const env = u < 0.15 ? u / 0.15 : 1 - ((u - 0.15) / 0.85) ** 2;
+      cam.setZoom(1 + (k.zoom - 1) * env);
+      cam.centerOn?.(480 + (k.x - 480) * env * 0.6, 270 + (k.y - 270) * env * 0.6);
+      if (u >= 1) {
+        cam.setZoom(1);
+        cam.centerOn?.(480, 270);
+        this.punch = null;
+      }
+    }
+    // Landing and knockdown dust: a few flattened puffs that spread and fade.
+    puff(x, strength) {
+      if (settings.reducedMotion) return;
+      for (const dir of [-1, 1])
+        this.dust.push({ x, dir, life: 0.42, max: 0.42, size: 16 * strength });
+      if (this.dust.length > 16) this.dust.splice(0, this.dust.length - 16);
     }
     resetRound() {
       this.fighters.forEach((f, i) => {
@@ -1165,6 +1229,12 @@ export async function startCombat({
       this.projectiles = [];
       this.pendingHits = [];
       this.sparks = [];
+      this.dust = [];
+      this.slowMo = 0;
+      if (this.punch) {
+        this.punch.t = this.punch.duration;
+        this.updateCamera(0);
+      }
       this.hitstop = 0;
       this.aiClock = 0;
       this.aiAction = {};
@@ -1173,7 +1243,9 @@ export async function startCombat({
       this.timer = 60;
       this.phase = "intro";
       this.phaseTime = 2;
-      message.textContent = `ROUND ${1 + this.fighters[0].rounds + this.fighters[1].rounds}`;
+      const [p, o] = this.fighters;
+      if (p.rounds === 1 && o.rounds === 1) banner("round", "FINAL ROUND");
+      else banner("round", `ROUND ${1 + p.rounds + o.rounds}`);
       clearInputs();
       this.sync();
     }
@@ -1181,7 +1253,12 @@ export async function startCombat({
       if (destroyed) return;
       const pads = [padInput(0), padInput(1)];
       if (paused || destroyed || ended || !this.fighters) return;
-      const dt = Math.min(delta / 1000, 0.035);
+      let dt = Math.min(delta / 1000, 0.035);
+      this.updateCamera(dt);
+      if (this.slowMo > 0) {
+        this.slowMo -= dt;
+        dt *= 0.3;
+      }
       for (let i = 0; i < 2; i++) {
         const type = [...MOVES].reverse().find((m) => pressed[i][m.type])?.type;
         if (type && this.phase === "fight") {
@@ -1228,9 +1305,20 @@ export async function startCombat({
         const tier = s.special ? 4 : s.tier;
         const rays = 6 + tier * 2;
         const size = (40 + tier * 12) * (s.block ? 0.6 : 1);
+        const u = 1 - s.life / 0.22;
+        const color = s.block ? 0x9fb4c0 : s.throw ? 0xff6ad5 : 0xffe49e;
+        // Layered impact: a hot core that collapses, then a ring on heavy strikes.
+        if (u < 0.45) {
+          this.fx.fillStyle(s.block ? 0xdff3ff : 0xffffff, 0.85 * (1 - u / 0.45));
+          this.fx.fillCircle(s.x, s.y, size * 0.34 * (1 - u * 0.9));
+        }
+        if (tier >= 3 && !s.block) {
+          this.fx.lineStyle(2, s.special ? 0xfff2c4 : color, 0.7 * (1 - u));
+          this.fx.strokeCircle(s.x, s.y, size * (0.35 + u * 0.95));
+        }
         this.fx.lineStyle(
           s.special ? 5 : 2 + Math.min(2, tier),
-          s.block ? 0x9fb4c0 : s.throw ? 0xff6ad5 : 0xffe49e,
+          color,
           s.life / 0.22,
         );
         for (let j = 0; j < rays; j++) {
@@ -1244,11 +1332,19 @@ export async function startCombat({
           );
         }
       }
+      this.dust = this.dust.filter((d) => (d.life -= dt) > 0);
+      for (const d of this.dust) {
+        const u = 1 - d.life / d.max;
+        this.fx.fillStyle(0xd9cbb0, 0.34 * (1 - u));
+        this.fx.fillEllipse(d.x + d.dir * (8 + u * 46), 450 - u * 10, d.size * (1 + u * 1.6), d.size * 0.5 * (1 + u));
+      }
       if (this.phase !== "fight") {
         if (this.phase === "result")
           this.fighters.forEach((f, i) => {
             f.vy += 1450 * dt;
             f.y = Math.min(450, f.y + f.vy * dt);
+            if (f.wasAir && f.y >= 449) this.puff(f.x, 1.5);
+            f.wasAir = f.y < 449;
             this.renderFighter(
               f,
               {},
@@ -1263,10 +1359,10 @@ export async function startCombat({
           });
         this.phaseTime -= dt;
         if (this.phase === "intro") {
-          if (this.phaseTime < 0.7) message.textContent = "FIGHT!";
+          if (this.phaseTime < 0.7 && message.dataset.kind !== "fight") banner("fight", "FIGHT!");
           if (this.phaseTime <= 0) {
             this.phase = "fight";
-            message.textContent = "";
+            banner("idle");
             clearInputs();
           }
         } else if (this.phaseTime <= 0) {
@@ -1328,6 +1424,14 @@ export async function startCombat({
       this.tickFighter(this.fighters[1], this.fighters[0], p2, dt, 1);
       for (const hit of this.pendingHits) this.hit(...hit);
       this.pendingHits = [];
+      for (const f of this.fighters) {
+        const air = f.y < 449,
+          down = f.down > 0;
+        if (down && !f.wasDown) this.puff(f.x, 1.5);
+        else if (f.wasAir && !air) this.puff(f.x, 0.8);
+        f.wasAir = air;
+        f.wasDown = down;
+      }
       const [p, o] = this.fighters;
       // A trial drops when the dummy recovers before the POWER lands.
       if (training.trial && o.comboHits === 0) trialDrop(training.trial);
@@ -1342,9 +1446,9 @@ export async function startCombat({
         if (o.hp <= 0) {
           o.hp = 100;
           o.x = 690;
-          message.textContent = "DUMMY RESET";
+          banner("info", "DUMMY RESET");
           this.time.delayedCall(650, () => {
-            if (!destroyed) message.textContent = "";
+            if (!destroyed) banner("idle");
           });
         }
         p.hp = 100;
