@@ -7,6 +7,7 @@ import { characters, bodyScale } from '../src/characters.js';
 import { arenas } from '../src/arenas.js';
 import * as moves from '../src/moves.js';
 import * as tournament from '../src/tournament.js';
+import * as matchStats from '../src/match-stats.js';
 const { MOVES } = moves;
 
 const source=(await readFile(new URL('../src/main.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'');
@@ -17,7 +18,7 @@ function setup(saved={},install='none') {
   let pending, latest, bonusLatest, bonuses=0, destroys=0, prompts=0, installListener;
   const pwa={registerPWA(){},installState:()=>install,onInstallChange:fn=>{installListener=fn;},promptInstall:async()=>{prompts++;install='none';installListener?.();return 'accepted';}};
   const context=vm.createContext({window,document:window.document,localStorage:window.localStorage,
-    matchMedia:()=>({matches:false}),characters,bodyScale,arenas,...moves,...tournament,console,
+    matchMedia:()=>({matches:false}),characters,bodyScale,arenas,...moves,...tournament,...matchStats,console,
     setTimeout:fn=>(pending=fn,1),clearTimeout:()=>{pending=null;},
     startBonus:options=>{bonuses++;bonusLatest=options;return {destroy(){}};},
     startCombat:async options=>{latest=options;return {destroy(){destroys++;}};},...pwa});

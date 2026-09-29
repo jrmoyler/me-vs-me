@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { readFileSync, existsSync } from 'node:fs';
+import { inflateSync } from 'node:zlib';
 import vm from 'node:vm';
 import { Window } from 'happy-dom';
 import { characters, bodyScale } from '../src/characters.js';
@@ -62,15 +64,15 @@ const contexts = {
 const expectedArt = {
   intro: [characters[0].portrait, characters[0].sheet, arenas.find((a) => a.id === 'mirror-garden').background],
   ladder: [characters[3].motionSheet, arenas[1].background, characters[1].portrait],
-  tournament: ['hataalii', 'urban', 'gauntlet', 'tote', 'vector', 'kinetic', 'glyph', 'zenith'].map((id) => characters.find((c) => c.id === id).portrait).concat(arenas[3].background),
+  tournament: ['hataalii', 'urban', 'gauntlet', 'tote', 'vector', 'kinetic', 'glyph', 'zenith'].map((id) => characters.find((c) => c.id === id).bust).concat(arenas[3].background),
   victory: [characters[5].motionSheet, arenas[4].background, characters[19].motionSheet],
   defeat: [characters[0].motionSheet, characters[7].combatSheet, arenas[0].background],
   shadow: [characters[6].sheet, arenas.find((a) => a.id === 'null-vault').background],
   bonus: [characters[2].motionSheet, arenas[5].background],
   final: [characters[9].sheet, characters[14].sheet, arenas.find((a) => a.id === 'glasshouse').background],
-  challenger: [characters[8].motionSheet, characters[3].portrait, characters[12].portrait, arenas[2].background],
-  round: [4, 2, 11, 7, 1, 13, 5, 9].map((i) => characters[i].portrait).concat(characters[4].sheet, characters[11].sheet, arenas[3].background),
-  duel: [characters[1].portrait, characters[10].portrait, characters[1].motionSheet, characters[10].motionSheet, arenas[3].background],
+  challenger: [characters[8].motionSheet, characters[3].bust, characters[12].bust, arenas[2].background],
+  round: [4, 2, 11, 7, 1, 13, 5, 9].map((i) => characters[i].bust).concat(characters[4].sheet, characters[11].sheet, arenas[3].background),
+  duel: [characters[1].bust, characters[10].bust, characters[1].motionSheet, characters[10].motionSheet, arenas[3].background],
   versus: [characters[6].motionSheet, characters[15].motionSheet, arenas[1].background],
   training: [characters[12].sheet, arenas[0].background],
   finish: [characters[2].combatSheet, characters[16].motionSheet, arenas[4].background],
@@ -475,4 +477,112 @@ test('finish names the winner, the score and the winner quote for both modes', a
     c.advance(6000);
     await done;
   }
+});
+
+// Close-ups draw each fighter's head-and-shoulders bust (scripts/make-busts.py), never a
+// blown-up full-body portrait: the whole head must fit, crowns, hats and hoods included.
+const BUST = 768;
+function rgba(file) {
+  const data = readFileSync(file);
+  assert.equal(data.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', file);
+  const width = data.readUInt32BE(16), height = data.readUInt32BE(20);
+  assert.equal(data[24], 8, `${file}: 8-bit`);
+  assert.equal(data[25], 6, `${file}: RGBA`);
+  assert.equal(data[28], 0, `${file}: non-interlaced`);
+  const idat = [];
+  for (let at = 8; at < data.length;) {
+    const len = data.readUInt32BE(at);
+    if (data.toString('ascii', at + 4, at + 8) === 'IDAT') idat.push(data.subarray(at + 8, at + 8 + len));
+    at += len + 12;
+  }
+  const raw = inflateSync(Buffer.concat(idat)), stride = width * 4, px = Buffer.alloc(stride * height);
+  const paeth = (a, b, c) => { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); return pa <= pb && pa <= pc ? a : pb <= pc ? b : c; };
+  for (let y = 0; y < height; y++) {
+    const f = raw[y * (stride + 1)];
+    for (let x = 0; x < stride; x++) {
+      const i = y * stride + x, a = x >= 4 ? px[i - 4] : 0, b = y ? px[i - stride] : 0, c = y && x >= 4 ? px[i - stride - 4] : 0;
+      px[i] = (raw[y * (stride + 1) + x + 1] + [0, a, b, (a + b) >> 1, paeth(a, b, c)][f]) & 255;
+    }
+  }
+  return { width, height, alpha: (x, y) => px[(y * width + x) * 4 + 3] };
+}
+
+test('every fighter has a 768px transparent bust with headroom above the head', () => {
+  for (const c of characters) {
+    assert.equal(c.bust, `/assets/characters/${c.id}-bust.png`, `${c.id}.bust`);
+    const file = new URL(`../public${c.bust}`, import.meta.url);
+    assert.ok(existsSync(file), `${c.id}: missing ${c.bust}`);
+    const { width, height, alpha } = rgba(file);
+    assert.deepEqual([width, height], [BUST, BUST], `${c.id}: bust size`);
+    let top = -1, opaque = 0;
+    for (let y = 0; y < height && top < 0; y++) for (let x = 0; x < width; x++) if (alpha(x, y) > 24) { top = y; break; }
+    for (let y = 0; y < height; y += 4) for (let x = 0; x < width; x += 4) if (alpha(x, y) > 24) opaque++;
+    assert.ok(top >= 32, `${c.id}: the head touches the top of the bust (first opaque row ${top})`);
+    assert.ok(top <= BUST * 0.2, `${c.id}: the bust is framed too loose (first opaque row ${top})`);
+    assert.ok(opaque > (BUST / 4) ** 2 * 0.3, `${c.id}: the bust is mostly empty`);
+    // Shoulders fill the bottom edge.
+    let bottom = 0;
+    for (let x = 0; x < width; x++) if (alpha(x, height - 1) > 24) bottom++;
+    assert.ok(bottom > width * 0.4, `${c.id}: shoulders do not reach the bottom edge`);
+    // The head never touches a side and is roughly centred.
+    let min = width, max = 0;
+    for (let y = top; y < top + BUST * 0.18; y++) for (let x = 0; x < width; x++) if (alpha(x, y) > 24) { min = Math.min(min, x); max = Math.max(max, x); }
+    assert.ok(min >= 8 && max < width - 8, `${c.id}: head clipped at a side (${min}–${max})`);
+    assert.ok(Math.abs((min + max) / 2 - width / 2) < width * 0.16, `${c.id}: head off-centre (${min}–${max})`);
+  }
+});
+
+test('close-ups use the bust; the ladder and the mirror keep the full-body portrait', async () => {
+  const shows = async (kind, ctx, at, selector) => {
+    const { body } = dom();
+    const c = clock();
+    const done = playCutscene(kind, ctx, { container: body, timers: c.timers, now: c.now, sound: false });
+    c.advance(at);
+    const found = [...body.querySelectorAll(selector)].map((n) => n.getAttribute('style'));
+    c.advance(40000);
+    await done;
+    return found;
+  };
+  const bust = (i) => new RegExp(characters[i].bust.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'));
+  const ecu = await shows('duel', contexts.duel, 100, '.cs-ecu');
+  assert.equal(ecu.length, 2);
+  assert.match(ecu[0], bust(1));
+  assert.match(ecu[1], bust(10));
+  const halves = await shows('challenger', contexts.challenger, 100, '.cs-half .cs-ecu');
+  assert.match(halves[0], bust(3));
+  assert.match(halves[1], bust(8));
+  const pips = await shows('challenger', contexts.challenger, 100, '.cs-pip-art');
+  contexts.challenger.fighters.forEach((i, n) => assert.match(pips[n], bust(i)));
+  for (const [kind, sel] of [['tournament', '.cs-seat-art'], ['round', '.cs-tile .cs-seat-art']]) {
+    const art = await shows(kind, contexts[kind], 100, sel);
+    assert.ok(art.length >= 8, `${kind} seats`);
+    for (const s of art) assert.match(s, /-bust\.png/, `${kind} seat uses a bust`);
+  }
+  const rungs = await shows('ladder', contexts.ladder, 100, '.cs-rung');
+  for (const s of rungs) assert.match(s, /-portrait\.png/, 'ladder rungs stay full body');
+  const glass = await shows('intro', contexts.intro, 100, '.cs-glass');
+  assert.match(glass[0], /-portrait\.png/, 'the mirror shows the whole reflection');
+});
+
+test('close-up CSS frames the bust whole: bottom-aligned, contained, between the bars', async () => {
+  const css = await readFile(new URL('../src/style.css', import.meta.url), 'utf8');
+  const rule = (sel) => {
+    const at = css.indexOf(`${sel} {`);
+    assert.ok(at >= 0, `missing ${sel}`);
+    return css.slice(at, css.indexOf('}', at));
+  };
+  const ecu = rule('.cs-ecu');
+  assert.match(ecu, /bottom: var\(--cs-bar\)/, 'the bust stands on the lower bar');
+  assert.match(ecu, /height: calc\(\(100% - 2 \* var\(--cs-bar\)\)/, 'sized to the band between the bars');
+  assert.match(ecu, /50% 100% \/ contain/);
+  assert.match(ecu, /image-rendering: pixelated/);
+  for (const sel of ['.cs-seat-art', '.cs-pip-art']) {
+    const r = rule(sel);
+    assert.match(r, /50% 100% \/ contain/, `${sel} contains the bust`);
+    assert.match(r, /image-rendering: pixelated/, `${sel} stays crisp`);
+  }
+  assert.match(rule('.cs-tile .cs-seat-art'), /background-size: contain; background-position: 50% 100%/);
+  // No close-up may oversize the art past its frame again.
+  assert.doesNotMatch(css, /\.cs-(ecu|half \.cs-ecu|seat-art|pip-art)[^{]*\{[^}]*background-size: max\(/);
+  assert.doesNotMatch(css, /\.cs-(seat-art|pip-art)[^{]*\{[^}]*\/ 2\d0% auto/);
 });

@@ -69,7 +69,7 @@ await mkdir("docs/qa", { recursive: true });
   await page.addInitScript(() => localStorage.setItem("mvm-onboarded", "true"));
   const problems = [];
   try {
-    await page.goto(`http://127.0.0.1:${port}/`);
+    await page.goto(`http://127.0.0.1:${port}/?nocutscenes`);
     const versus = page.locator('.title-actions [data-mode="local"]');
     if ((await versus.count()) !== 1) problems.push("Versus button missing from the title");
     else if (!/VERSUS/.test(await versus.innerText())) problems.push("Versus button has no VERSUS label");
@@ -99,7 +99,7 @@ for (const [name, width, height] of VIEWPORTS) {
   });
   const problems = [];
   try {
-    await page.goto(`http://127.0.0.1:${port}/`);
+    await page.goto(`http://127.0.0.1:${port}/?nocutscenes`);
     await page.click(".start-button");
     await page.click('[data-action="confirm-fighter"]');
     await page.click('[data-action="confirm-fighter"]');

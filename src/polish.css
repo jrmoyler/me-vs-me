@@ -1,0 +1,390 @@
+/* =====================================================================
+   POLISH LAYER — loaded after style.css (see src/main.js).
+   Screen transitions, menu focus states, the combat HUD (faces, damage
+   trail, tones, meter glow, banners), pause, results and bracket fixes.
+   Every animation here is switched off by reduced motion at the end.
+   ===================================================================== */
+:root {
+  --gold: #f5cc60;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ─── Screen entrances ─────────────────────────────────────────────── */
+main.screen-enter {
+  animation: mvm-screen-in 0.42s var(--ease-out) both;
+}
+main.screen-enter .screen-heading,
+main.screen-enter .title-copy > * {
+  animation: mvm-rise 0.5s var(--ease-out) both;
+}
+main.screen-enter .title-copy > :nth-child(2) { animation-delay: 0.05s; }
+main.screen-enter .title-copy > :nth-child(3) { animation-delay: 0.1s; }
+main.screen-enter .title-copy > :nth-child(4) { animation-delay: 0.15s; }
+main.screen-enter .title-copy > :nth-child(5) { animation-delay: 0.2s; }
+main.screen-enter .hero-character-front { animation: mvm-hero-in 0.7s 0.1s var(--ease-out) both; }
+main.screen-enter .hero-character-back { animation: mvm-hero-in-back 0.8s 0.18s var(--ease-out) both; }
+main.screen-enter .roster-fighter { animation: mvm-card-in 0.36s var(--ease-out) both; animation-delay: calc(min(var(--i, 0), 24) * 12ms); }
+main.screen-enter .arena-option { animation: mvm-card-in 0.36s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 30ms); }
+main.screen-enter .result-art > .fighter-art { animation: mvm-hero-in 0.6s 0.05s var(--ease-out) both; }
+main.screen-enter .match-breakdown > span { animation: mvm-rise 0.45s var(--ease-out) both; animation-delay: calc(0.25s + var(--i, 0) * 60ms); }
+main.screen-enter .match-grade { animation: mvm-stamp 0.5s 0.55s var(--ease-out) both; }
+@keyframes mvm-screen-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mvm-rise { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
+@keyframes mvm-card-in { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
+@keyframes mvm-hero-in { from { opacity: 0; translate: -40px 0; filter: brightness(2.2); } to { opacity: 1; translate: 0 0; filter: none; } }
+@keyframes mvm-hero-in-back { from { opacity: 0; translate: 50px 0; } to { opacity: 1; translate: 0 0; } }
+@keyframes mvm-stamp { 0% { opacity: 0; scale: 1.8; } 60% { opacity: 1; scale: 0.94; } 100% { opacity: 1; scale: 1; } }
+
+/* ─── Title ────────────────────────────────────────────────────────── */
+.start-button { position: relative; overflow: hidden; isolation: isolate; }
+.start-button::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -40%;
+  width: 30%;
+  background: linear-gradient(100deg, transparent, #fff6 50%, transparent);
+  transform: skewX(-18deg);
+  animation: mvm-sheen 3.6s 1.2s ease-in-out infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+@keyframes mvm-sheen { 0%, 70% { left: -40%; } 100% { left: 130%; } }
+.secondary-actions button { transition: color 0.15s, border-color 0.15s, background 0.15s; }
+.secondary-actions button:hover,
+.secondary-actions button:focus-visible { color: var(--gold); }
+.hero-stage .hero-character-front img { filter: drop-shadow(0 0 24px #ee594333); }
+.hero-sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, #ffe7b41a 48%, #ffffff10 50%, transparent 60%) 0 0 / 250% 100% no-repeat;
+  mix-blend-mode: screen;
+  animation: mvm-sweep 7s 1.4s ease-in-out infinite;
+}
+@keyframes mvm-sweep { 0% { background-position: 120% 0; } 45%, 100% { background-position: -30% 0; } }
+.title-press {
+  margin: 14px 0 -18px;
+  font: 700 9px monospace;
+  letter-spacing: 0.2em;
+  color: #abb4c2;
+  animation: mvm-breathe 2.4s ease-in-out infinite;
+}
+.title-press .keycap { display: inline-block; min-width: 22px; margin-right: 4px; padding: 3px 5px; border: 1px solid #ffffff40; font-size: 9px; text-align: center; color: var(--cream); }
+.title-press .keycap:nth-of-type(2) { margin-left: 8px; }
+@keyframes mvm-breathe { 50% { opacity: 0.45; } }
+@media (pointer: coarse), (max-width: 700px) { .title-press { display: none; } }
+
+/* ─── Focus: one clear, consistent ring for keyboard and pad users ─── */
+:where(button, a, [tabindex="0"]):focus-visible {
+  outline: 2px solid #ffe877;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px #ffe87722;
+}
+
+/* ─── Character select ─────────────────────────────────────────────── */
+.roster-fighter {
+  transition: transform 0.14s var(--ease-out), border-color 0.14s, background 0.14s, box-shadow 0.14s;
+  isolation: isolate;
+}
+.roster-fighter::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(ellipse at 50% 80%, color-mix(in srgb, var(--fighter-color) 34%, transparent), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.roster-fighter:hover,
+.roster-fighter:focus-visible { transform: translateY(-3px); border-color: color-mix(in srgb, var(--fighter-color) 70%, white); }
+.roster-fighter:hover::before,
+.roster-fighter:focus-visible::before,
+.roster-fighter.selected::before { opacity: 1; }
+.roster-fighter:focus-visible { outline-offset: 2px; z-index: 2; }
+/* Portraits carry wide transparent margins: frame the fighter larger, feet on the same line. */
+.roster-fighter img { image-rendering: pixelated; transition: transform 0.18s var(--ease-out); transform: scale(1.3); transform-origin: 50% 92.5%; }
+.roster-fighter:hover img,
+.roster-fighter:focus-visible img,
+.roster-fighter.selected img { transform: scale(1.42); }
+.roster-fighter.selected strong { background: color-mix(in srgb, var(--fighter-color) 30%, #0b0e14); }
+.role-tag[data-role] { border-radius: 1px; }
+.selection-fighter > .fighter-art { transition: opacity 0.2s; }
+/* Phones: the role badge used to be clipped by the preview panel; the job line and
+   power class live on the move list and the roster cards already. */
+@media (max-width: 700px) {
+  .selection-stage { height: 346px; }
+  .selection-fighter .kit-line { margin-top: 8px; }
+  .selection-fighter .kit-line > span:not(.role-tag),
+  .selection-fighter .kit-line > small { display: none; }
+}
+
+/* ─── Stage select ─────────────────────────────────────────────────── */
+.arena-option { transition: transform 0.14s var(--ease-out), box-shadow 0.14s, filter 0.14s; }
+.arena-option:hover,
+.arena-option:focus-visible { transform: translateY(-3px); }
+.arena-option.selected { box-shadow: 0 0 0 2px var(--red), 0 10px 26px #ee594333; }
+.arena-coordinate {
+  padding: 6px 9px;
+  background: #080a11c4;
+  border-left: 2px solid var(--arena-color, var(--red));
+  line-height: 1.6;
+}
+
+@media (min-width: 1001px) {
+  /* Frame the matchup larger over the showcase (portraits carry wide transparent margins). */
+  .arena-fighters img { transform-origin: 50% 92.5%; scale: 1.4; }
+  .arena-fighters img.body-scaled { scale: calc(var(--body-scale, 1) * 1.4); }
+  .arena-fighters b { padding: 0 18px; }
+}
+
+/* ─── Combat HUD ───────────────────────────────────────────────────── */
+.mvm-combat .mvm-hud > div:not(.mvm-clock) {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  column-gap: 10px;
+  align-content: start;
+}
+.mvm-combat .mvm-hud > div:not(.mvm-clock) > :not(.mvm-hud-face) { grid-column: 2; }
+.mvm-combat .mvm-hud > div.mvm-hud-right:not(.mvm-clock) { grid-template-columns: minmax(0, 1fr) 54px; }
+.mvm-combat .mvm-hud > div.mvm-hud-right:not(.mvm-clock) > :not(.mvm-hud-face) { grid-column: 1; }
+.mvm-hud-face {
+  grid-row: 1 / span 5;
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  image-rendering: pixelated;
+  background: radial-gradient(circle at 50% 70%, #ffffff22, #0b0e16 70%);
+  border: 2px solid #f6e0a0;
+  box-shadow: 0 3px #000;
+}
+.mvm-combat .mvm-hud-right > .mvm-hud-face { grid-column: 2; grid-row: 1 / span 5; transform: scaleX(-1); }
+.mvm-hud-face.shadow { filter: grayscale(0.6) brightness(0.7) sepia(1) hue-rotate(210deg) saturate(2.2); }
+.mvm-combat .mvm-health {
+  position: relative;
+  overflow: hidden;
+  background: #2a1520;
+  transition: box-shadow 0.2s;
+}
+.mvm-combat .mvm-health > b {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  background: linear-gradient(#ffffff, #ffc9bd);
+  opacity: 0.9;
+  transition: width 0.55s cubic-bezier(0.4, 0, 0.3, 1) 0.45s;
+}
+.mvm-combat .mvm-hud-right .mvm-health > b { inset: 0 0 0 auto; }
+.mvm-combat .mvm-health > i {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(#fff6b0, #f4c542 55%, #d99a1e);
+  box-shadow: inset 0 -3px #0002, inset 0 2px #fff6;
+}
+.mvm-combat .mvm-health[data-tone="warn"] > i { background: linear-gradient(#ffd98a, #f39a2f 55%, #d8701d); }
+.mvm-combat .mvm-health[data-tone="low"] > i { background: linear-gradient(#ff9f8a, #ec4d3a 55%, #b8261f); }
+.mvm-combat .mvm-health[data-tone="low"] { animation: mvm-low 0.9s ease-in-out infinite; }
+@keyframes mvm-low { 50% { box-shadow: 0 3px #000, 0 0 16px #ff4b3acc; border-color: #ffb09c; } }
+.mvm-combat .mvm-energy { height: 7px; overflow: visible; background: #1a1c2c; box-shadow: inset 0 0 0 1px #ffffff14; }
+.mvm-combat .mvm-energy > i { background: linear-gradient(90deg, #3fb7c9, #7cecde); }
+.mvm-combat .mvm-hud-right .mvm-energy > i { margin-left: auto; background: linear-gradient(270deg, #3fb7c9, #7cecde); }
+.mvm-combat .mvm-hud-right .mvm-energy::after { left: auto; right: 35%; }
+.mvm-combat .mvm-energy[data-ready="true"] > i {
+  background: linear-gradient(90deg, #7cecde, #eafffb, #7cecde);
+  background-size: 200% 100%;
+  box-shadow: 0 0 10px #7cecdeaa;
+  animation: mvm-meter 1.1s linear infinite;
+}
+@keyframes mvm-meter { to { background-position: -200% 0; } }
+.mvm-combat .mvm-meter-label[data-ready="true"] { text-shadow: 0 0 8px #ffe39588; }
+.mvm-combat .mvm-rounds { color: var(--gold); text-shadow: 0 0 6px #f5cc6066, 0 2px #000; }
+.mvm-combat .mvm-clock span { display: block; transition: color 0.2s; }
+.mvm-combat .mvm-clock[data-low="true"] span { color: #ff6a55; animation: mvm-tick 1s steps(2) infinite; }
+@keyframes mvm-tick { 50% { opacity: 0.55; } }
+
+/* Round banners: ROUND n / FINAL ROUND / FIGHT! / K.O. / PERFECT / TIME! / DRAW. */
+.mvm-combat .mvm-message { display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 6; }
+.mvm-combat .mvm-message b {
+  display: block;
+  font: italic 900 clamp(34px, 7vw, 96px) / 0.95 var(--display);
+  letter-spacing: 0.05em;
+  color: #ffe6a2;
+  text-shadow: 4px 4px #421849, -2px -2px #090915, 0 0 26px #ffb34766;
+}
+.mvm-combat .mvm-message small {
+  display: block;
+  padding: 5px 14px;
+  font: 700 clamp(10px, 1.4vw, 15px) monospace;
+  letter-spacing: 0.3em;
+  color: #fff;
+  background: #090a17d0;
+  border-block: 1px solid #ffe6a255;
+}
+.mvm-combat .mvm-message[data-kind="fight"] b { color: #fff; text-shadow: 4px 4px var(--red), -2px -2px #090915, 0 0 30px #ee5943aa; }
+.mvm-combat .mvm-message[data-kind="ko"] b,
+.mvm-combat .mvm-message[data-kind="perfect"] b { color: #ff6a55; text-shadow: 5px 5px #2a0a14, -2px -2px #090915, 0 0 40px #ff3b2fbb; font-size: clamp(44px, 10vw, 130px); }
+.mvm-combat .mvm-message[data-kind="perfect"] b { color: var(--gold); text-shadow: 5px 5px #3a2208, -2px -2px #090915, 0 0 40px #f5cc60cc; }
+.mvm-combat .mvm-message[data-kind="time"] b { color: #9fe8ff; }
+.mvm-combat .mvm-message[data-pop="a"] > * { animation: mvm-banner-a 0.42s var(--ease-out) both; }
+.mvm-combat .mvm-message[data-pop="b"] > * { animation: mvm-banner-b 0.42s var(--ease-out) both; }
+.mvm-combat .mvm-message > small { animation-delay: 0.12s !important; }
+@keyframes mvm-banner-a { 0% { opacity: 0; scale: 1.9; filter: blur(6px); } 60% { opacity: 1; scale: 0.95; filter: none; } 100% { opacity: 1; scale: 1; } }
+@keyframes mvm-banner-b { 0% { opacity: 0; scale: 1.9; filter: blur(6px); } 60% { opacity: 1; scale: 0.95; filter: none; } 100% { opacity: 1; scale: 1; } }
+
+/* Pause: the game's own type and buttons instead of browser defaults. */
+.mvm-combat .mvm-overlay { gap: 12px; background: radial-gradient(ellipse at center, #141828e8, #06070fef 75%); }
+.mvm-combat .mvm-overlay .mvm-overlay-eyebrow { font: 700 10px monospace; letter-spacing: 0.3em; color: var(--red); text-transform: uppercase; }
+.mvm-combat .mvm-overlay h2 { font: 900 clamp(38px, 6vw, 72px) / 0.9 var(--display); letter-spacing: 0.02em; color: var(--cream); text-shadow: 4px 4px #000; margin: 0; }
+.mvm-combat .mvm-overlay p { margin: 0 0 10px; font: 11px monospace; letter-spacing: 0.1em; color: #abb4c2; }
+.mvm-combat .mvm-overlay button {
+  min-width: 250px;
+  padding: 15px 26px;
+  font: 700 12px monospace;
+  letter-spacing: 0.16em;
+  text-align: left;
+  background: #1a1d29;
+  color: var(--cream);
+  border: 1px solid #ffffff22;
+  box-shadow: 4px 4px 0 #05060b;
+  transition: transform 0.12s, background 0.12s;
+}
+.mvm-combat .mvm-overlay button.mvm-resume { background: var(--red); color: #101319; border-color: transparent; }
+.mvm-combat .mvm-overlay button:hover,
+.mvm-combat .mvm-overlay button:focus-visible { transform: translateX(4px); }
+.mvm-combat .mvm-overlay button.mvm-leave { background: transparent; color: #abb4c2; box-shadow: none; }
+
+@media (max-width: 600px) {
+  .mvm-combat .mvm-hud > div:not(.mvm-clock) { grid-template-columns: 34px minmax(0, 1fr); column-gap: 6px; }
+  .mvm-combat .mvm-hud > div.mvm-hud-right:not(.mvm-clock) { grid-template-columns: minmax(0, 1fr) 34px; }
+  .mvm-hud-face { width: 34px; height: 34px; border-width: 1px; }
+  .mvm-combat .mvm-meter-label { font-size: 8px; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mvm-combat .mvm-energy { height: 5px; }
+  .mvm-combat .mvm-overlay button { min-width: 220px; }
+}
+
+/* ─── Results ──────────────────────────────────────────────────────── */
+.result-art { overflow: hidden; isolation: isolate; }
+.result-art-backdrop {
+  position: absolute;
+  inset: 8% 6% 6%;
+  z-index: -1;
+  background: var(--result-arena) center 70% / cover no-repeat;
+  opacity: 0.55;
+  filter: saturate(0.85);
+  -webkit-mask-image: radial-gradient(ellipse 58% 52% at 50% 62%, #000 20%, transparent 100%);
+  mask-image: radial-gradient(ellipse 58% 52% at 50% 62%, #000 20%, transparent 100%);
+}
+.result-screen.victory .result-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(ellipse at 50% 58%, color-mix(in srgb, var(--fighter-color) 30%, transparent), transparent 55%);
+}
+.result-screen.defeat .result-art-backdrop { filter: grayscale(0.7) brightness(0.8); }
+.match-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+  border-block: 1px solid #ffffff25;
+  margin: 24px 0;
+  padding: 18px 0;
+}
+.match-summary.ungraded { grid-template-columns: 1fr; }
+.match-summary .match-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 18px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.match-summary .match-breakdown span { font: 9px monospace; letter-spacing: 0.1em; color: #abb4c2; }
+.match-summary .match-breakdown b { font: 900 28px var(--display); color: var(--gold); }
+.match-grade {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 10px 10px;
+  border: 2px solid var(--grade-color, var(--gold));
+  background: color-mix(in srgb, var(--grade-color, var(--gold)) 10%, #0b0e14);
+  box-shadow: 4px 4px 0 #05060b;
+}
+.match-grade b {
+  font: italic 900 64px / 0.9 var(--display);
+  color: var(--grade-color, var(--gold));
+  text-shadow: 3px 3px 0 #05060b;
+  min-width: 48px;
+  text-align: center;
+}
+.match-grade span { font: 700 9px monospace; letter-spacing: 0.18em; color: var(--cream); }
+.match-grade small { display: block; margin-top: 6px; font: 9px monospace; color: #abb4c2; letter-spacing: 0.12em; }
+.match-grade[data-grade="S"] { --grade-color: #ffd86b; }
+.match-grade[data-grade="S"] b { text-shadow: 3px 3px 0 #05060b, 0 0 22px #ffd86b99; }
+.match-grade[data-grade="A"] { --grade-color: #7cecde; }
+.match-grade[data-grade="B"] { --grade-color: #98c493; }
+.match-grade[data-grade="C"] { --grade-color: #f39a2f; }
+.match-grade[data-grade="D"] { --grade-color: #ee5943; }
+@media (max-width: 700px) {
+  .match-summary { grid-template-columns: 1fr; gap: 16px; }
+  .match-grade { justify-self: start; }
+  .match-summary .match-breakdown { gap: 12px; }
+  .match-summary .match-breakdown b { font-size: 22px; }
+  .match-summary .match-breakdown span { font-size: 8px; }
+}
+
+/* ─── Tournament bracket ───────────────────────────────────────────── */
+/* Headings sit on one line; matches share the remaining height. */
+.bracket-round { justify-content: flex-start; }
+.bracket-round > h2 { margin-bottom: 6px; }
+.bracket-round > .bracket-match,
+.bracket-round > .bracket-champion { margin-block: auto; }
+.bracket-slot > .bracket-face {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  image-rendering: pixelated;
+  background: #ffffff0d;
+}
+.bracket-slot.lost > .bracket-face { filter: grayscale(1); }
+.bracket-match { transition: box-shadow 0.2s; }
+.bracket-match.next { animation: mvm-next 1.8s ease-in-out infinite; }
+@keyframes mvm-next { 50% { box-shadow: 0 0 26px #f5cc6066; } }
+@media (max-width: 700px) {
+  .bracket-entrant span { font-size: 11px; overflow-wrap: normal; }
+  .bracket-round > .bracket-match,
+  .bracket-round > .bracket-champion { margin-block: 0; }
+}
+
+/* ─── Reduced motion: every layer above holds still ────────────────── */
+.reduced-motion main.screen-enter,
+.reduced-motion main.screen-enter *,
+.reduced-motion .start-button::after,
+.reduced-motion .hero-sweep,
+.reduced-motion .title-press,
+.reduced-motion .mvm-combat .mvm-health,
+.reduced-motion .mvm-combat .mvm-energy > i,
+.reduced-motion .mvm-combat .mvm-clock span,
+.reduced-motion .mvm-combat .mvm-message > *,
+.reduced-motion .bracket-match.next {
+  animation: none !important;
+}
+.reduced-motion .roster-fighter,
+.reduced-motion .arena-option,
+.reduced-motion .mvm-combat .mvm-overlay button { transition: none; transform: none !important; }
+.reduced-motion .roster-fighter img { transition: none; transform: scale(1.3) !important; }
+@media (prefers-reduced-motion: reduce) {
+  main.screen-enter,
+  main.screen-enter *,
+  .start-button::after,
+  .hero-sweep,
+  .title-press,
+  .mvm-combat .mvm-health,
+  .mvm-combat .mvm-energy > i,
+  .mvm-combat .mvm-clock span,
+  .mvm-combat .mvm-message > *,
+  .bracket-match.next {
+    animation: none !important;
+  }
+}
