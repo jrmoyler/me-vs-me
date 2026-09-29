@@ -281,6 +281,7 @@ export const characters = [
     speed: 7,
     power: 6,
     reach: 10,
+    motionBodyHeight: 220, // motion atlas is drawn about 1.25x the combat art
   }),
   fighter({
     id: "cyborg",
@@ -371,20 +372,19 @@ export const characters = [
   fighter({ id: "crimsonoracle", name: "CRIMSON ORACLE", title: "The Seer", color: "#f34d65", description: "Red runes and a sealed fate.", move: "Blood Moon Seal", quote: "I saw you coming.", speed: 7, power: 9, reach: 8, bodyHeight: 157 }),
   fighter({ id: "dunevoyager", name: "DUNE VOYAGER", title: "The Pathfinder", color: "#dca35f", description: "Expedition gear and a spiral of desert sand.", move: "Sandstorm Break", quote: "The desert keeps its own score.", speed: 8, power: 7, reach: 9, bodyHeight: 176 }),
   // Fourteen-fighter pack. Appended after the existing thirty-five; those fighters are unchanged.
-  // motionBodyHeight is the illustrated guard pose, so menu and combat scale match the ready stance.
-  fighter({ id: "pharaoh", name: "SUNCROWN", title: "The Sun King", color: "#e8b84a", description: "Gold collar, blue crown, and a sun held in one hand.", move: "Solar Dominion", quote: "The sun does not ask permission.", speed: 6, power: 8, reach: 9, motionBodyHeight: 149 }),
-  fighter({ id: "roman", name: "CENTURION", title: "The Legion", color: "#c45c4a", description: "Red cloak and a short strike that closes the gap.", move: "Aquila Strike", quote: "The eagle lands once.", speed: 8, power: 8, reach: 7, motionBodyHeight: 153 }),
-  fighter({ id: "viking", name: "NORTHWIND", title: "The Raider", color: "#7eb6d6", description: "Fur mantle and a frost-edged axe that lifts.", move: "Frost Axe", quote: "Winter arrives early.", speed: 6, power: 9, reach: 7, motionBodyHeight: 170 }),
-  fighter({ id: "medieval", name: "OATHKEEPER", title: "The Oathbound", color: "#8d9a7b", description: "Mail hood and a grab that does not let go.", move: "Iron Oath", quote: "Sworn, then settled.", speed: 5, power: 10, reach: 6, motionBodyHeight: 162 }),
-  fighter({ id: "renaissance", name: "MAESTRO", title: "The Patron", color: "#d4a574", description: "Gilded doublet and a long, measured sweep.", move: "Gilded Flourish", quote: "Art, then the follow-through.", speed: 7, power: 7, reach: 8, motionBodyHeight: 158 }),
-  fighter({ id: "colonial", name: "FLINTLOCK", title: "The Minuteman", color: "#3e5c8a", description: "Blue coat and a volley fired from range.", move: "Liberty Volley", quote: "Hold the line. Then break theirs.", speed: 7, power: 6, reach: 10, motionBodyHeight: 172 }),
-  fighter({ id: "victorian", name: "GEARWRIGHT", title: "The Horologist", color: "#6b5344", description: "Brass gears and a reversal wound tight.", move: "Clockwork Reversal", quote: "You were early. I was exact.", speed: 6, power: 8, reach: 7, motionBodyHeight: 157 }),
-  fighter({ id: "jazz", name: "BLUE NOTE", title: "The Bandstand", color: "#e07a3d", description: "Pinstripes and a rush that keeps time.", move: "Midnight Tempo", quote: "Count it in, then I take the chorus.", speed: 10, power: 6, reach: 7, motionBodyHeight: 160 }),
-  fighter({ id: "raven", name: "BLACKFEATHER", title: "The Aviary", color: "#6a6e8a", description: "Black hood and a flock sent ahead of the punch.", move: "Murder of Crows", quote: "I designed the exit too.", speed: 7, power: 7, reach: 9, motionBodyHeight: 169 }),
-  fighter({ id: "blood", name: "NIGHTVEIL", title: "The Eclipse", color: "#c81e3a", description: "Crimson veil and a seal that answers a block.", move: "Crimson Eclipse", quote: "The moon already chose.", speed: 6, power: 9, reach: 8, motionBodyHeight: 174 }),
-  fighter({ id: "merman", name: "TIDEBORN", title: "The Tide", color: "#3ec1c9", description: "Scaled coat and a spiral that takes the lane.", move: "Riptide Spiral", quote: "The water was already moving.", speed: 8, power: 7, reach: 8, motionBodyHeight: 173 }),
-  fighter({ id: "operative", name: "DEADBOLT", title: "The Operative", color: "#4a5568", description: "Dark kit and a breach that does not knock.", move: "Breach Point", quote: "Door's open. You're not.", speed: 9, power: 7, reach: 6, motionBodyHeight: 160 }),
-  fighter({ id: "coast", name: "GOLDEN HOUR", title: "The Drift", color: "#f0a07a", description: "Sunset jacket and a kick that rides the lane.", move: "Sunset Drive", quote: "Last light, last point.", speed: 8, power: 6, reach: 8, motionBodyHeight: 166 }),
-  fighter({ id: "jungle", name: "WILDHEART", title: "The Wild", color: "#3f8f4e", description: "Leaf hood and a rising pounce out of the canopy.", move: "Canopy Pounce", quote: "You never saw the branch.", speed: 7, power: 9, reach: 7, motionBodyHeight: 171 }),
+  fighter({ id: "pharaoh", name: "SUNCROWN", title: "The Sun King", color: "#e8b84a", description: "Gold collar, blue crown, and a sun held in one hand.", move: "Solar Dominion", quote: "The sun does not ask permission.", speed: 6, power: 8, reach: 9 }),
+  fighter({ id: "roman", name: "CENTURION", title: "The Legion", color: "#c45c4a", description: "Red cloak and a short strike that closes the gap.", move: "Aquila Strike", quote: "The eagle lands once.", speed: 8, power: 8, reach: 7 }),
+  fighter({ id: "viking", name: "NORTHWIND", title: "The Raider", color: "#7eb6d6", description: "Fur mantle and a frost-edged axe that lifts.", move: "Frost Axe", quote: "Winter arrives early.", speed: 6, power: 9, reach: 7 }),
+  fighter({ id: "medieval", name: "OATHKEEPER", title: "The Oathbound", color: "#8d9a7b", description: "Mail hood and a grab that does not let go.", move: "Iron Oath", quote: "Sworn, then settled.", speed: 5, power: 10, reach: 6 }),
+  fighter({ id: "renaissance", name: "MAESTRO", title: "The Patron", color: "#d4a574", description: "Gilded doublet and a long, measured sweep.", move: "Gilded Flourish", quote: "Art, then the follow-through.", speed: 7, power: 7, reach: 8 }),
+  fighter({ id: "colonial", name: "FLINTLOCK", title: "The Minuteman", color: "#3e5c8a", description: "Blue coat and a volley fired from range.", move: "Liberty Volley", quote: "Hold the line. Then break theirs.", speed: 7, power: 6, reach: 10 }),
+  fighter({ id: "victorian", name: "GEARWRIGHT", title: "The Horologist", color: "#6b5344", description: "Brass gears and a reversal wound tight.", move: "Clockwork Reversal", quote: "You were early. I was exact.", speed: 6, power: 8, reach: 7 }),
+  fighter({ id: "jazz", name: "BLUE NOTE", title: "The Bandstand", color: "#e07a3d", description: "Pinstripes and a rush that keeps time.", move: "Midnight Tempo", quote: "Count it in, then I take the chorus.", speed: 10, power: 6, reach: 7 }),
+  fighter({ id: "raven", name: "BLACKFEATHER", title: "The Aviary", color: "#6a6e8a", description: "Black hood and a flock sent ahead of the punch.", move: "Murder of Crows", quote: "I designed the exit too.", speed: 7, power: 7, reach: 9 }),
+  fighter({ id: "blood", name: "NIGHTVEIL", title: "The Eclipse", color: "#c81e3a", description: "Crimson veil and a seal that answers a block.", move: "Crimson Eclipse", quote: "The moon already chose.", speed: 6, power: 9, reach: 8 }),
+  fighter({ id: "merman", name: "TIDEBORN", title: "The Tide", color: "#3ec1c9", description: "Scaled coat and a spiral that takes the lane.", move: "Riptide Spiral", quote: "The water was already moving.", speed: 8, power: 7, reach: 8 }),
+  fighter({ id: "operative", name: "DEADBOLT", title: "The Operative", color: "#4a5568", description: "Dark kit and a breach that does not knock.", move: "Breach Point", quote: "Door's open. You're not.", speed: 9, power: 7, reach: 6 }),
+  fighter({ id: "coast", name: "GOLDEN HOUR", title: "The Drift", color: "#f0a07a", description: "Sunset jacket and a kick that rides the lane.", move: "Sunset Drive", quote: "Last light, last point.", speed: 8, power: 6, reach: 8 }),
+  fighter({ id: "jungle", name: "WILDHEART", title: "The Wild", color: "#3f8f4e", description: "Leaf hood and a rising pounce out of the canopy.", move: "Canopy Pounce", quote: "You never saw the branch.", speed: 7, power: 9, reach: 7 }),
 ];
 export default characters;

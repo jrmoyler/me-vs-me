@@ -179,3 +179,30 @@ Before and after: [docs/qa/atlas-repair-before-after.jpg](docs/qa/atlas-repair-b
 The fourteen were also renamed so no name leans on "SELF" and none collides with an existing one: Pharaoh Self → **Suncrown**, Roman Self → **Centurion**, Viking Self → **Northwind**, Medieval Self → **Oathkeeper**, Renaissance Self → **Maestro**, Colonial Self → **Flintlock**, Victorian Self → **Gearwright**, Jazz Age Self → **Blue Note**, Raven Architect → **Blackfeather**, Blood Oracle → **Nightveil** (it clashed with Crimson Oracle), Black Ops Self → **Deadbolt**, Coastline Self → **Golden Hour**, Primal Self → **Wildheart**. Tideborn keeps its name. Ids, titles, moves and quotes are unchanged.
 
 `public/icons/` holds the install icons, drawn by `scripts/make-icons.py` from Hataalii's portrait.
+
+## Sprite bounds rebuild — cut poses, sunk feet, floating poses
+
+Players reported that many of the newer fighters were cut off and some sank into the ground. The earlier atlas repair (above) stitched split poses back together but left three kinds of damage:
+
+- **Sunk feet.** The fourteen- and eight-fighter exports cut some rows off below the shins, and grounding put the cut on the floor line, so the fighter stood knee-deep in the ground. It was worst in the guard row (every block), the crouch (jump take-off, which is also the crouch frame), several uppercut and roundhouse rows, and Suncrown's hurt stagger. Because the guards were short, `motionBodyHeight` had been tuned to them, which drew those fighters' whole motion atlas 10–30% larger than their ready stance.
+- **Hard cuts.** Crop boxes sliced kicks at the foot, fists at the knuckles, heads at the crown and POWER effects along straight lines. The earlier repair faded these out over 14px, which still read as a straight cut, and faded natural straight edges too.
+- **Floating poses.** Several of the original eleven's motion atlases (Tote, Urban, Hataalii and others) stood on a haze of alpha 1–8 pixels, so the visible pose hovered up to 50px above the ground.
+
+`scripts/fix-sprite-bounds.py` rebuilds the 22 exported fighters from the export atlases in git history (fourteen at `bf6bd21`, eight at `82d5ca9`), since the source zips are not in the repo:
+
+1. It marks every crop cut in the export in the blue channel's lowest bit and the export's floor row in the green channel's lowest bit. A cut is a solid run of 12px or more along a piece's outermost column or top row, or a column or row whose edge runs dead straight for 26px or more. The marks are invisible and are cleared before saving.
+2. It stitches split poses with `scripts/repair-cut-cells.py` (without its feather), keeping the marks when a pose is scaled.
+3. Per cell, it drops slivers of neighbouring cells and small glowing tops of the next row's effects. It grafts lost lower legs and feet from the fighter's own ready, jab and walk poses: the last 12 rows of the cut leg are matched (masked SSD) against those poses, and the donor's leg below the match is added. A leg end above the floor is always a cut. One on the floor is grafted only when it matches the middle of a donor leg clearly better than any donor foot, and at most two legs per row are grafted, with lengths that agree. It rounds every remaining cut off with a short mirrored cap (glow fades out, solid parts end in a dark outline pixel), fits the pose inside the cell with a 6px margin, and puts the lowest visible pixel on row 295 (the feet meet the engine anchor at 296).
+4. Rows drawn at another scale are redrawn at the ready pose's scale, measured by body area. This affected the eight pack's low kicks, drawn about 1.2–1.45× larger. The lost low-kick rows are rebuilt from the fixed sidekick, and the ready sheet is rebuilt from the POWER timeline.
+5. A short hand-checked table erases the few neighbour pieces that touch a pose (a second pair of legs beside a POWER, a gear under a roundhouse). Centurion's landing crouch, lost below the hips, reuses his take-off crouch.
+
+The other 27 fighters are only re-grounded: invisible haze is dropped and each cell's lowest visible pixel goes on row 295.
+
+`scripts/audit-sprites.py` checks every cell of all 49 fighters for edge contact, cuts, sinking, floating, haze, scale and specks, and `--sheets DIR` renders contact sheets with the ground line. Lost feet cannot be told from real feet by geometry alone, so the contact sheets must still be looked at. `tests/sprite-bounds.test.mjs` runs the same checks in CI. Before and after contact sheets: `docs/qa/sprite-bounds-before-after-*.jpg`.
+
+```sh
+python3 scripts/fix-sprite-bounds.py            # rebuild all 49 (22 from their exports, 27 re-grounded)
+python3 scripts/audit-sprites.py --sheets /tmp/sheets
+```
+
+Still interpretive: grafted feet come from the fighter's own standing poses, so a crouched foot can be slightly too upright. Rounded caps are invented pixels, a few pixels deep. Iron Chef's POWER frames 2–3 still lack the top of the head, now rounded instead of cut. Blood's POWER swirl has a notch where two crop boxes met, now rounded.

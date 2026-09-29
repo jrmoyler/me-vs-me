@@ -382,23 +382,7 @@ test("every motion atlas shows the same fighter as its combat atlas", () => {
   });
 });
 
-test("expansion motion atlases scale to the same height as the ready pose", () => {
-  const visible = (file, row, col) => {
-    const { width, pixels } = png(asset(file), true);
-    let top = 320, bottom = -1;
-    for (let y = 0; y < 320; y++)
-      for (let x = 0; x < 320; x++)
-        if (pixels[((row * 320 + y) * width + col * 320 + x) * 4 + 3] > 128) {
-          top = Math.min(top, y);
-          bottom = Math.max(bottom, y);
-        }
-    return bottom - top + 1;
-  };
-  // The originals were hand-drawn with crouched guards; both packed expansions stand tall.
-  for (const c of characters.slice(11)) {
-    const ready = visible(c.combatSheet, 0, 0) / c.bodyHeight;
-    const guard = visible(c.motionSheet, 2, 0) / c.motionBodyHeight;
-    assert.ok(Math.abs(guard - ready) < 0.03,
-      `${c.id}: guard ${guard.toFixed(3)} vs ready ${ready.toFixed(3)} — motionBodyHeight is wrong`);
-  }
-});
+// Motion-atlas scale is checked in tests/sprite-bounds.test.mjs by body area. The guard-height
+// check that used to live here tuned motionBodyHeight to guards that had lost their lower legs,
+// so the fourteen walked 10-30% larger than they stood.
+
