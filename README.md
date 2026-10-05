@@ -6,6 +6,8 @@ A browser arcade fighter with 49 versions of Hataalii, ten illustrated arenas, a
 
 **Live:** https://me-vs-me-three.vercel.app
 
+**Trailer.** [`promo/ME-VS-ME-trailer.mp4`](promo/ME-VS-ME-trailer.mp4) is a 66-second 1080p promo rendered entirely from code (Three.js scenes and a synthesised score). See [`promo/README.md`](promo/README.md) to rebuild it.
+
 **Install it.** The game is a Progressive Web App. In Chrome, Edge or on Android, choose **INSTALL THE GAME** on the title screen (or the browser's install icon). On iPhone and iPad, open it in Safari, tap Share, then **Add to Home Screen**; the same title button explains how. The installed game opens full screen from its own icon. The page, bundle and icons are cached on install, and each fighter's art and stage is cached the first time it loads, so fighters you have already played keep working offline.
 
 - **Choose your match:** a quick duel against the CPU. Pick both fighters, including a mirror match.
