@@ -429,6 +429,7 @@ export async function startCombat({
       this.add.rectangle(480, 510, 960, 60, 0x080a16, 0.28);
       this.atmosphere = this.add.graphics().setDepth(3);
       this.fx = this.add.graphics().setDepth(9);
+      this.lightStage();
       this.fighters = [player, opponent].map((c, i) => {
         const sprite = this.add
           .sprite(i ? 690 : 270, 450, `ready${i}`, 0)
@@ -1199,6 +1200,36 @@ export async function startCombat({
         if (p.rounds >= 2 || o.rounds >= 2) this.slowMo = 1.1;
       }
       this.sync();
+    }
+    // One lens over the whole scene. The arena's own colour is multiplied over the stage art, the
+    // scenery and the fighters (depth 6, under the front effects at 9.5) so a fighter standing in
+    // Neon Avenue is lit by Neon Avenue, and a vignette above everything holds the frame together.
+    // Pure decoration: a renderer without canvas textures just skips the vignette.
+    lightStage() {
+      const colour = parseInt(String(arena.color || "").replace("#", ""), 16);
+      try {
+        this.wash = this.add.rectangle(480, 270, 960, 540, Number.isNaN(colour) ? 0xffffff : colour, 0.18).setDepth(6);
+        this.wash.setBlendMode?.("MULTIPLY");
+      } catch {
+        this.wash = null;
+      }
+      try {
+        if (!this.textures?.createCanvas) return;
+        const key = `vignette${Math.random().toString(36).slice(2, 8)}`;
+        const texture = this.textures.createCanvas(key, 480, 270);
+        const ctx = texture.getContext();
+        const shade = ctx.createRadialGradient(240, 150, 90, 240, 135, 330);
+        shade.addColorStop(0, "rgba(6, 8, 16, 0)");
+        shade.addColorStop(0.62, "rgba(6, 8, 16, 0.22)");
+        shade.addColorStop(1, "rgba(6, 8, 16, 0.78)");
+        ctx.fillStyle = shade;
+        ctx.fillRect(0, 0, 480, 270);
+        texture.setFilter?.(Phaser.Textures?.FilterMode?.LINEAR ?? 1);
+        texture.refresh();
+        this.vignette = this.add.image(0, 0, key).setOrigin(0, 0).setScale(2).setDepth(9.7);
+      } catch {
+        this.vignette = null;
+      }
     }
     // A short zoom toward (x, y) that eases back out; driven per frame in update().
     cameraPunch(zoom, x, y, duration) {

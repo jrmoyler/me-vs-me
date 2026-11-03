@@ -129,35 +129,36 @@ export const MATCH_FX = {
 };
 
 // ---- the arenas: weather (round one, then the final round), critters and props ---------------
-// Props sit at the stage's edges in pixel space (320×180, floor at y 150).
+// Positions are in 320×180 screen units (the floor is y 150), each placed on something the stage
+// art already has: the sunburst on Sunset Court's sun, the koi in Mirror Garden's pond, the waterfall
+// on its waterfall, the hologram as Terminal Nine's departure board, the fountain in the Glasshouse's
+// basin and the jellyfish in its specimen tank. Nothing floats in front of a window or a sign.
 export const ARENA_FX = {
   "neon-avenue": {
     weather: ["weather/rain", "weather/storm"],
-    critters: [{ id: "critters/jellyfish", x: 250, y: 46 }],
-    props: [
-      { id: "scifi/hologram", x: 38, y: 92 },
-      { id: "water/ripples", x: 160, y: 152 },
-    ],
+    critters: [{ id: "critters/bat", x: 120, y: 40 }],
+    props: [{ id: "water/ripples", x: 232, y: 156 }],
     landing: "water/rain-splash",
   },
   "sunset-court": {
     weather: ["weather/clouds", "weather/god-rays"],
     critters: [{ id: "critters/bird", x: 70, y: 40 }],
-    props: [{ id: "holy/sunburst", x: 262, y: 44 }],
+    props: [{ id: "holy/sunburst", x: 233, y: 57 }],
   },
   "mirror-garden": {
     weather: ["weather/cherry-blossoms", "weather/falling-leaves"],
     critters: [
-      { id: "critters/butterfly", x: 240, y: 70 },
-      { id: "critters/fish-school", x: 196, y: 128 },
+      { id: "critters/butterfly", x: 150, y: 72 },
+      { id: "critters/fish-school", x: 110, y: 104 },
     ],
-    props: [{ id: "water/fountain", x: 290, y: 152 }],
+    props: [{ id: "water/waterfall", x: 262, y: 118 }],
   },
   "the-foundry": {
     weather: ["weather/fog", "weather/fog"],
     critters: [{ id: "critters/slime", x: 30, y: 152 }],
     props: [
       { id: "fire/brazier", x: 292, y: 152 },
+      { id: "fire/torch", x: 14, y: 126 },
       { id: "lightning/tesla-coil", x: 40, y: 90 },
     ],
   },
@@ -168,10 +169,10 @@ export const ARENA_FX = {
   },
   "terminal-nine": {
     weather: ["weather/fog", "weather/rain"],
-    critters: [{ id: "critters/ghost", x: 270, y: 96 }],
+    critters: [{ id: "critters/ghost", x: 282, y: 104 }],
     props: [
       { id: "water/drip", x: 60, y: 30 },
-      { id: "fire/torch", x: 22, y: 150 },
+      { id: "scifi/hologram", x: 160, y: 62 },
     ],
   },
   glasshouse: {
@@ -179,9 +180,10 @@ export const ARENA_FX = {
     critters: [
       { id: "critters/frog", x: 286, y: 152 },
       { id: "critters/wisp", x: 60, y: 60 },
+      { id: "critters/jellyfish", x: 16, y: 76 },
     ],
     props: [
-      { id: "water/waterfall", x: 26, y: 152 },
+      { id: "water/fountain", x: 160, y: 112 },
       { id: "water/bubbles", x: 300, y: 120 },
     ],
   },
@@ -211,6 +213,12 @@ export const ARENA_FX = {
 
 // ---- menus, the bonus stage and screen changes (drawn over the page) -------------------------
 export const SCREEN_FX = {
+  // Every transition is drawn in the cabinet's own ramp (ink, the title's red, gold, cream) over the
+  // page's own ink, and runs at `speed`, so a screen change is one short, branded beat: the shape
+  // changes with the moment, the material never does.
+  palette: ["#101319", "#2a1b21", "#5c2a27", "#a63a2d", "#ee5943", "#f5a07c", "#f8dcae", "#fff6e6"],
+  ink: "#101319",
+  speed: 2.2,
   // each screen opens on its own transition, started where it covers the screen
   transitions: {
     title: "transitions/star-iris",
@@ -224,11 +232,16 @@ export const SCREEN_FX = {
     route: "transitions/pixel-dissolve",
     gameover: "transitions/crt-off",
   },
+  // Celebrations play in the cabinet's colours and the winner's own (src/main.js celebrate()):
+  // confetti and a firework for a win, a beam of the winner's colour for an S, the next stage
+  // rising out of the NEXT CHALLENGER button, and the toast, the rocket, the key and the gem
+  // kept for a champion. The HTML grade stamp is the grade; nothing else repeats it.
   victory: ["ui/confetti", "explosions/firework-burst"],
-  grade: "ui/achievement",
   topGrade: "pickups/loot-beam",
   nextStage: "ui/level-up",
-  champion: ["explosions/firework-rocket", "pickups/key-glint", "pickups/gem-spin"],
+  champion: ["explosions/firework-rocket", "ui/achievement", "pickups/key-glint", "pickups/gem-spin"],
+  // confetti in the cabinet's colours (the winner's colour is added at play time)
+  confetti: ["#ee5943", "#f8dcae", "#fff6e6", "#f5cc60"],
 };
 export const BONUS_FX = {
   start: "ui/countdown",
