@@ -186,7 +186,7 @@ test('Enter from title uses the same choose-both-fighters flow',()=>{
 test('title offers Versus; versus picks player one, then player two, a stage, and launches local',async()=>{
   const h=setup({'mvm-onboarded':true});
   const labels=[...h.document.querySelectorAll('.title-actions button')].map(b=>b.textContent);
-  assert.deepEqual(labels.map(l=>l.replace(/\s*↗$/,'')),['CHOOSE YOUR MATCH','VERSUS / TWO PLAYERS','ARCADE LADDER','TOURNAMENT','TRAINING']);
+  assert.deepEqual(labels.map(l=>l.replace(/\s*↗$/,'')),['CHOOSE YOUR MATCH','VERSUS / TWO PLAYERS','ARCADE LADDER','TOURNAMENT','TRAINING','PIXEL FX LAB ✦']);
   assert.match(h.document.querySelector('.title-ticker').textContent,/ONE PLAYER OR TWO \/ SAME CABINET/);
   assert.doesNotMatch(h.document.body.textContent,/NO SECOND PLAYER REQUIRED/);
   h.click('[data-mode="local"]');

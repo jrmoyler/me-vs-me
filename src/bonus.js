@@ -22,7 +22,14 @@ export function startBonus({
   arena,
   onEnd,
   settings = {},
+  effects,
 }) {
+  // Pixel effects come in from main.js (effects.play(key, element, options)); this module stays import-free.
+  const fx = (key, el, o) => {
+    try {
+      effects?.play?.(key, el, o);
+    } catch {}
+  };
   let remaining = BONUS_DURATION,
     integrity = 240,
     score = 0,
@@ -90,6 +97,7 @@ export function startBonus({
   function finish(skipped = false) {
     if (finished) return;
     finished = true;
+    if (!skipped && score) fx("score", root.querySelector("[data-score]"), { count: Math.min(12, Math.ceil(score / 500)) });
     cleanup();
     onEnd?.({ score, destroyed: integrity <= 0, skipped });
   }
@@ -123,7 +131,11 @@ export function startBonus({
     integrity = Math.max(0, integrity - damage);
     score += damage * 25;
     meter.value = integrity / 240;
+    if (integrity < 160 && target.dataset.damaged !== "true") fx("crack", target);
     target.dataset.damaged = String(integrity < 160);
+    fx("strike", target, { flip: false });
+    fx("coins", target, { life: 1.6 });
+    if (key === "l" || key === "o") fx("shard", target, { life: 1.4 });
     feedback.textContent = `${key === "l" || key === "o" ? "CRUSH!" : "HIT!"} +${damage * 25}`;
     if (!settings.reducedMotion && target.animate)
       target.animate(
@@ -137,6 +149,8 @@ export function startBonus({
     if (integrity === 0) {
       score += Math.ceil(remaining) * 100;
       target.dataset.broken = "true";
+      fx("broken", target, { palette: ["#0a1a33", "#14406e", "#2370a8", "#46a8d8", "#84e0f4", "#c8f8ff", "#ffffff"], life: 2.4 });
+      fx("reward", root.querySelector(".mvm-bonus-stage"), { delay: 0.6 });
       feedback.textContent = "PERFECT! REFLECTION SHATTERED";
       buttons.forEach((b) => (b.disabled = true));
       finishTimer = setTimeout(() => finish(), 1200);
@@ -186,6 +200,8 @@ export function startBonus({
     }
   }, 100);
   buttons[0].focus();
+  fx("start", stage, { from: 1 });
+  fx("hud", root.querySelector("[data-score]"), { life: BONUS_DURATION });
   return {
     destroy() {
       finished = true;

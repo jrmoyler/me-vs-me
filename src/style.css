@@ -458,6 +458,7 @@ img {
   color: #6f7377;
 }
 .selection-screen,
+.lab-screen,
 .arena-screen {
   max-width: 1440px;
   margin: auto;

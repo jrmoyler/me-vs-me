@@ -9,6 +9,9 @@ import { createTournament, recordPlayerResult, currentOpponent, isChampion, isEl
 import { playCutscene } from "./cutscenes.js";
 import { registerPWA, installState, onInstallChange, promptInstall } from "./pwa.js";
 import { matchGrade, statTiles } from "./match-stats.js";
+import { configureScreenFx, screenBurst, screenTransition, preloadScreenFx } from "./screen-fx.js";
+import { SCREEN_FX, BONUS_FX } from "./fx-map.js";
+import { mountFxLab } from "./fx-lab.js";
 
 const app = document.querySelector("#app");
 const read = (key, fallback) => {
@@ -132,11 +135,57 @@ const playClick = () => {
     o.stop(audioCtx.currentTime + 0.1);
   } catch {}
 };
+// --- PIXEL EFFECTS (src/screen-fx.js) ------------------------------------------
+// Guarded like the cutscene hooks: harnesses evaluate this file without its imports.
+function pixelSetting() {
+  if (settings.pixelFx) return settings.pixelFx;
+  return settings.reducedMotion || matchMedia("(pointer:coarse)").matches ? "lite" : "full";
+}
+function transitionTo(name) {
+  try {
+    if (typeof screenTransition === "function") screenTransition(name);
+  } catch {}
+}
+function burst(id, at, o = {}) {
+  try {
+    if (typeof screenBurst === "function" && id) screenBurst(id, { at, ...o });
+  } catch {}
+}
+// Celebrate a result screen: confetti and fireworks on a win, a badge for a top grade,
+// a level-up on the way to the next stage, the crown's glint for a champion.
+function celebrate({ won, next = false, champion = false } = {}) {
+  if (typeof screenBurst !== "function" || typeof SCREEN_FX === "undefined") return;
+  transitionTo(won ? "result" : "defeat");
+  if (!won) return;
+  const art = app.querySelector(".result-art");
+  const heading = app.querySelector(".result-copy h1");
+  setTimeout(() => {
+    burst(SCREEN_FX.victory[0], art, { delay: 0.5 });
+    burst(SCREEN_FX.victory[1], heading, { delay: 0.8 });
+    const grade = app.querySelector(".match-grade")?.dataset.grade;
+    if (grade === "S" || grade === "A") burst(SCREEN_FX.grade, app.querySelector(".match-grade"), { title: `GRADE ${grade}`, delay: 1.1, flip: false });
+    if (grade === "S") burst(SCREEN_FX.topGrade, art, { delay: 0.6 });
+    if (next) burst(SCREEN_FX.nextStage, app.querySelector('[data-action="next-stage"]'), { text: `STAGE ${state.stage + 2}`, delay: 1.3 });
+    if (champion) {
+      const seal = app.querySelector(".champion-seal");
+      burst(SCREEN_FX.champion[0], art, { delay: 1 });
+      burst(SCREEN_FX.champion[1], seal, { delay: 1.4 });
+      burst(SCREEN_FX.champion[2], seal, { delay: 1.6 });
+    }
+  }, 0);
+}
+// --- END PIXEL EFFECTS ---------------------------------------------------------
 function applySettings() {
   document.body.classList.toggle("reduced-motion", settings.reducedMotion);
   save("mvm-settings", settings);
+  try {
+    if (typeof configureScreenFx === "function") configureScreenFx({ quality: pixelSetting(), reducedMotion: settings.reducedMotion });
+  } catch {}
 }
 applySettings();
+try {
+  if (typeof preloadScreenFx === "function") preloadScreenFx();
+} catch {}
 function portrait(c, classes = "") {
   const scale = bodyScale(c);
   const scaled = scale === 1 ? "" : ` style="--body-scale:${scale}"`;
@@ -151,7 +200,10 @@ function footer(text = `ONE MIND. ${characters.length} WAYS TO FIGHT.`) {
 // A changed screen plays a short entrance on its <main> (see bind()); re-renders of the
 // same screen (picking a fighter, a stage) stay still.
 let entering = false;
+let lab = null;
 function setScreen(screen) {
+  lab?.destroy();
+  lab = null;
   clearTimeout(transitionTimer);
   clearTimeout(continueTimer);
   continueTimer = null;
@@ -161,6 +213,7 @@ function setScreen(screen) {
   if (changed) {
     entering = true;
     window.scrollTo(0, 0);
+    if (screen !== "result" && screen !== "combat") transitionTo(screen);
   }
 }
 // --- CUTSCENE HOOKS (see src/cutscenes.js) --------------------------------
@@ -185,6 +238,7 @@ function gameOver() {
   // DEFEAT cutscene: arcade continue declined or expired.
   clearTimeout(continueTimer);
   continueTimer = null;
+  transitionTo("gameover");
   cutscene(
     "defeat",
     { player: state.player, opponent: state.opponent, arena: state.arena, mode: "arcade" },
@@ -208,8 +262,19 @@ function title() {
   setScreen("title");
   const lead = characters[0],
     second = characters[Math.min(5, characters.length - 1)];
-  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="local">VERSUS / TWO PLAYERS <span>↗</span></button><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="tournament">TOURNAMENT <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button>${installButton()}</div><p class="title-press" aria-hidden="true"><span class="keycap">↵</span> PRESS ENTER · <span class="keycap">↑↓←→</span> CHOOSE · PADS WORK TOO</p></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><i class="hero-sweep" aria-hidden="true"></i><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>ONE PLAYER OR TWO / SAME CABINET</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
+  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="local">VERSUS / TWO PLAYERS <span>↗</span></button><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="tournament">TOURNAMENT <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button><button data-action="fx-lab">PIXEL FX LAB <span>✦</span></button>${installButton()}</div><p class="title-press" aria-hidden="true"><span class="keycap">↵</span> PRESS ENTER · <span class="keycap">↑↓←→</span> CHOOSE · PADS WORK TOO</p></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><i class="hero-sweep" aria-hidden="true"></i><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>ONE PLAYER OR TWO / SAME CABINET</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
   bind();
+}
+// The FX LAB: browse and play every pixel effect in the game (src/fx-lab.js).
+function fxLab() {
+  setScreen("lab");
+  const c = characters[state.player] ?? characters[0];
+  app.innerHTML = `${chrome("EVERY SPARK IN THE CABINET")}<main class="lab-screen"><div class="screen-heading"><button class="text-button" data-action="home">← TITLE</button><div><span class="eyebrow">PIXEL EFFECTS · PLAY ANY OF THEM</span><h1>FX <em>LAB.</em></h1></div><span class="step-counter">✦</span></div><div class="lab-mount"></div></main>${footer("EVERY HIT, POWER, STORM AND WIPE IN THE GAME.")}`;
+  bind();
+  try {
+    if (typeof mountFxLab === "function")
+      lab = mountFxLab(app.querySelector(".lab-mount"), { characters, arenas, fighter: c, arena: arenas[state.arena] ?? arenas[0], reducedMotion: settings.reducedMotion });
+  } catch {}
 }
 function begin(mode) {
   state.mode = mode;
@@ -342,6 +407,7 @@ function nextChallenger() {
       character: characters[state.player],
       arena: arenas[state.arena],
       settings: { ...settings },
+      effects: { play: (key, el, o) => typeof BONUS_FX !== "undefined" && burst(BONUS_FX[key], el, o) },
       onEnd: () => {
         bonus?.destroy();
         bonus = null;
@@ -560,6 +626,7 @@ function result(data) {
         : "Every loss is a lesson from yourself. Run it back.";
   app.innerHTML = `${chrome("THE REFLECTION NEVER LIES")}<main class="result-screen ${won ? "victory" : "defeat"}">${resultArt(winner)}<div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${complete ? "KNOW<br>THYSELF." : won ? "SELF<br>MASTERY." : "MEET YOUR<br>MATCH."}</h1>${resultScore(data, won)}${quote}<p>${story}</p>${complete ? `<div class="champion-seal">SELF MASTERED <span>${reflections} / ${reflections} REFLECTIONS · SHADOW DEFEATED</span></div>` : ""}${state.mode === "arcade" && !won ? '<div class="continue-prompt">CONTINUE? <b class="continue-seconds" role="timer">10</b><span>Run it back before time runs out.</span></div>' : ""}<div class="result-actions">${state.mode === "arcade" && won && !complete ? '<button class="button primary" data-action="next-stage">NEXT CHALLENGER <span>→</span></button>' : '<button class="button primary" data-action="rematch">RUN IT BACK <span>↻</span></button>'}<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button></div>${matchSummary(data, won)}${recordLine()}</div></main>${footer("THE WORK ON YOURSELF IS NEVER FINISHED.")}`;
   bind();
+  celebrate({ won: won || local, next: state.mode === "arcade" && won && !complete, champion: complete });
   if (state.mode === "arcade" && !won) beginContinueCountdown();
 }
 // Shared result-screen pieces (arcade, duel, versus, training and tournament results).
@@ -708,6 +775,7 @@ function tournamentResultScreen(data, { won, eyebrow, heading, story, seal = "",
   const quote = victoryQuote(winner);
   app.innerHTML = `${chrome("EIGHT ENTER. ONE IS CROWNED.")}<main class="result-screen tournament-result ${won ? "victory" : "defeat"}">${resultArt(winner)}<div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${heading}</h1>${resultScore(data, won)}${quote}<p>${story}</p>${seal}<div class="result-actions">${actions}</div>${matchSummary(data, won)}${recordLine()}</div></main>${footer("EIGHT ENTER. ONE IS CROWNED.")}`;
   bind();
+  celebrate({ won, champion: Boolean(seal) });
 }
 const TOURNAMENT_QUIT = '<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button>';
 function showTournamentMatchWon(data) {
@@ -811,7 +879,7 @@ function showHelp(onDone) {
 }
 function showSettings() {
   const layer = modal(
-    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>SKIP CUTSCENES</strong><small>Intro, match openers, challengers, rounds & results</small></div><button class="toggle ${settings.skipCutscenes ? "active" : ""}" data-setting="skipCutscenes" aria-pressed="${Boolean(settings.skipCutscenes)}">${settings.skipCutscenes ? "ON" : "OFF"}</button></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
+    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>SKIP CUTSCENES</strong><small>Intro, match openers, challengers, rounds & results</small></div><button class="toggle ${settings.skipCutscenes ? "active" : ""}" data-setting="skipCutscenes" aria-pressed="${Boolean(settings.skipCutscenes)}">${settings.skipCutscenes ? "ON" : "OFF"}</button></div><div class="difficulty-setting pixel-setting"><strong>PIXEL EFFECTS</strong><div class="difficulty-options">${["full", "lite", "off"].map((q) => `<button class="${pixelSetting() === q ? "active" : ""}" data-pixel="${q}" aria-pressed="${pixelSetting() === q}">${q}</button>`).join("")}</div><small>Full adds weather, critters and finishers. Lite keeps hits and POWERs.</small></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
     "",
     refresh,
   );
@@ -821,6 +889,14 @@ function showSettings() {
       (b.onclick = () => {
         const k = b.dataset.setting;
         settings[k] = !settings[k];
+        applySettings();
+        updateSettingsModal(layer);
+      }),
+  );
+  layer.querySelectorAll("[data-pixel]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        settings.pixelFx = b.dataset.pixel;
         applySettings();
         updateSettingsModal(layer);
       }),
@@ -912,6 +988,11 @@ function updateSettingsModal(layer) {
     b.classList.toggle("active", active);
     b.setAttribute("aria-pressed", active);
   });
+  layer.querySelectorAll("[data-pixel]").forEach((b) => {
+    const active = pixelSetting() === b.dataset.pixel;
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-pressed", active);
+  });
   syncSoundButton();
 }
 function refresh() {
@@ -938,6 +1019,9 @@ function bind() {
           break;
         case "start":
           begin(el.dataset.mode);
+          break;
+        case "fx-lab":
+          fxLab();
           break;
         case "moves":
           showMoves(characters[state.screen === "selection" ? state[state.selecting] : state.player]);
