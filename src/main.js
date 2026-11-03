@@ -11,6 +11,7 @@ import { registerPWA, installState, onInstallChange, promptInstall } from "./pwa
 import { matchGrade, statTiles } from "./match-stats.js";
 import { configureScreenFx, screenBurst, screenTransition, preloadScreenFx } from "./screen-fx.js";
 import { SCREEN_FX, BONUS_FX } from "./fx-map.js";
+import { rampFrom } from "./pixelfx.js";
 import { mountFxLab } from "./fx-lab.js";
 
 const app = document.querySelector("#app");
@@ -151,26 +152,31 @@ function burst(id, at, o = {}) {
     if (typeof screenBurst === "function" && id) screenBurst(id, { at, ...o });
   } catch {}
 }
-// Celebrate a result screen: confetti and fireworks on a win, a badge for a top grade,
-// a level-up on the way to the next stage, the crown's glint for a champion.
-function celebrate({ won, next = false, champion = false } = {}) {
+// Celebrate a result screen in the cabinet's colours and the winner's own: confetti and a
+// firework on a win, a beam of the winner's colour for an S, the next stage rising out of the
+// NEXT CHALLENGER button, and the toast, rocket, key and gem for a champion. The HTML grade
+// stamp is the grade; no effect repeats it.
+function celebrate({ won, next = false, champion = false, winner = characters[state.player] } = {}) {
   if (typeof screenBurst !== "function" || typeof SCREEN_FX === "undefined") return;
   transitionTo(won ? "result" : "defeat");
   if (!won) return;
   const art = app.querySelector(".result-art");
   const heading = app.querySelector(".result-copy h1");
+  const colour = winner?.color || "#ee5943";
+  const ramp = typeof rampFrom === "function" ? rampFrom(colour) : undefined;
+  const warm = SCREEN_FX.palette;
   setTimeout(() => {
-    burst(SCREEN_FX.victory[0], art, { delay: 0.5 });
-    burst(SCREEN_FX.victory[1], heading, { delay: 0.8 });
+    burst(SCREEN_FX.victory[0], art, { delay: 0.5, palette: [...SCREEN_FX.confetti, colour] });
+    burst(SCREEN_FX.victory[1], heading, { delay: 0.8, palette: ramp });
     const grade = app.querySelector(".match-grade")?.dataset.grade;
-    if (grade === "S" || grade === "A") burst(SCREEN_FX.grade, app.querySelector(".match-grade"), { title: `GRADE ${grade}`, delay: 1.1, flip: false });
-    if (grade === "S") burst(SCREEN_FX.topGrade, art, { delay: 0.6 });
+    if (grade === "S") burst(SCREEN_FX.topGrade, art, { delay: 0.6, palette: ramp });
     if (next) burst(SCREEN_FX.nextStage, app.querySelector('[data-action="next-stage"]'), { text: `STAGE ${state.stage + 2}`, delay: 1.3 });
     if (champion) {
       const seal = app.querySelector(".champion-seal");
-      burst(SCREEN_FX.champion[0], art, { delay: 1 });
-      burst(SCREEN_FX.champion[1], seal, { delay: 1.4 });
-      burst(SCREEN_FX.champion[2], seal, { delay: 1.6 });
+      burst(SCREEN_FX.champion[0], art, { delay: 1, palette: ramp });
+      burst(SCREEN_FX.champion[1], seal, { title: "CHAMPION", delay: 1.3, flip: false, ribbon: warm });
+      burst(SCREEN_FX.champion[2], seal, { delay: 1.7 });
+      burst(SCREEN_FX.champion[3], seal, { delay: 1.9, palette: ramp });
     }
   }, 0);
 }
@@ -626,7 +632,7 @@ function result(data) {
         : "Every loss is a lesson from yourself. Run it back.";
   app.innerHTML = `${chrome("THE REFLECTION NEVER LIES")}<main class="result-screen ${won ? "victory" : "defeat"}">${resultArt(winner)}<div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${complete ? "KNOW<br>THYSELF." : won ? "SELF<br>MASTERY." : "MEET YOUR<br>MATCH."}</h1>${resultScore(data, won)}${quote}<p>${story}</p>${complete ? `<div class="champion-seal">SELF MASTERED <span>${reflections} / ${reflections} REFLECTIONS · SHADOW DEFEATED</span></div>` : ""}${state.mode === "arcade" && !won ? '<div class="continue-prompt">CONTINUE? <b class="continue-seconds" role="timer">10</b><span>Run it back before time runs out.</span></div>' : ""}<div class="result-actions">${state.mode === "arcade" && won && !complete ? '<button class="button primary" data-action="next-stage">NEXT CHALLENGER <span>→</span></button>' : '<button class="button primary" data-action="rematch">RUN IT BACK <span>↻</span></button>'}<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button></div>${matchSummary(data, won)}${recordLine()}</div></main>${footer("THE WORK ON YOURSELF IS NEVER FINISHED.")}`;
   bind();
-  celebrate({ won: won || local, next: state.mode === "arcade" && won && !complete, champion: complete });
+  celebrate({ won: won || local, next: state.mode === "arcade" && won && !complete, champion: complete, winner });
   if (state.mode === "arcade" && !won) beginContinueCountdown();
 }
 // Shared result-screen pieces (arcade, duel, versus, training and tournament results).
@@ -775,7 +781,7 @@ function tournamentResultScreen(data, { won, eyebrow, heading, story, seal = "",
   const quote = victoryQuote(winner);
   app.innerHTML = `${chrome("EIGHT ENTER. ONE IS CROWNED.")}<main class="result-screen tournament-result ${won ? "victory" : "defeat"}">${resultArt(winner)}<div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${heading}</h1>${resultScore(data, won)}${quote}<p>${story}</p>${seal}<div class="result-actions">${actions}</div>${matchSummary(data, won)}${recordLine()}</div></main>${footer("EIGHT ENTER. ONE IS CROWNED.")}`;
   bind();
-  celebrate({ won, champion: Boolean(seal) });
+  celebrate({ won, champion: Boolean(seal), winner });
 }
 const TOURNAMENT_QUIT = '<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button>';
 function showTournamentMatchWon(data) {

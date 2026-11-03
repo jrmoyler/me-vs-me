@@ -1,13 +1,29 @@
 // Pixel effects for a fight: it watches the scene (attacks starting, POWERs charging, shots in
 // flight, guards, meters, knockdowns) and gets told about hits and round ends. Which effect plays
 // where comes from src/fx-map.js; the drawing is src/pixelfx.js, on three Phaser canvas textures.
-import { createPixelStage, actorFromImage, fxModule, loadFx, preloadFx, rampFrom, PIXEL_SCALE } from "./pixelfx.js";
+import { createPixelStage, actorFromImage, fxModule, loadFx, preloadFx, rampFrom, COMBAT_SCALE, COMBAT_W, COMBAT_H } from "./pixelfx.js";
 import { powerFxFor, guardFxFor, SMEAR_FX, HIT_FX, MATCH_FX, ARENA_FX } from "./fx-map.js";
 
-const S = PIXEL_SCALE;
+// Combat effects and scenery are drawn at 480×270 (×2); the weather frames at 320×180 (×3).
+const S = COMBAT_SCALE;
 const FLOOR = 450;
-const DEPTHS = { weather: 3.4, life: 3.6, under: 4.5, over: 9.5 };
-const ALPHA = { weather: 0.85, life: 0.8, under: 1, over: 1 };
+// Where each canvas sits in the scene: the stage art is at 0, the fighters at 5, the arena's light
+// wash at 6 (src/combat.js), the HUD above everything. The near weather falls in front of the fighters.
+const DEPTHS = { weather: 3.4, life: 3.6, under: 4.5, over: 9.5, "weather-front": 9.6 };
+// Weather and scenery are light in the scene, not stickers on it: SCREEN keeps only what glows, so
+// the dark haze and ink of an effect vanish into the stage art and its highlights read as lit air.
+const BLEND = { weather: "SCREEN", life: "NORMAL", under: "NORMAL", over: "NORMAL", "weather-front": "SCREEN" };
+const ALPHA = { weather: 0.72, life: 0.9, under: 1, over: 1, "weather-front": 0.5 };
+// Weather takes on the stage's own colour: a tint part way from white toward the arena colour.
+const WEATHER_TINT = 0.45;
+
+/** 0xRRGGBB part way (k) from white toward a "#rrggbb" colour. */
+export function lightTint(color, k = WEATHER_TINT) {
+  const v = parseInt(String(color || "#ffffff").replace("#", "").padEnd(6, "f").slice(0, 6), 16);
+  if (Number.isNaN(v)) return 0xffffff;
+  const ch = (shift) => Math.round(255 + (((v >> shift) & 255) - 255) * k);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
 
 /** "full" on desktops, "lite" on phones, unless the player chose (settings.pixelFx). */
 export function pixelQuality(settings = {}) {
@@ -33,25 +49,31 @@ export function createCombatFx({ scene, settings = {}, arena, mode, reducedMotio
   const uid = `pfx${Math.random().toString(36).slice(2, 8)}`;
   const textures = {};
   const images = {};
+  const tint = lightTint(arena?.color);
   for (const l of stage.layers) {
     if (!l.canvas) continue;
     const key = `${uid}-${l.name}`;
     textures[l.name] = scene.textures.addCanvas(key, l.canvas);
-    images[l.name] = scene.add
+    const image = scene.add
       .image(0, 0, key)
       .setOrigin(0, 0)
       .setScale(960 / l.w)
-      .setDepth(DEPTHS[l.name])
+      .setDepth(DEPTHS[l.name] ?? 9)
       .setAlpha(ALPHA[l.name] ?? 1)
       .setVisible(false);
+    try {
+      image.setBlendMode?.(BLEND[l.name] ?? "NORMAL");
+      if (l.kind === "weather") image.setTint?.(tint);
+    } catch {}
+    images[l.name] = image;
   }
-  // critters and props live on the finer 480×270 grid; the map gives them in 320×180 units
-  const LIFE = 480 / 320;
+  // critters and props live on the 480×270 grid; the map gives them in 320×180 units
+  const LIFE = COMBAT_W / 320;
   const fighters = scene.fighters;
   const kits = fighters.map((f) => powerFxFor(f.c));
   const tints = fighters.map((f) => rampFrom(f.c.color));
   const ambient = ARENA_FX[arena?.id] ?? null;
-  const watch = fighters.map(() => ({ attack: null, guardT: 0, guardFx: null, hp: 100, energy: 0, down: false, combo: 0, danger: false, dizzy: false }));
+  const watch = fighters.map(() => ({ attack: null, guardT: 0, guardFx: null, hp: 100, energy: null, down: false, combo: 0, danger: false, dizzy: false }));
   const shots = new WeakMap();
   const actors = new Map();
   let weather = null,
@@ -92,6 +114,7 @@ export function createCombatFx({ scene, settings = {}, arena, mode, reducedMotio
       anchorX: (sprite.originX ?? 0.5) * frame.cutWidth,
       anchorY: (sprite.originY ?? 1) * frame.cutHeight,
       scale: Math.abs(sprite.scaleX || 1),
+      pixelScale: S,
     });
     if (actors.size > 60) actors.clear();
     actors.set(key, actor || undefined);
@@ -198,8 +221,8 @@ export function createCombatFx({ scene, settings = {}, arena, mode, reducedMotio
       f.launchedBy = null;
     }
     w.down = down;
-    // meter crosses the POWER line
-    if (w.energy < 35 && f.energy >= 35 && mode !== "training") on(f, MATCH_FX.powerReady, { at: "head", follow: true, life: 1.1, tier: "extra" });
+    // meter crosses the POWER line (never for the meter a round starts with)
+    if (w.energy != null && w.energy < 35 && f.energy >= 35 && mode !== "training") on(f, MATCH_FX.powerReady, { at: "head", follow: true, life: 1.1, tier: "extra" });
     w.energy = f.energy;
     // health drops into the red: the bar flashes over their head and they get angry
     if (!w.danger && f.hp > 0 && f.hp <= 25 && mode !== "training") {
@@ -299,7 +322,7 @@ export function createCombatFx({ scene, settings = {}, arena, mode, reducedMotio
       const kit = kits[wi];
       const power = finalBlow?.type === "special";
       if (!ko) on(loser, MATCH_FX.timeUp, { follow: true, life: 2.4 });
-      if (ko && power && !reducedMotion) spawn(HIT_FX.koFrame, { x: 160, y: 90, flip: winner.face < 0, frozen: false });
+      if (ko && power && !reducedMotion) spawn(HIT_FX.koFrame, { x: COMBAT_W / 2, y: COMBAT_H / 2, flip: winner.face < 0, frozen: false });
       on(winner, matchOver ? MATCH_FX.matchWon : MATCH_FX.roundWon, { at: "head", follow: true, life: 2.4, frozen: false });
       on(loser, MATCH_FX.roundLost, { at: "head", y: head(loser).y - 8, life: 1.5, frozen: false });
       if (!matchOver) return;
@@ -326,7 +349,7 @@ export function createCombatFx({ scene, settings = {}, arena, mode, reducedMotio
           on(f, entrance, { at: "feet", life: 1.8, delay: 0.1 + i * 0.25, tint: kits[i].tint });
         });
       } else if (lastLoser) on(lastLoser, final ? MATCH_FX.comeback : MATCH_FX.blessing, { at: "feet", follow: true, life: 2, frozen: false });
-      watch.forEach((w) => Object.assign(w, { danger: false, dizzy: false, combo: 0, hp: 100, down: false, guardFx: null, attack: null }));
+      watch.forEach((w, i) => Object.assign(w, { danger: false, dizzy: false, combo: 0, hp: 100, energy: fighters[i]?.energy ?? null, down: false, guardFx: null, attack: null }));
     },
     trainingReset(player) {
       on(player, MATCH_FX.trainingReset, { at: "feet", life: 1.6 });

@@ -5,9 +5,11 @@ import { characters } from "../src/characters.js";
 import { arenas } from "../src/arenas.js";
 import { POWERS } from "../src/moves.js";
 import { POWER_FX, ARENA_FX, SCREEN_FX, BONUS_FX, MATCH_FX, usedFxIds, powerFxFor } from "../src/fx-map.js";
-import { createPixelStage, setFxLoader, loadFx, rampFrom, coverTime, SINGLE_LAYER } from "../src/pixelfx.js";
+import { createPixelStage, setFxLoader, loadFx, rampFrom, coverTime, SINGLE_LAYER, COMBAT_LAYERS, COMBAT_W, COMBAT_H, PIXEL_W } from "../src/pixelfx.js";
 import { createFrame, clearFrame, createFx } from "../src/vendor/pixelfx/core/index.js";
 import { usesOf } from "../src/fx-lab.js";
+import { transitionOptions } from "../src/screen-fx.js";
+import { lightTint } from "../src/combat-fx.js";
 
 const root = new URL("../src/vendor/pixelfx/fx/", import.meta.url);
 const library = readdirSync(root)
@@ -116,4 +118,85 @@ test("fighter palettes ramp dark to bright through the fighter's colour", () => 
 
 test("match and bonus effects name real library effects", () => {
   for (const id of [...Object.values(MATCH_FX), ...Object.values(BONUS_FX)]) assert.ok(library.includes(id), id);
+});
+
+test("a fight draws combat effects at 480×270 and stands the fighters inside the weather", async () => {
+  assert.deepEqual(COMBAT_LAYERS.map((l) => l.name), ["weather", "life", "under", "over", "weather-front"]);
+  const stage = createPixelStage({ quality: "full", document: null });
+  assert.equal(stage.sizeOf("over").w, COMBAT_W);
+  assert.equal(stage.sizeOf("under").h, COMBAT_H);
+  assert.equal(stage.sizeOf("weather").w, PIXEL_W, "weather effects are sized to the 320×180 frame");
+  await loadFx("weather/rain");
+  await loadFx("weather/clouds");
+  // clouds draw only a sky: they stay behind the fighters and never reach the front layer
+  stage.spawn("weather/clouds", { layer: "weather", x: 160, y: 180 });
+  for (let i = 0; i < 6; i++) stage.update(1 / 30);
+  stage.render(true);
+  assert.ok(stage.visible("weather"), "the sky is drawn behind the fighters");
+  assert.ok(!stage.visible("weather-front"), "a sky-only effect draws nothing in front of them");
+  // rain has a far half and a near half: the near drops fall in front of the fighters
+  stage.clear(true);
+  stage.update(0);
+  stage.spawn("weather/rain", { layer: "weather", x: 160, y: 170 });
+  for (let i = 0; i < 6; i++) stage.update(1 / 30);
+  stage.render(true);
+  assert.ok(stage.visible("weather"), "far rain behind the fighters");
+  assert.ok(stage.visible("weather-front"), "near rain in front of the fighters");
+});
+
+test("speed plays an effect faster, so a transition can uncover the screen in a beat", async () => {
+  const stage = createPixelStage({ quality: "full", layers: SINGLE_LAYER, document: null });
+  await loadFx("impacts/hit-spark");
+  const slow = stage.spawn("impacts/hit-spark", { x: 100, y: 80 });
+  const fast = stage.spawn("impacts/hit-spark", { x: 100, y: 80, speed: 3 });
+  let fastDoneAt = null,
+    slowDoneAt = null;
+  for (let i = 0; i < 90; i++) {
+    stage.update(1 / 30);
+    if (fast.done && fastDoneAt == null) fastDoneAt = i;
+    if (slow.done && slowDoneAt == null) slowDoneAt = i;
+  }
+  assert.ok(fastDoneAt != null && slowDoneAt != null, "both finish");
+  assert.ok(fastDoneAt < slowDoneAt, `fast ${fastDoneAt} before slow ${slowDoneAt}`);
+});
+
+test("every screen transition plays in the cabinet's palette, over its ink, at one pace", async () => {
+  const o = transitionOptions();
+  assert.equal(o.palette.length, 8);
+  for (const c of o.palette) assert.match(c, /^#[0-9a-f]{6}$/);
+  assert.equal(o.palette[0], o.color, "the ramp starts at the ink the page is painted in");
+  assert.equal(o.color, "#101319");
+  assert.ok(o.speed > 1 && o.speed <= 3, `speed ${o.speed}`);
+  for (const id of Object.values(SCREEN_FX.transitions)) {
+    const mod = await loadFx(id);
+    assert.ok(Array.isArray(mod.meta.options.palette), `${id} takes a palette`);
+    assert.equal(typeof mod.meta.options.color, "string", `${id} takes the ink colour`);
+    // it still covers the frame when played in the cabinet's colours
+    const frame = createFrame(320, 180);
+    const fx = createFx(mod, { x: 0, y: 0, ...o });
+    const steps = Math.ceil(coverTime(id, mod) * 30);
+    for (let i = 0; i < steps; i++) fx.update(1 / 30);
+    clearFrame(frame);
+    fx.draw(frame);
+    let n = 0;
+    for (let i = 0; i < frame.color.length; i++) if (frame.color[i] >>> 24 === 255) n++;
+    assert.ok(n > frame.color.length * 0.5, `${id} covers the frame in the cabinet palette (${n})`);
+  }
+});
+
+test("the weather takes a tint part way from white toward the arena's colour", () => {
+  assert.equal(lightTint("#ffffff"), 0xffffff);
+  assert.equal(lightTint("#000000", 0.45), 0x8c8c8c);
+  assert.equal(lightTint("#46e1df", 1), 0x46e1df);
+  assert.equal(lightTint(undefined), 0xffffff);
+  const t = lightTint("#46e1df", 0.45);
+  assert.ok((t >> 16) > 0x46 && (t >> 16) < 0xff, "red channel is lifted toward white");
+});
+
+test("critters and props sit inside the stage frame, on the floor or in the scenery", () => {
+  for (const [id, a] of Object.entries(ARENA_FX))
+    for (const p of [...a.critters, ...a.props]) {
+      assert.ok(p.x >= 0 && p.x <= 320 && p.y >= 0 && p.y <= 180, `${id} ${p.id} at ${p.x},${p.y}`);
+      assert.ok(library.includes(p.id), `${id} ${p.id}`);
+    }
 });

@@ -1,16 +1,25 @@
-// The pixel effects layer: plays pixelfx effects (src/vendor/pixelfx, MIT) at 320×180, a third of
-// the 960×540 game, so every effect keeps its chunky pixels when it is scaled up.
+// The pixel effects layer: plays pixelfx effects (src/vendor/pixelfx, MIT) on small frames that are
+// scaled up onto the 960×540 game, so every effect keeps square pixels.
 //
-// A stage owns three frames, each composited into its own canvas:
-//   ambient  weather, critters and arena props, behind the fighters, redrawn at 15 fps
-//   under    the back half of combat effects, behind the fighters, 30 fps
-//   over     everything in front of the fighters, 30 fps
+// A fight draws five frames, each composited into its own canvas, back to front:
+//   weather        the far half of the stage's weather (sky, far rain, the wet floor), behind everything
+//   life           critters and arena props, behind the fighters
+//   under          the back half of combat effects, behind the fighters
+//   over           the front half of combat effects, in front of the fighters
+//   weather-front  the near half of the weather, in front of the fighters, so they stand inside it
+// Weather is drawn at 320×180 (its effects are sized to that frame); combat effects and scenery at
+// 480×270, so a hit spark sits at the scale of the fighters instead of the scale of the screen.
 // Effect modules load lazily (one small chunk each), so only what a match uses is downloaded.
 import { createFrame, clearFrame, createFx, composite } from "./vendor/pixelfx/core/index.js";
 
+/** The screen frame every transition and menu effect is drawn on, and its scale on the 960×540 game. */
 export const PIXEL_SCALE = 3;
 export const PIXEL_W = 320;
 export const PIXEL_H = 180;
+/** The finer frame combat effects and scenery are drawn on. */
+export const COMBAT_SCALE = 2;
+export const COMBAT_W = 480;
+export const COMBAT_H = 270;
 
 const PREFIX = "./vendor/pixelfx/fx/";
 // Vite turns this into one lazy chunk per effect. Outside Vite (node tests) there is no glob.
@@ -80,12 +89,12 @@ export function rampFrom(color, n = 8) {
 // ---- a fighter as a pixelfx actor ------------------------------------------------------------
 /**
  * Build a pixelfx actor (the silhouette and colours status effects wrap) from an image cell.
- * The cell is shrunk to pixel scale; (anchorX, anchorY) are the feet inside the cell, in source px;
- * scale is the on-screen scale the game draws the cell at.
+ * The cell is shrunk to the layer's pixel scale; (anchorX, anchorY) are the feet inside the cell, in
+ * source px; scale is the on-screen scale the game draws the cell at.
  */
-export function actorFromImage(image, { sx = 0, sy = 0, sw, sh, anchorX = sw / 2, anchorY = sh, scale = 1 } = {}) {
+export function actorFromImage(image, { sx = 0, sy = 0, sw, sh, anchorX = sw / 2, anchorY = sh, scale = 1, pixelScale = PIXEL_SCALE } = {}) {
   if (typeof document === "undefined" || !image) return null;
-  const k = scale / PIXEL_SCALE,
+  const k = scale / pixelScale,
     w = Math.max(1, Math.round(sw * k)),
     h = Math.max(1, Math.round(sh * k));
   let data;
@@ -172,15 +181,18 @@ export function coverTime(id, mod = fxModule(id)) {
 // ---- the stage ------------------------------------------------------------------------------
 /**
  * The layers a fight draws, back to front. kind says which instances a layer paints:
- * "weather" and "life" are ambient (behind the fighters, slow), "back"/"front" are the two halves
- * of combat effects. phase staggers the slow layers so they never repaint on the same frame.
- * life is drawn on a finer grid (480×270, ×2) so critters and props sit smaller in the scenery.
+ * "weather" and "life" are ambient (slow), "back"/"front" are the two halves of combat effects.
+ * half splits an ambient kind the same way: "back" paints what an effect draws behind a character
+ * (far rain, the sky, the wet floor), "front" what it draws in front (the near drops); an effect
+ * without a back half is painted whole on the back layer and not at all on the front one.
+ * phase staggers the slow layers so they never repaint on the same frame.
  */
 export const COMBAT_LAYERS = [
-  { name: "weather", kind: "weather", w: PIXEL_W, h: PIXEL_H, fps: 10, phase: 0 },
-  { name: "life", kind: "life", w: 480, h: 270, fps: 10, phase: 0.05 },
-  { name: "under", kind: "back", w: PIXEL_W, h: PIXEL_H, fps: 30 },
-  { name: "over", kind: "front", w: PIXEL_W, h: PIXEL_H, fps: 30 },
+  { name: "weather", kind: "weather", half: "back", w: PIXEL_W, h: PIXEL_H, fps: 12, phase: 0 },
+  { name: "life", kind: "life", w: COMBAT_W, h: COMBAT_H, fps: 10, phase: 0.05 },
+  { name: "under", kind: "back", w: COMBAT_W, h: COMBAT_H, fps: 30 },
+  { name: "over", kind: "front", w: COMBAT_W, h: COMBAT_H, fps: 30 },
+  { name: "weather-front", kind: "weather", half: "front", w: PIXEL_W, h: PIXEL_H, fps: 12, phase: 0.03 },
 ];
 /** One layer that draws everything: menus, transitions, the bonus stage and the FX LAB. */
 export const SINGLE_LAYER = [{ name: "over", kind: "all", w: PIXEL_W, h: PIXEL_H, fps: 30 }];
@@ -200,6 +212,7 @@ const DRAW_STEP = 1 / 30;
  *   velocity    [vx, vy] pixels per second
  *   delay       seconds before it starts
  *   skip        seconds to fast-forward on start (start a transition where it covers the screen)
+ *   speed       playback rate (1): a transition at 1.6 uncovers the screen in 60% of its time
  *   frozen      true: the instance holds still while the stage is frozen (hitstop)
  *   tier        "core" | "extra" (lite quality drops extras and all ambience)
  */
@@ -278,9 +291,11 @@ export function createPixelStage({ quality = "full", cap = 28, layers = COMBAT_L
         tier,
         o,
         fx: null,
+        mod: null,
         age: 0,
         delay: o.delay ?? 0,
         life: o.life ?? Infinity,
+        speed: o.speed > 0 ? o.speed : 1,
         frozen: Boolean(o.frozen),
         follow: o.follow,
         velocity: o.velocity,
@@ -290,8 +305,9 @@ export function createPixelStage({ quality = "full", cap = 28, layers = COMBAT_L
           handle.done = true;
           return;
         }
-        const { layer, life, follow, velocity, delay, skip, frozen, tier: _t, ...opts } = o;
+        const { layer, life, follow, velocity, delay, skip, speed, frozen, tier: _t, ...opts } = o;
         try {
+          inst.mod = mod;
           inst.fx = createFx(mod, opts);
           if (skip > 0) {
             const n = Math.ceil(skip / DRAW_STEP);
@@ -328,7 +344,8 @@ export function createPixelStage({ quality = "full", cap = 28, layers = COMBAT_L
           continue;
         }
         if (!i.fx) continue;
-        i.age += dt;
+        const step = dt * i.speed;
+        i.age += step;
         if (i.follow) {
           const p = i.follow();
           if (p) {
@@ -337,11 +354,11 @@ export function createPixelStage({ quality = "full", cap = 28, layers = COMBAT_L
             if (p.flip !== undefined) i.fx.options.flip = p.flip;
           }
         } else if (i.velocity) {
-          i.fx.options.x += i.velocity[0] * dt;
-          i.fx.options.y += i.velocity[1] * dt;
+          i.fx.options.x += i.velocity[0] * step;
+          i.fx.options.y += i.velocity[1] * step;
         }
         try {
-          i.fx.update(dt);
+          i.fx.update(step);
         } catch {
           i.handle.done = true;
         }
@@ -390,7 +407,10 @@ export function createPixelStage({ quality = "full", cap = 28, layers = COMBAT_L
         if (l.kind === "all") i.fx.draw(frame);
         else if (l.kind === "weather" || l.kind === "life") {
           if (i.kind !== l.kind) continue;
-          i.fx.draw(frame);
+          if (!l.half) i.fx.draw(frame);
+          else if (i.mod?.drawBack) i.fx.draw(frame, l.half);
+          else if (l.half === "back") i.fx.draw(frame);
+          else continue;
         } else if (i.kind === "combat") i.fx.draw(frame, l.kind);
         else continue;
         n++;
