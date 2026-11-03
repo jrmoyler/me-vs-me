@@ -68,6 +68,19 @@ Hard also punishes whiffs in range and fires POWER only when it can land: projec
 
 Sparks are layered: a hot white core that collapses, the tiered rays, and an expanding ring on heavy strikes and POWERs. Landings and knockdowns kick up floor dust (at most 16 puffs). A clean POWER hit gives the camera a brief 1.05× push toward the impact; every K.O. pushes 1.12× toward the loser with a warm flash, and the match-winning K.O. plays out at 30% speed for about a second. Reduced motion turns off the dust, zoom, flash and slow motion.
 
+### Pixel effects
+
+Every one of the 244 effects in [pixelfx](https://github.com/patch-gg/pixelfx) (MIT, vendored in `src/vendor/pixelfx`) plays somewhere in the game. `src/fx-map.js` says where, and `tests/pixelfx.test.mjs` fails if any effect is left out.
+
+- **Strikes.** Each normal leaves its own smear when it goes active (jab thrust, cross double slash, uppercut, low sweep, whip, spin, air slash, wakeup scythe, overhead hammer, dagger flurry on long combos), then a hit spark sized to its weight, a damage number, a crit number and a startled "!" on counter hits, a guard shield or parry on blocks, a ricochet off a blocked shot.
+- **POWERs.** All 49 fighters have their own charge, release, impact and a status left on the target (burning, frozen, electrified, poisoned, cursed, slowed…). Zoners' shots ride a projectile effect: ball lightning, an ice lance, a fireball, a flock of crows, a page storm. Effects marked for it are recoloured with the fighter's own colour.
+- **The match.** Fighters arrive in round one their own way (warp, blink, portal, egg, smoke bomb); the shadow rises on tendrils. A low-health bar and rage, dizzy stars after a long combo, a power star when the meter is ready, meter orbs, a heart lost per round, a blessing (or a resurrection in the final round) for whoever lost the last round. The deciding K.O. plays the winner's finisher on the loser (meteor call, lightning call, sword combo…) and the loser's exit (shatter, dissolve, disintegrate, soul rise); a PERFECT drops the nuke.
+- **Arenas.** Each stage has weather that changes for the final round (rain to storm, clouds to god rays, blossoms to falling leaves, a green data blizzard in Null Vault) plus its own critters and props (a slime and brazier in The Foundry, koi and a fountain in Mirror Garden, a ghost on Terminal Nine).
+- **Screens.** Every screen opens on its own transition, started where it covers the page. Wins get confetti and fireworks, an S or A grade gets an achievement badge (S adds a loot beam), the next arcade stage levels up and a tournament champion gets the key. The bonus stage has a countdown, strike bursts, coins, crystal shards, the crystal blowing apart, a coin tally and a chest.
+- **FX LAB** on the title screen plays any of the 244 effects, acted out on a dummy, mirrored or in your fighter's colours, and lists where each appears.
+
+Effects draw at 320×180 (a third of the game) so they keep their chunky pixels; critters and props use a 480×270 grid so they sit smaller in the scenery. Weather and scenery redraw at 10 fps on alternating frames, combat effects at 30 fps, hitstop freezes them, and each effect module is a lazy chunk the service worker caches after first use. **Settings → Pixel effects**: FULL (everything), LITE (hits, POWERs and screens, no weather, scenery or cosmetic extras; the default on touch screens and with reduced motion), OFF (the original vector sparks). Reduced motion also skips screen transitions, the impact frame and the nuke.
+
 ### HUD and results
 
 Each health bar carries the fighter's head-and-shoulders art, and a pale damage trail that waits until a combo ends, then drains down to the new health. Bars turn amber at half health and red at a quarter, where they pulse. The POWER meter shimmers once it passes the 35 mark, and the clock turns red for the last ten seconds. Rounds open with ROUND n (FINAL ROUND at one round each), then FIGHT!, and close with K.O., TIME!, DRAW or PERFECT (the winner never lost health), each with a sub-line naming the winner. Pause uses the game's own type and shows the arena, round and score.
@@ -175,6 +188,9 @@ Vercel runs the test suite before building `dist` using the included configurati
 MIT. See [LICENSE](LICENSE).
 
 ## Assets
+
+Pixel effects: `src/vendor/pixelfx` is pixelfx by Patch and Hugo Duprez, MIT; see its `LICENSE` and `NOTICE.md` (the gallery font is not included).
+
 
 See [ASSET-NOTES.md](ASSET-NOTES.md). Original supplied GIFs, sheets, and portraits are preserved. The combat edition contains 1372 attack poses across 343 four-pose sequences, plus 1176 poses for walking, jumping, guarding, hurt reactions, knockouts, and victories. Every move's impact pose is synchronized to its damage window. Stages are 1536×864 WebP backgrounds with bounded runtime atmosphere effects. Reduced motion disables environmental movement, the POWER glow, and menu preview loops.
 

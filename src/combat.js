@@ -41,6 +41,7 @@ import {
   wakeupWindow,
 } from "./combat-rules.js";
 import { createTouchController } from "./controller.js";
+import { createCombatFx } from "./combat-fx.js";
 
 const CSS = `
 .mvm-combat{position:relative;width:100%;height:100%;min-height:300px;background:#080914;overflow:hidden;isolation:isolate}.mvm-combat canvas{display:block;width:100%;height:100%;object-fit:contain}.mvm-hud{position:absolute;inset:16px 3% auto;display:grid;grid-template-columns:1fr 72px 1fr;gap:14px;pointer-events:none;font-family:inherit;color:white;text-shadow:0 2px #000}.mvm-hud-name{font-size:clamp(10px,1.7vw,19px);font-weight:900;letter-spacing:.07em;margin-bottom:5px;text-transform:uppercase}.mvm-hud-right{text-align:right}.mvm-health{height:20px;border:3px solid #f6e0a0;background:#542a37;box-shadow:0 3px #000}.mvm-health>i{display:block;height:100%;background:linear-gradient(#fff292,#edb42a);transition:width .12s}.mvm-hud-right .mvm-health>i{margin-left:auto}.mvm-energy{height:5px;background:#27293c;margin-top:5px}.mvm-energy>i{display:block;height:100%;background:#7cecde;transition:width .1s}.mvm-rounds{font-size:15px;color:#ffd96b;letter-spacing:6px;margin-top:3px}.mvm-clock{font-size:36px;text-align:center;font-weight:950;color:#ffdf74;line-height:1}.mvm-clock small{display:block;font-size:9px;color:white;letter-spacing:2px;margin-bottom:4px}.mvm-pause-button{position:absolute;right:12px;bottom:13px;z-index:4;border:1px solid #ffffff55;background:#111827cc;color:white;padding:8px 12px;cursor:pointer}.mvm-message{position:absolute;inset:39% 0 auto;text-align:center;pointer-events:none;color:#ffe6a2;font-size:clamp(24px,5vw,64px);font-weight:950;font-style:italic;text-shadow:4px 4px #421849,-2px -2px #090915;letter-spacing:.06em}.mvm-overlay{position:absolute;inset:0;background:#090a17df;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;z-index:10;color:white;backdrop-filter:blur(8px)}.mvm-overlay h2{font-size:40px;margin:0}.mvm-overlay button{padding:14px 35px;min-width:220px;background:#edbb57;color:#171121;border:0;font:700 15px inherit;cursor:pointer}.mvm-overlay button:last-child{background:#252638;color:white}.mvm-help{position:absolute;left:16px;bottom:14px;color:#ffffff88;font-size:10px;letter-spacing:1px;pointer-events:none}.mvm-combat[data-touch="true"] .mvm-help{display:none}.mvm-local-hint{display:none;position:absolute;left:50%;top:96px;transform:translateX(-50%);max-width:92%;padding:6px 10px;background:#070b13df;color:#e5d6b1;font:9px monospace;letter-spacing:1px;text-align:center;pointer-events:none;z-index:4}.mvm-combat[data-touch="true"] .mvm-local-hint{display:block}.mvm-trial-hint,.mvm-data{position:absolute;left:50%;transform:translateX(-50%);padding:6px 12px;background:#070b13ef;border:1px solid #e8d7ac55;color:#ffe395;font:10px monospace;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;pointer-events:none;z-index:4}.mvm-trial-hint{top:22%}.mvm-trial-hint[data-status="pass"]{color:#7cecde;border-color:#7cecde}.mvm-trial-hint[data-status="fail"]{color:#ff8fb1;border-color:#ff8fb1}.mvm-data{bottom:96px;color:#cfe6ff}.mvm-trial-hint:empty,.mvm-data:empty{display:none}.mvm-training-tools{flex-wrap:wrap;max-width:94%}.mvm-combo[data-pop="a"]{animation:mvm-pop-a .18s ease-out}.mvm-combo[data-pop="b"]{animation:mvm-pop-b .18s ease-out}@keyframes mvm-pop-a{from{transform:scale(1.35)}to{transform:scale(1)}}@keyframes mvm-pop-b{from{transform:scale(1.35)}to{transform:scale(1)}}.reduced-motion .mvm-combo{animation:none!important}@media(prefers-reduced-motion:reduce){.mvm-combo{animation:none!important}}
@@ -187,6 +188,7 @@ export async function startCombat({
       if (scene && !paused) {
         scene.resetRound();
         resetTraining();
+        scene.pixel?.trainingReset(scene.fighters[0]);
         Object.keys(stats).forEach((k) => (stats[k] = 0));
       }
     };
@@ -478,6 +480,17 @@ export async function startCombat({
       this.pendingHits = [];
       this.slowMo = 0;
       this.punch = null;
+      // Pixel effects (src/combat-fx.js): never allowed to stop a fight from starting.
+      this.pixel = null;
+      try {
+        if (typeof createCombatFx === "function") {
+          this.shadowFinal = Boolean(opponent.shadow);
+          this.pixel = createCombatFx({ scene: this, settings, arena, mode });
+          this.pixel?.roundStart({ round: 0, final: false });
+        }
+      } catch {
+        this.pixel = null;
+      }
       // Zoom punches stay inside the 960×540 stage.
       this.cameras.main.setBounds?.(0, 0, 960, 540);
       banner("round", "ROUND 1");
@@ -1081,6 +1094,8 @@ export async function startCombat({
       });
       if (this.sparks.length > SPARK_CAP)
         this.sparks.splice(0, this.sparks.length - SPARK_CAP);
+      if (!blocking) this.lastBlow = m;
+      this.pixel?.hit({ attacker: f, defender: e, move: m, outcome, blocking, damage, projectile: Boolean(m.projectile), index });
       if (!blocking && m.type === "special" && e.hp > 0)
         this.cameraPunch(1.05, (f.x + e.x) / 2, Math.min(f.y, e.y) - 90, 0.42);
       if (!settings.reducedMotion) {
@@ -1168,6 +1183,14 @@ export async function startCombat({
       if (!win) banner("draw", "DRAW", "REMATCH");
       else if (ko && win.hp >= 100) banner("perfect", "PERFECT", `K.O. · ${who}`);
       else banner(ko ? "ko" : "time", ko ? "K.O." : "TIME!", who);
+      this.pixel?.roundEnd({
+        winner: win,
+        loser: win ? (win === p ? o : p) : null,
+        ko,
+        perfect: Boolean(ko && win.hp >= 100),
+        matchOver: p.rounds >= 2 || o.rounds >= 2,
+        finalBlow: this.lastBlow,
+      });
       if (ko && !settings.reducedMotion) {
         const loser = win === p ? o : p;
         this.cameraPunch(1.12, loser.x, loser.y - 90, 0.9);
@@ -1246,6 +1269,12 @@ export async function startCombat({
       const [p, o] = this.fighters;
       if (p.rounds === 1 && o.rounds === 1) banner("round", "FINAL ROUND");
       else banner("round", `ROUND ${1 + p.rounds + o.rounds}`);
+      this.lastBlow = null;
+      this.pixel?.roundStart({
+        round: p.rounds + o.rounds,
+        final: p.rounds === 1 && o.rounds === 1,
+        lastLoser: this.roundWinner ? (this.roundWinner === p ? o : p) : null,
+      });
       clearInputs();
       this.sync();
     }
@@ -1282,6 +1311,11 @@ export async function startCombat({
       );
       for (const f of this.fighters)
         paintPower(this.fx, f, this.elapsed, settings.reducedMotion);
+      try {
+        this.pixel?.tick(dt, { frozen: this.hitstop > 0 });
+      } catch {
+        this.pixel = null;
+      }
       if (this.elapsed > this.powerUntil)
         wrapper.querySelector(".mvm-power-callout").classList.remove("visible");
       if (this.elapsed > (this.calloutUntil ?? 0))
@@ -1300,7 +1334,7 @@ export async function startCombat({
       });
       if (mode === "training") this.trainingReadout(activePlayer);
       this.sparks = this.sparks.filter((s) => (s.life -= dt) > 0);
-      for (const s of this.sparks) {
+      for (const s of this.pixel ? [] : this.sparks) {
         // Size and ray count scale with the strike's tier; blocks are small and cool.
         const tier = s.special ? 4 : s.tier;
         const rays = 6 + tier * 2;
@@ -1411,7 +1445,7 @@ export async function startCombat({
           this.pendingHits.push([
             shot.owner,
             shot.target,
-            { ...shot.move, face: shot.face, source: shot.move },
+            { ...shot.move, face: shot.face, source: shot.move, projectile: true },
             shot.index,
           ]);
           shot.life = 0;
@@ -1428,7 +1462,10 @@ export async function startCombat({
         const air = f.y < 449,
           down = f.down > 0;
         if (down && !f.wasDown) this.puff(f.x, 1.5);
-        else if (f.wasAir && !air) this.puff(f.x, 0.8);
+        else if (f.wasAir && !air) {
+          this.puff(f.x, 0.8);
+          this.pixel?.landing(f);
+        }
         f.wasAir = air;
         f.wasDown = down;
       }
@@ -1447,6 +1484,7 @@ export async function startCombat({
           o.hp = 100;
           o.x = 690;
           banner("info", "DUMMY RESET");
+          this.pixel?.dummyReset(o);
           this.time.delayedCall(650, () => {
             if (!destroyed) banner("idle");
           });
@@ -1462,6 +1500,7 @@ export async function startCombat({
   function destroy() {
     if (destroyed) return;
     destroyed = true;
+    scene?.pixel?.destroy();
     listeners.forEach((fn) => fn());
     controller.destroy();
     game?.destroy(true);
