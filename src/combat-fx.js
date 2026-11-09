@@ -377,6 +377,15 @@ export function createCombatFx({ scene, settings = {}, arena, mode, reducedMotio
         images[layer]?.setVisible?.(stage.visible(layer));
       }
     },
+    /** RAINBOW cheat: multiply the hit and POWER layers by one colour (null clears it). */
+    tintEffects(color) {
+      for (const name of ["under", "over"]) {
+        try {
+          if (color == null) images[name]?.clearTint?.();
+          else images[name]?.setTint?.(color);
+        } catch {}
+      }
+    },
     destroy() {
       destroyed = true;
       stage.destroy();

@@ -391,3 +391,93 @@ main.screen-enter .match-grade { animation: mvm-stamp 0.5s 0.55s var(--ease-out)
 
 /* FX LAB (src/fx-lab.js) sits under the shared screen heading. */
 .lab-mount .fx-lab{padding-inline:0}
+
+/* ─── Konami code: title pips, cheats badge, celebration, settings, result line ── */
+.konami-pips { display: flex; gap: 6px; height: 6px; margin-top: 16px; opacity: 0; transition: opacity 0.2s; }
+.konami-pips.on { opacity: 1; }
+.konami-pips i { width: 6px; height: 6px; background: #ffffff1c; }
+.konami-pips i.lit { background: var(--pip, var(--gold)); box-shadow: 0 0 6px var(--pip, var(--gold)); }
+.konami-pips i:nth-child(6n + 1) { --pip: #ff4d6d; }
+.konami-pips i:nth-child(6n + 2) { --pip: #ffb547; }
+.konami-pips i:nth-child(6n + 3) { --pip: #ffe877; }
+.konami-pips i:nth-child(6n + 4) { --pip: #5ef38c; }
+.konami-pips i:nth-child(6n + 5) { --pip: #4dd2ff; }
+.konami-pips i:nth-child(6n + 6) { --pip: #a77bff; }
+.hero-meta > .cheat-badge {
+  display: flex; align-items: center; gap: 6px;
+  font: 700 18px var(--display); color: var(--muted);
+  border: 1px solid var(--line); padding: 4px 8px;
+}
+.hero-meta > .cheat-badge.on { color: #ffd1f6; border-color: #ff7be566; }
+.hero-meta > .cheat-badge small { color: inherit; }
+/* sits under the pixel bursts (9000) and over everything else but cutscenes */
+.konami-overlay {
+  position: fixed; inset: 0; z-index: 8999;
+  display: grid; place-items: center; padding: 16px;
+  background: repeating-linear-gradient(0deg, #0000 0 3px, #0000002e 3px 4px), radial-gradient(ellipse at 50% 45%, #2a1b21f2, #101319f7 70%);
+  cursor: pointer;
+  animation: mvm-konami-in 0.18s steps(3) both;
+}
+.konami-card { text-align: center; max-width: 720px; }
+.konami-code { display: block; font: 700 11px monospace; letter-spacing: 0.45em; color: var(--gold); }
+.konami-card h2 {
+  margin: 22px 0 14px;
+  font: 400 clamp(44px, 9vw, 104px)/0.92 "MVM Pixel", var(--display);
+  letter-spacing: -2px;
+  color: #f2d68a; text-shadow: 4px 4px 0 #c34a32, 8px 8px 0 #080b11;
+  animation: mvm-konami-pop 0.42s 0.05s steps(5) both;
+}
+@media (max-width: 700px) { .konami-card h2 { letter-spacing: 0; text-shadow: 3px 3px 0 #c34a32, 6px 6px 0 #080b11; } }
+.konami-card h2 em { font-style: normal; color: var(--red); text-shadow: 4px 4px 0 #5c2a27, 8px 8px 0 #080b11; }
+.konami-sub {
+  display: inline-block; margin: 6px 0 22px; padding: 7px 14px;
+  font: 700 13px monospace; letter-spacing: 0.4em;
+  color: #141820; background: var(--gold);
+  animation: mvm-konami-blink 0.16s 0.45s steps(2) 3 both;
+}
+.konami-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 22px; padding: 0; list-style: none; }
+.konami-list li {
+  padding: 6px 10px; border: 1px solid var(--c); color: var(--c);
+  font: 700 10px monospace; letter-spacing: 0.15em;
+  animation: mvm-rise 0.3s var(--ease-out) both; animation-delay: calc(0.5s + var(--i) * 70ms);
+}
+.konami-card > small { font: 9px monospace; letter-spacing: 0.25em; color: var(--muted); }
+.konami-overlay.toast {
+  inset: auto auto auto 50%; top: 72px; translate: -50% 0;
+  padding: 0; background: none; cursor: default; pointer-events: none;
+}
+.konami-toast {
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+  padding: 12px 20px; background: #151a22; border: 1px solid var(--gold); box-shadow: 6px 6px 0 #0008;
+  font: 700 10px monospace; letter-spacing: 0.25em; white-space: nowrap;
+}
+.konami-toast b { color: var(--gold); }
+.konami-toast span { color: var(--muted); font-size: 9px; }
+@keyframes mvm-konami-in { from { opacity: 0; } }
+@keyframes mvm-konami-pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } }
+@keyframes mvm-konami-blink { 50% { opacity: 0.2; } }
+.cheats-panel { padding: 24px 0 4px; }
+.cheats-panel > strong { font-size: 10px; letter-spacing: 1px; }
+.cheats-panel > strong span { margin-left: 8px; color: #ff7be5; font-size: 8px; letter-spacing: 2px; }
+.cheats-panel > small { display: block; margin-top: 6px; font-size: 8px; color: var(--muted); }
+.cheats-panel .setting-row { padding: 14px 0; }
+.cheats-panel .setting-row:last-of-type { border-bottom: 0; }
+.cheats-panel .toggle.active { background: #ff7be5; }
+.cheats-panel + .input-panel { margin-top: 6px; }
+.cheats-panel .input-meta { margin: 0; padding: 8px 0 6px; color: var(--muted); font-size: 8px; letter-spacing: 1px; }
+.cheats-panel [data-lock-cheats] { font-size: 9px; }
+.cheat-line {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+  margin: 0 0 14px; padding: 8px 12px;
+  border-left: 2px solid #ff7be5; background: #2a0f2f55;
+  font: 700 9px monospace; letter-spacing: 0.15em; color: #ffd1f6;
+}
+.cheat-line b { color: var(--gold); }
+.continue-prompt.infinite b { font-family: var(--display); }
+.reduced-motion .konami-overlay,
+.reduced-motion .konami-card h2,
+.reduced-motion .konami-sub,
+.reduced-motion .konami-list li { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .konami-overlay, .konami-card h2, .konami-sub, .konami-list li { animation: none; }
+}

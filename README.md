@@ -92,6 +92,10 @@ Before and after, on the stage select, the versus screen, round one, a POWER and
 
 Weather and scenery redraw at 10–12 fps on alternating frames, combat effects at 30 fps, hitstop freezes them, and each effect module is a lazy chunk the service worker caches after first use. **Settings → Pixel effects**: FULL (everything), LITE (hits, POWERs and screens, no weather, scenery or cosmetic extras; the default on touch screens and with reduced motion), OFF (the original vector sparks). Reduced motion also skips screen transitions, the impact frame and the nuke.
 
+### Cinematic layer
+
+`src/vfx-pro.js` adds a WebGL pass over each fight: bloom on only the brightest pixels; on heavy hits, counter hits and POWERs, a chromatic pulse, a shockwave ripple, speed lines and a radial blur; two-frame impact frames on a POWER hit and the K.O.; and a 0.45 s POWER cut-in (the world desaturates and a slanted band shows the fighter's bust and POWER name). The cut-in holds the simulation like a pause, so frame data and outcomes are unchanged. It also adds afterimages on jumps, heavy normals and launches; light from a charging POWER or passing shot on both fighters and the floor; layered additive spark streaks and embers sized by strike tier; and a vignette, grain and arena-tinted grade. **Pixel effects** FULL gets all of it, LITE keeps sparks, halos and bloom, OFF removes the layer, and reduced motion keeps only gentle bloom. Without WebGL the shader is skipped. Screenshots: [heavy hit](docs/qa/vfx-pro-heavy-hit.jpg), [POWER cut-in](docs/qa/vfx-pro-power-cutin.jpg), [POWER impact frame](docs/qa/vfx-pro-power-impact-frame.jpg), [K.O. frame](docs/qa/vfx-pro-ko-impact-frame.jpg).
+
 ### HUD and results
 
 Each health bar carries the fighter's head-and-shoulders art, and a pale damage trail that waits until a combo ends, then drains down to the new health. Bars turn amber at half health and red at a quarter, where they pulse. The POWER meter shimmers once it passes the 35 mark, and the clock turns red for the last ten seconds. Rounds open with ROUND n (FINAL ROUND at one round each), then FIGHT!, and close with K.O., TIME!, DRAW or PERFECT (the winner never lost health), each with a sub-line naming the winner. Pause uses the game's own type and shows the arena, round and score.
@@ -118,6 +122,25 @@ Hits and blocks now follow shared frame data in `src/combat-rules.js`:
 - **Launches and knockdowns.** An uppercut or roundhouse inside a combo (or as a counter hit) launches; one juggle hit is allowed. POWER knocks down. A launched fighter lands into a 0.75 s knockdown during which they cannot be hit, ending the combo.
 - **Counter hits.** Striking a rival during their startup deals 125 % damage and adds hitstun, with a COUNTER! callout. Counter kits also score one after a successful block.
 - The HUD counts true combos only (hits landing while the rival is still reeling or airborne); the result screen reports the best combo of the match.
+
+## Secrets
+
+Enter **↑ ↑ ↓ ↓ ← → ← → B A** on the title screen or any menu to unlock the cheats. It works on the keyboard (arrows, then the B and A keys), on a pad (d-pad, then B and A), and on touch (four-way swipes, then a tap on the left half for B and the right half for A). It is ignored during fights, bonus stages and cutscenes, where player two plays on the arrows. On the title screen ten small pips light up as the code goes in. A full-screen card with a jingle and pixel fireworks confirms the unlock (static and silent under reduced motion and muted sound); entering it again shows a short reminder. Detection lives in `src/konami.js`, the in-match effects in `src/cheat-effects.js`.
+
+Once unlocked, **Settings → Cheats** switches each one on or off, and **LOCK CHEATS** hides them again. The choices are stored in `mvm-konami`, and the title screen shows how many are on.
+
+| Cheat | Effect |
+|---|---|
+| TURBO | Matches run 1.35x faster. |
+| BIG HEAD | Fighters' heads (top of sprite) scaled up. |
+| RAINBOW | Hit sparks and POWERs cycle through the spectrum. |
+| CRT | Scanlines and a curved-glass glow over the cabinet. |
+| 30 CONTINUES | Arcade continue timer never runs out. |
+| INFINITE METER | POWER is always ready (CPU too). |
+
+A fight with any cheat on shows CHEATS ON in the HUD, lists the cheats on the result screen, and is not saved to your wins, fights or best streak.
+
+Screenshots: [unlock](docs/qa/konami-unlock.jpg), [settings](docs/qa/konami-settings.jpg) (headless Chromium).
 
 ## Stages
 
