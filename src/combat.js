@@ -42,6 +42,17 @@ import {
 } from "./combat-rules.js";
 import { createTouchController } from "./controller.js";
 import { createCombatFx } from "./combat-fx.js";
+import {
+  activeCheats,
+  inMatchCheats,
+  cheatColor,
+  hexString,
+  headCrop,
+  crtStyle,
+  TURBO_SCALE,
+  BIG_HEAD_SCALE,
+  CHEAT_LABELS,
+} from "./cheat-effects.js";
 
 const CSS = `
 .mvm-combat{position:relative;width:100%;height:100%;min-height:300px;background:#080914;overflow:hidden;isolation:isolate}.mvm-combat canvas{display:block;width:100%;height:100%;object-fit:contain}.mvm-hud{position:absolute;inset:16px 3% auto;display:grid;grid-template-columns:1fr 72px 1fr;gap:14px;pointer-events:none;font-family:inherit;color:white;text-shadow:0 2px #000}.mvm-hud-name{font-size:clamp(10px,1.7vw,19px);font-weight:900;letter-spacing:.07em;margin-bottom:5px;text-transform:uppercase}.mvm-hud-right{text-align:right}.mvm-health{height:20px;border:3px solid #f6e0a0;background:#542a37;box-shadow:0 3px #000}.mvm-health>i{display:block;height:100%;background:linear-gradient(#fff292,#edb42a);transition:width .12s}.mvm-hud-right .mvm-health>i{margin-left:auto}.mvm-energy{height:5px;background:#27293c;margin-top:5px}.mvm-energy>i{display:block;height:100%;background:#7cecde;transition:width .1s}.mvm-rounds{font-size:15px;color:#ffd96b;letter-spacing:6px;margin-top:3px}.mvm-clock{font-size:36px;text-align:center;font-weight:950;color:#ffdf74;line-height:1}.mvm-clock small{display:block;font-size:9px;color:white;letter-spacing:2px;margin-bottom:4px}.mvm-pause-button{position:absolute;right:12px;bottom:13px;z-index:4;border:1px solid #ffffff55;background:#111827cc;color:white;padding:8px 12px;cursor:pointer}.mvm-message{position:absolute;inset:39% 0 auto;text-align:center;pointer-events:none;color:#ffe6a2;font-size:clamp(24px,5vw,64px);font-weight:950;font-style:italic;text-shadow:4px 4px #421849,-2px -2px #090915;letter-spacing:.06em}.mvm-overlay{position:absolute;inset:0;background:#090a17df;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;z-index:10;color:white;backdrop-filter:blur(8px)}.mvm-overlay h2{font-size:40px;margin:0}.mvm-overlay button{padding:14px 35px;min-width:220px;background:#edbb57;color:#171121;border:0;font:700 15px inherit;cursor:pointer}.mvm-overlay button:last-child{background:#252638;color:white}.mvm-help{position:absolute;left:16px;bottom:14px;color:#ffffff88;font-size:10px;letter-spacing:1px;pointer-events:none}.mvm-combat[data-touch="true"] .mvm-help{display:none}.mvm-local-hint{display:none;position:absolute;left:50%;top:96px;transform:translateX(-50%);max-width:92%;padding:6px 10px;background:#070b13df;color:#e5d6b1;font:9px monospace;letter-spacing:1px;text-align:center;pointer-events:none;z-index:4}.mvm-combat[data-touch="true"] .mvm-local-hint{display:block}.mvm-trial-hint,.mvm-data{position:absolute;left:50%;transform:translateX(-50%);padding:6px 12px;background:#070b13ef;border:1px solid #e8d7ac55;color:#ffe395;font:10px monospace;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;pointer-events:none;z-index:4}.mvm-trial-hint{top:22%}.mvm-trial-hint[data-status="pass"]{color:#7cecde;border-color:#7cecde}.mvm-trial-hint[data-status="fail"]{color:#ff8fb1;border-color:#ff8fb1}.mvm-data{bottom:96px;color:#cfe6ff}.mvm-trial-hint:empty,.mvm-data:empty{display:none}.mvm-training-tools{flex-wrap:wrap;max-width:94%}.mvm-combo[data-pop="a"]{animation:mvm-pop-a .18s ease-out}.mvm-combo[data-pop="b"]{animation:mvm-pop-b .18s ease-out}@keyframes mvm-pop-a{from{transform:scale(1.35)}to{transform:scale(1)}}@keyframes mvm-pop-b{from{transform:scale(1.35)}to{transform:scale(1)}}.reduced-motion .mvm-combo{animation:none!important}@media(prefers-reduced-motion:reduce){.mvm-combo{animation:none!important}}
@@ -125,6 +136,32 @@ export async function startCombat({
       `<div class="mvm-meter-label" data-meter-label="${i}"></div>`,
     );
   });
+  // Konami cheats (src/cheat-effects.js): on only when settings.cheats is unlocked and switched
+  // on. Without the helpers (or without settings.cheats) nothing below changes the fight.
+  const cheatList = typeof activeCheats === "function" ? activeCheats(settings) : [];
+  const fightCheats = typeof inMatchCheats === "function" ? inMatchCheats(settings) : [];
+  const cheat = Object.fromEntries(fightCheats.map((id) => [id, true]));
+  const timeScale = cheat.turbo ? TURBO_SCALE : 1;
+  const rainbow = (color, t) => (cheat.rainbow ? cheatColor(color, t) : color);
+  let crt = null;
+  if (fightCheats.length) {
+    // Recorded results are marked: the HUD says so for the whole match.
+    const names = fightCheats.map((id) => CHEAT_LABELS?.[id] ?? id).join(" · ");
+    wrapper.insertAdjacentHTML(
+      "beforeend",
+      `<div class="mvm-cheats-tag" role="note" aria-label="Cheats on: ${safe(names)}" title="${safe(names)}" style="position:absolute;left:50%;top:2px;transform:translateX(-50%);z-index:4;padding:1px 8px;background:#2a0f2fdd;border:1px solid #ff7be5;color:#ffd1f6;font:700 9px monospace;letter-spacing:2px;pointer-events:none;white-space:nowrap">CHEATS ON</div>`,
+    );
+  }
+  if (cheat.crt) {
+    crt = document.createElement("div");
+    crt.className = "cheat-crt";
+    crt.setAttribute("aria-hidden", "true");
+    crt.setAttribute("style", crtStyle({ reducedMotion: settings.reducedMotion === true }));
+    if (settings.reducedMotion !== true)
+      crt.innerHTML =
+        "<style>@keyframes cheat-crt-flicker{0%,100%{opacity:1}48%{opacity:.94}50%{opacity:.86}52%{opacity:.96}}@media(prefers-reduced-motion:reduce){.cheat-crt{animation:none!important}}</style>";
+    wrapper.append(crt);
+  }
   // Training lab state. The dummy cycles OPEN → GUARD → CROUCH GUARD → RECORD → PLAY.
   const DUMMY_MODES = ["open", "guard", "crouch", "record", "play"];
   const DUMMY_LABELS = {
@@ -443,10 +480,16 @@ export async function startCombat({
         const shadow = this.add
           .ellipse(sprite.x, 450, 96, 17, 0x000000, 0.35)
           .setDepth(2);
+        // BIG HEAD: a second copy of the frame, cropped to the head and pinned at the neck.
+        // Drawing only: hurtboxes and reach still come from the fighter, not from this sprite.
+        const head = cheat.bigHead
+          ? this.add.sprite(sprite.x, 450, `ready${i}`, 0).setDepth(5.05)
+          : null;
         return {
           c,
           sprite,
           shadow,
+          head,
           scale,
           motionScale: 190 / (c.motionBodyHeight || c.bodyHeight || 176),
           x: sprite.x,
@@ -462,6 +505,8 @@ export async function startCombat({
           ...freshFighterState(),
         };
       });
+      // The intro does not render fighters, so the big heads are fitted once here.
+      this.fighters.forEach((f, i) => f.head && this.renderHead(f, `ready${i}`, 0, f.scale, 0));
       this.powerUntil = 0;
       this.timer = 60;
       this.phase = "intro";
@@ -905,12 +950,80 @@ export async function startCombat({
     }
     // One render tick of white on a clean hit, the hurt blush, and the arcade shadow's tint.
     tint(f) {
+      const paint = f.head ? (fn) => [f.sprite, f.head].forEach(fn) : (fn) => fn(f.sprite);
       if (f.flash > 0) {
         f.flash--;
-        f.sprite.setTintFill(0xffffff);
-      } else if (f.stun > 0 && f.visualTime < 0.05) f.sprite.setTint(0xffc6b4);
-      else if (f.c.shadow) f.sprite.setTint(0x9186d6);
-      else f.sprite.clearTint();
+        paint((s) => s.setTintFill(0xffffff));
+      } else if (f.stun > 0 && f.visualTime < 0.05) paint((s) => s.setTint(0xffc6b4));
+      else if (f.c.shadow) paint((s) => s.setTint(0x9186d6));
+      else paint((s) => s.clearTint());
+    }
+    // BIG HEAD: the highest opaque row of a sheet frame (where the head is in a crouch or a lunge),
+    // measured once per frame. undefined when the art cannot be read (the head falls back to the
+    // standing body's top).
+    frameTop(texture, frame) {
+      const key = `${texture}:${frame}`;
+      this.frameTops ??= new Map();
+      if (this.frameTops.has(key)) return this.frameTops.get(key);
+      let top;
+      try {
+        const f = this.textures?.getFrame?.(texture, frame);
+        const image = f?.source?.image;
+        if (f && image && typeof document !== "undefined") {
+          const canvas = document.createElement("canvas");
+          canvas.width = f.cutWidth;
+          canvas.height = f.cutHeight;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          ctx.drawImage(image, f.cutX, f.cutY, f.cutWidth, f.cutHeight, 0, 0, f.cutWidth, f.cutHeight);
+          const data = ctx.getImageData(0, 0, f.cutWidth, f.cutHeight).data;
+          // A row counts once a few pixels are solid, so a stray speck is not a crown.
+          for (let y = 0; y < f.cutHeight && top === undefined; y++) {
+            let solid = 0;
+            for (let x = 0; x < f.cutWidth; x++) if (data[(y * f.cutWidth + x) * 4 + 3] > 96) solid++;
+            if (solid >= 3) top = y;
+          }
+        }
+      } catch {
+        top = undefined;
+      }
+      this.frameTops.set(key, top);
+      return top;
+    }
+    // BIG HEAD: the overlay copies the body's texture, frame, position, flip, alpha and depth.
+    renderHead(f, texture, frame, scale, bob) {
+      const head = f.head;
+      if (!head) return;
+      const c = f.c;
+      const fw = c.frameWidth || 320,
+        fh = c.frameHeight || 320;
+      const anchorX = c.anchorX || 160,
+        anchorY = c.anchorY || 296;
+      // The body's height in this sheet's own pixels (each sheet is scaled to the same 190 px).
+      const crop = headCrop({
+        frameWidth: fw,
+        frameHeight: fh,
+        anchorY,
+        bodyHeight: 190 / (scale || 1),
+        top: this.frameTop(texture, frame),
+      });
+      if (f.headTexture !== texture) {
+        head.setTexture(texture);
+        f.headTexture = texture;
+      }
+      if (!crop.visible) {
+        head.setVisible(false);
+        return;
+      }
+      head
+        .setFrame(frame)
+        .setOrigin(anchorX / fw, crop.neck / fh)
+        .setCrop(crop.x, crop.y, crop.width, crop.height)
+        .setRotation(0)
+        .setPosition(f.x, f.y + bob - (anchorY - crop.neck) * scale)
+        .setFlipX(f.face < 0)
+        .setScale(scale * BIG_HEAD_SCALE)
+        .setAlpha(f.sprite.alpha ?? 1)
+        .setVisible(f.sprite.visible !== false);
     }
     rumble(index, ms) {
       if (settings.reducedMotion || !(index === 0 || mode === "local")) return;
@@ -988,6 +1101,8 @@ export async function startCombat({
         // The motion atlas can be packed at a different height from the ready and combat art.
         .setScale(texture === `motion${index}` ? f.motionScale : f.scale);
       f.shadow.setPosition(f.x, 452).setScale(1 - (450 - f.y) / 600);
+      if (f.head)
+        this.renderHead(f, texture, frame, texture === `motion${index}` ? f.motionScale : f.scale, bob);
       this.tint(f);
     }
 
@@ -1278,6 +1393,7 @@ export async function startCombat({
           .setFrame(0)
           .clearTint();
         f.textureKey = `ready${i}`;
+        if (f.head) this.renderHead(f, `ready${i}`, 0, f.scale, 0);
         f.visualState = null;
       });
       this.projectiles = [];
@@ -1313,7 +1429,9 @@ export async function startCombat({
       if (destroyed) return;
       const pads = [padInput(0), padInput(1)];
       if (paused || destroyed || ended || !this.fighters) return;
-      let dt = Math.min(delta / 1000, 0.035);
+      // TURBO scales game time itself, so hitstop, frame data and the clock keep their ratios.
+      let dt = Math.min(delta / 1000, 0.035) * timeScale;
+      if (cheat.meter) for (const f of this.fighters) f.energy = 100;
       this.updateCamera(dt);
       if (this.slowMo > 0) {
         this.slowMo -= dt;
@@ -1341,8 +1459,16 @@ export async function startCombat({
         settings.reducedMotion,
       );
       for (const f of this.fighters)
-        paintPower(this.fx, f, this.elapsed, settings.reducedMotion);
+        paintPower(
+          this.fx,
+          cheat.rainbow && f.attack?.type === "special"
+            ? { ...f, c: { ...f.c, color: hexString(rainbow(f.c.color, this.elapsed)) } }
+            : f,
+          this.elapsed,
+          settings.reducedMotion,
+        );
       try {
+        if (cheat.rainbow) this.pixel?.tintEffects?.(rainbow(0xffffff, this.elapsed));
         this.pixel?.tick(dt, { frozen: this.hitstop > 0 });
       } catch {
         this.pixel = null;
@@ -1371,14 +1497,14 @@ export async function startCombat({
         const rays = 6 + tier * 2;
         const size = (40 + tier * 12) * (s.block ? 0.6 : 1);
         const u = 1 - s.life / 0.22;
-        const color = s.block ? 0x9fb4c0 : s.throw ? 0xff6ad5 : 0xffe49e;
+        const color = rainbow(s.block ? 0x9fb4c0 : s.throw ? 0xff6ad5 : 0xffe49e, this.elapsed);
         // Layered impact: a hot core that collapses, then a ring on heavy strikes.
         if (u < 0.45) {
-          this.fx.fillStyle(s.block ? 0xdff3ff : 0xffffff, 0.85 * (1 - u / 0.45));
+          this.fx.fillStyle(rainbow(s.block ? 0xdff3ff : 0xffffff, this.elapsed + 0.2), 0.85 * (1 - u / 0.45));
           this.fx.fillCircle(s.x, s.y, size * 0.34 * (1 - u * 0.9));
         }
         if (tier >= 3 && !s.block) {
-          this.fx.lineStyle(2, s.special ? 0xfff2c4 : color, 0.7 * (1 - u));
+          this.fx.lineStyle(2, s.special ? rainbow(0xfff2c4, this.elapsed + 0.4) : color, 0.7 * (1 - u));
           this.fx.strokeCircle(s.x, s.y, size * (0.35 + u * 0.95));
         }
         this.fx.lineStyle(
@@ -1444,6 +1570,7 @@ export async function startCombat({
                 damageTaken: Math.round(stats.damageTaken),
               },
             };
+            if (cheatList.length) result.cheats = [...cheatList];
             queueMicrotask(() => {
               if (!destroyed) onEnd?.(result);
             });
@@ -1467,7 +1594,13 @@ export async function startCombat({
       for (const shot of this.projectiles) {
         shot.life -= dt;
         shot.x += shot.face * (shot.move.projectileSpeed || 580) * dt;
-        paintProjectile(this.fx, shot, settings.reducedMotion ? 0 : this.elapsed);
+        paintProjectile(
+          this.fx,
+          cheat.rainbow
+            ? { ...shot, owner: { ...shot.owner, c: { ...shot.owner.c, color: hexString(rainbow(shot.owner.c.color, this.elapsed)) } } }
+            : shot,
+          settings.reducedMotion ? 0 : this.elapsed,
+        );
         if (
           canBeHit(shot.target) &&
           Math.abs(shot.x - shot.target.x) < 45 &&
@@ -1489,6 +1622,7 @@ export async function startCombat({
       this.tickFighter(this.fighters[1], this.fighters[0], p2, dt, 1);
       for (const hit of this.pendingHits) this.hit(...hit);
       this.pendingHits = [];
+      if (cheat.meter) for (const f of this.fighters) f.energy = 100;
       for (const f of this.fighters) {
         const air = f.y < 449,
           down = f.down > 0;
@@ -1532,6 +1666,8 @@ export async function startCombat({
     if (destroyed) return;
     destroyed = true;
     scene?.pixel?.destroy();
+    scene?.fighters?.forEach((f) => f.head?.destroy?.());
+    crt?.remove();
     listeners.forEach((fn) => fn());
     controller.destroy();
     game?.destroy(true);
