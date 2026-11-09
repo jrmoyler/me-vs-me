@@ -119,6 +119,25 @@ Hits and blocks now follow shared frame data in `src/combat-rules.js`:
 - **Counter hits.** Striking a rival during their startup deals 125 % damage and adds hitstun, with a COUNTER! callout. Counter kits also score one after a successful block.
 - The HUD counts true combos only (hits landing while the rival is still reeling or airborne); the result screen reports the best combo of the match.
 
+## Secrets
+
+Enter **↑ ↑ ↓ ↓ ← → ← → B A** on the title screen or any menu to unlock the cheats. It works on the keyboard (arrows, then the B and A keys), on a pad (d-pad, then B and A), and on touch (four-way swipes, then a tap on the left half for B and the right half for A). It is ignored during fights, bonus stages and cutscenes, where player two plays on the arrows. On the title screen ten small pips light up as the code goes in. A full-screen card with a jingle and pixel fireworks confirms the unlock (static and silent under reduced motion and muted sound); entering it again shows a short reminder. Detection lives in `src/konami.js`, the in-match effects in `src/cheat-effects.js`.
+
+Once unlocked, **Settings → Cheats** switches each one on or off, and **LOCK CHEATS** hides them again. The choices are stored in `mvm-konami`, and the title screen shows how many are on.
+
+| Cheat | Effect |
+|---|---|
+| TURBO | Matches run 1.35x faster. |
+| BIG HEAD | Fighters' heads (top of sprite) scaled up. |
+| RAINBOW | Hit sparks and POWERs cycle through the spectrum. |
+| CRT | Scanlines and a curved-glass glow over the cabinet. |
+| 30 CONTINUES | Arcade continue timer never runs out. |
+| INFINITE METER | POWER is always ready (CPU too). |
+
+A fight with any cheat on shows CHEATS ON in the HUD, lists the cheats on the result screen, and is not saved to your wins, fights or best streak.
+
+Screenshots: [unlock](docs/qa/konami-unlock.jpg), [settings](docs/qa/konami-settings.jpg) (headless Chromium).
+
 ## Stages
 
 | # | Stage | Setting | Atmosphere |

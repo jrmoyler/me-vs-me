@@ -13,6 +13,7 @@ import { configureScreenFx, screenBurst, screenTransition, preloadScreenFx } fro
 import { SCREEN_FX, BONUS_FX } from "./fx-map.js";
 import { rampFrom } from "./pixelfx.js";
 import { mountFxLab } from "./fx-lab.js";
+import { CHEATS, defaultCheats, loadCheats, saveCheats, unlockCheats, installKonami } from "./konami.js";
 
 const app = document.querySelector("#app");
 const read = (key, fallback) => {
@@ -51,6 +52,22 @@ let state = {
   stage: 0,
   tournament: null, // TOURNAMENT MODE bracket (src/tournament.js); null outside tournaments
 };
+// Konami cheats (src/konami.js): kept apart from settings so they never land in mvm-settings.
+// Guarded like the cutscene hooks: harnesses evaluate this file without its imports.
+const cheatStore = () => {
+  try {
+    return localStorage;
+  } catch {
+    return null;
+  }
+};
+let cheats = typeof loadCheats === "function" ? loadCheats(cheatStore()) : { unlocked: false };
+const cheatList = () => (typeof CHEATS !== "undefined" && cheats.unlocked ? CHEATS : []);
+const menuCheat = (id) => Boolean(cheats.unlocked && cheats[id]);
+const cheatName = (id) => (typeof CHEATS !== "undefined" ? CHEATS.find((c) => c.id === id)?.name : null) ?? String(id).toUpperCase();
+function storeCheats() {
+  if (typeof saveCheats === "function") saveCheats(cheats, cheatStore());
+}
 let combat = null,
   transitionTimer = null,
   audioCtx;
@@ -118,24 +135,27 @@ function syncSoundButton(el = app.querySelector('[data-action="sound"]')) {
   el.setAttribute("title", `Sound ${settings.sound ? "on" : "off"}`);
   el.innerHTML = soundButtonInner();
 }
-const playClick = () => {
+// One chiptune voice: a square (or triangle) note at `at` seconds from now, optionally gliding to `to` Hz.
+function beep(freq, { at = 0, len = 0.09, to, type = "square", gain = 0.025 } = {}) {
   if (!settings.sound) return;
   try {
     audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.resume();
+    const t = audioCtx.currentTime + at;
     const o = audioCtx.createOscillator(),
       g = audioCtx.createGain();
-    o.type = "square";
-    o.frequency.setValueAtTime(440, audioCtx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(240, audioCtx.currentTime + 0.07);
-    g.gain.setValueAtTime(0.025, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.09);
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (to) o.frequency.exponentialRampToValueAtTime(to, t + len * 0.8);
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + len);
     o.connect(g);
     g.connect(audioCtx.destination);
-    o.start();
-    o.stop(audioCtx.currentTime + 0.1);
+    o.start(t);
+    o.stop(t + len + 0.01);
   } catch {}
-};
+}
+const playClick = () => beep(440, { to: 240, len: 0.09 });
 // --- PIXEL EFFECTS (src/screen-fx.js) ------------------------------------------
 // Guarded like the cutscene hooks: harnesses evaluate this file without its imports.
 function pixelSetting() {
@@ -268,7 +288,7 @@ function title() {
   setScreen("title");
   const lead = characters[0],
     second = characters[Math.min(5, characters.length - 1)];
-  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="local">VERSUS / TWO PLAYERS <span>↗</span></button><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="tournament">TOURNAMENT <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button><button data-action="fx-lab">PIXEL FX LAB <span>✦</span></button>${installButton()}</div><p class="title-press" aria-hidden="true"><span class="keycap">↵</span> PRESS ENTER · <span class="keycap">↑↓←→</span> CHOOSE · PADS WORK TOO</p></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span></div></div><div class="hero-stage"><i class="hero-sweep" aria-hidden="true"></i><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>ONE PLAYER OR TWO / SAME CABINET</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
+  app.innerHTML = `${chrome()}<main class="title-screen"><div class="title-copy"><div class="eyebrow"><span class="tiny-cross">✦</span> AN INNER CONFLICT. AN ARCADE CLASSIC.</div><h1 class="game-title"><span>ME<span class="title-stroke">.</span></span><em>VERSUS</em><span>ME<span class="title-stroke">.</span></span></h1><p class="hero-description">${characters.length} versions. One original.<br>Find out who you are when you fight yourself.</p><div class="title-actions"><button class="button primary start-button" data-action="start" data-mode="duel">CHOOSE YOUR MATCH <span>↗</span></button><div class="secondary-actions"><button data-action="start" data-mode="local">VERSUS / TWO PLAYERS <span>↗</span></button><button data-action="start" data-mode="arcade">ARCADE LADDER <span>↗</span></button><button data-action="start" data-mode="tournament">TOURNAMENT <span>↗</span></button><button data-action="start" data-mode="training">TRAINING <span>↗</span></button><button data-action="fx-lab">PIXEL FX LAB <span>✦</span></button>${installButton()}</div><p class="title-press" aria-hidden="true"><span class="keycap">↵</span> PRESS ENTER · <span class="keycap">↑↓←→</span> CHOOSE · PADS WORK TOO</p></div><div class="hero-meta"><span>${characters.length} <small>FIGHTERS</small></span><i></i><span>${pad2(arenas.length)} <small>STAGES</small></span><i></i><span>01 <small>YOU</small></span>${cheatBadge()}</div><div class="konami-pips" aria-hidden="true">${"<i></i>".repeat(10)}</div></div><div class="hero-stage"><i class="hero-sweep" aria-hidden="true"></i><div class="stage-word">KNOW<br>THYSELF.</div><div class="hero-sun"></div><div class="stage-grid"></div><div class="hero-character hero-character-back">${portrait(second)}</div><div class="hero-character hero-character-front">${portrait(lead)}</div><div class="stage-caption"><span class="live-dot"></span>PLAYER 01 <strong>HATAALII</strong><small>ALL ROADS LEAD BACK TO YOU</small></div><div class="edition-label">EST. 2026<br>ARCADE EDITION / 01</div></div></main><div class="title-ticker"><span>ONE PLAYER OR TWO / SAME CABINET</span><b>✦</b><span>FACE YOUR OTHER SIDE</span><b>✦</b><span>BEST OF THREE</span><b>✦</b><span>${countWord(arenas.length)} PLACES TO SETTLE IT</span><b>✦</b></div>${footer()}`;
   bind();
 }
 // The FX LAB: browse and play every pixel effect in the game (src/fx-lab.js).
@@ -423,6 +443,7 @@ function nextChallenger() {
   });
 }
 function beginContinueCountdown() {
+  if (menuCheat("lives30")) return; // 30 CONTINUES: the clock never runs out
   let remaining = 10;
   const tick = () => {
     if (state.screen !== "result") return;
@@ -548,7 +569,7 @@ async function launchCombat() {
       arena: arenas[state.arena],
       difficulty: settings.difficulty,
       mode: state.mode,
-      settings: { ...settings },
+      settings: { ...settings, cheats: { ...cheats } },
       onMoves: () => showMoves(characters[state.player]),
       onEnd: result,
       onExit: () => {
@@ -594,7 +615,8 @@ function result(data) {
     );
     return;
   }
-  if (state.mode !== "training" && !local) {
+  // A cheated fight (combat reports data.cheats) never touches the saved record.
+  if (state.mode !== "training" && !local && !cheated(data)) {
     record.matches++;
     record.wins += won ? 1 : 0;
     record.streak = won ? record.streak + 1 : 0;
@@ -630,7 +652,7 @@ function result(data) {
       : won
         ? "One version stronger. The next version is waiting."
         : "Every loss is a lesson from yourself. Run it back.";
-  app.innerHTML = `${chrome("THE REFLECTION NEVER LIES")}<main class="result-screen ${won ? "victory" : "defeat"}">${resultArt(winner)}<div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${complete ? "KNOW<br>THYSELF." : won ? "SELF<br>MASTERY." : "MEET YOUR<br>MATCH."}</h1>${resultScore(data, won)}${quote}<p>${story}</p>${complete ? `<div class="champion-seal">SELF MASTERED <span>${reflections} / ${reflections} REFLECTIONS · SHADOW DEFEATED</span></div>` : ""}${state.mode === "arcade" && !won ? '<div class="continue-prompt">CONTINUE? <b class="continue-seconds" role="timer">10</b><span>Run it back before time runs out.</span></div>' : ""}<div class="result-actions">${state.mode === "arcade" && won && !complete ? '<button class="button primary" data-action="next-stage">NEXT CHALLENGER <span>→</span></button>' : '<button class="button primary" data-action="rematch">RUN IT BACK <span>↻</span></button>'}<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button></div>${matchSummary(data, won)}${recordLine()}</div></main>${footer("THE WORK ON YOURSELF IS NEVER FINISHED.")}`;
+  app.innerHTML = `${chrome("THE REFLECTION NEVER LIES")}<main class="result-screen ${won ? "victory" : "defeat"}">${resultArt(winner)}<div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${complete ? "KNOW<br>THYSELF." : won ? "SELF<br>MASTERY." : "MEET YOUR<br>MATCH."}</h1>${resultScore(data, won)}${quote}<p>${story}</p>${complete ? `<div class="champion-seal">SELF MASTERED <span>${reflections} / ${reflections} REFLECTIONS · SHADOW DEFEATED</span></div>` : ""}${state.mode === "arcade" && !won ? continuePrompt() : ""}<div class="result-actions">${state.mode === "arcade" && won && !complete ? '<button class="button primary" data-action="next-stage">NEXT CHALLENGER <span>→</span></button>' : '<button class="button primary" data-action="rematch">RUN IT BACK <span>↻</span></button>'}<button class="button outline" data-action="change-fighters">CHANGE FIGHTERS</button><button class="text-button" data-action="home">BACK TO TITLE</button></div>${matchSummary(data, won)}${cheatLine(data)}${recordLine()}</div></main>${footer("THE WORK ON YOURSELF IS NEVER FINISHED.")}`;
   bind();
   celebrate({ won: won || local, next: state.mode === "arcade" && won && !complete, champion: complete, winner });
   if (state.mode === "arcade" && !won) beginContinueCountdown();
@@ -661,6 +683,16 @@ function matchSummary(data, won) {
     ? `<div class="match-grade" data-grade="${grade}" aria-label="Match grade ${grade}, ${score} of 100"><b>${grade}</b><span>${isLocal() ? "PLAYER ONE" : "MATCH"} GRADE<small>${score} / 100</small></span></div>`
     : "";
   return `<div class="match-summary${graded ? "" : " ungraded"}">${badge}<div class="match-breakdown">${tiles}</div></div>`;
+}
+function continuePrompt() {
+  return menuCheat("lives30")
+    ? '<div class="continue-prompt infinite">CONTINUE? <b class="continue-seconds" role="timer" aria-label="No time limit">∞</b><span>30 CONTINUES · the clock never runs out.</span></div>'
+    : '<div class="continue-prompt">CONTINUE? <b class="continue-seconds" role="timer">10</b><span>Run it back before time runs out.</span></div>';
+}
+const cheated = (data) => Array.isArray(data?.cheats) && data.cheats.length > 0;
+function cheatLine(data) {
+  if (!cheated(data)) return "";
+  return `<div class="cheat-line" role="note"><span>CHEATS: ${data.cheats.map((id) => esc(cheatName(id))).join(" · ")}</span><b>RECORD NOT SAVED</b></div>`;
 }
 function recordLine() {
   return `<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> FIGHTS</span><span><b>${record.best}</b> BEST STREAK</span></div>`;
@@ -779,7 +811,7 @@ function tournamentResultScreen(data, { won, eyebrow, heading, story, seal = "",
   setScreen("result");
   const winner = characters[won ? state.player : state.opponent];
   const quote = victoryQuote(winner);
-  app.innerHTML = `${chrome("EIGHT ENTER. ONE IS CROWNED.")}<main class="result-screen tournament-result ${won ? "victory" : "defeat"}">${resultArt(winner)}<div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${heading}</h1>${resultScore(data, won)}${quote}<p>${story}</p>${seal}<div class="result-actions">${actions}</div>${matchSummary(data, won)}${recordLine()}</div></main>${footer("EIGHT ENTER. ONE IS CROWNED.")}`;
+  app.innerHTML = `${chrome("EIGHT ENTER. ONE IS CROWNED.")}<main class="result-screen tournament-result ${won ? "victory" : "defeat"}">${resultArt(winner)}<div class="result-copy"><span class="eyebrow">${eyebrow}</span><h1>${heading}</h1>${resultScore(data, won)}${quote}<p>${story}</p>${seal}<div class="result-actions">${actions}</div>${matchSummary(data, won)}${cheatLine(data)}${recordLine()}</div></main>${footer("EIGHT ENTER. ONE IS CROWNED.")}`;
   bind();
   celebrate({ won, champion: Boolean(seal), winner });
 }
@@ -885,11 +917,12 @@ function showHelp(onDone) {
 }
 function showSettings() {
   const layer = modal(
-    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>SKIP CUTSCENES</strong><small>Intro, match openers, challengers, rounds & results</small></div><button class="toggle ${settings.skipCutscenes ? "active" : ""}" data-setting="skipCutscenes" aria-pressed="${Boolean(settings.skipCutscenes)}">${settings.skipCutscenes ? "ON" : "OFF"}</button></div><div class="difficulty-setting pixel-setting"><strong>PIXEL EFFECTS</strong><div class="difficulty-options">${["full", "lite", "off"].map((q) => `<button class="${pixelSetting() === q ? "active" : ""}" data-pixel="${q}" aria-pressed="${pixelSetting() === q}">${q}</button>`).join("")}</div><small>Full adds weather, critters and finishers. Lite keeps hits and POWERs.</small></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
-    "",
+    `<span class="eyebrow">MAKE YOURSELF COMFORTABLE</span><h2>YOUR<br><em>RULES.</em></h2><div class="setting-row"><div><strong>SOUND EFFECTS</strong><small>Arcade feedback & battle sounds</small></div><button class="toggle ${settings.sound ? "active" : ""}" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>REDUCED MOTION</strong><small>Fewer flashes & shorter transitions</small></div><button class="toggle ${settings.reducedMotion ? "active" : ""}" data-setting="reducedMotion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion ? "ON" : "OFF"}</button></div><div class="setting-row"><div><strong>SKIP CUTSCENES</strong><small>Intro, match openers, challengers, rounds & results</small></div><button class="toggle ${settings.skipCutscenes ? "active" : ""}" data-setting="skipCutscenes" aria-pressed="${Boolean(settings.skipCutscenes)}">${settings.skipCutscenes ? "ON" : "OFF"}</button></div><div class="difficulty-setting pixel-setting"><strong>PIXEL EFFECTS</strong><div class="difficulty-options">${["full", "lite", "off"].map((q) => `<button class="${pixelSetting() === q ? "active" : ""}" data-pixel="${q}" aria-pressed="${pixelSetting() === q}">${q}</button>`).join("")}</div><small>Full adds weather, critters and finishers. Lite keeps hits and POWERs.</small></div><div class="difficulty-setting"><strong>CPU DIFFICULTY</strong><div class="difficulty-options">${["easy", "normal", "hard"].map((d) => `<button class="${settings.difficulty === d ? "active" : ""}" data-difficulty="${d}" aria-pressed="${settings.difficulty === d}">${d}</button>`).join("")}</div><small>Applies to your next fight.</small></div>${cheatsPanel()}${inputPanel()}<div class="record-line"><span><b>${record.wins}</b> WINS</span><span><b>${record.matches}</b> MATCHES</span><span><b>${record.best}</b> BEST STREAK</span></div><button class="button primary modal-done">BACK TO IT <span>→</span></button>`,
+    "settings-modal",
     refresh,
   );
   bindInputPanel(layer);
+  bindCheatsPanel(layer);
   layer.querySelectorAll("[data-setting]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -1224,9 +1257,11 @@ document.addEventListener("keydown", (e) => {
 // Start confirms. Combat, bonus stages and cutscenes read the pads themselves.
 const PAD_REPEAT = [0.32, 0.12]; // first repeat, then held repeat (seconds)
 const padMenu = { running: false, held: {}, last: 0 };
+// Pad presses arrive as keydowns flagged `repeat`: the Konami listener reads the pads itself and
+// ignores repeats, so a d-pad press never counts twice toward the code.
 function padMenuKey(key) {
   const target = document.activeElement?.closest?.("#app") ? document.activeElement : document;
-  target.dispatchEvent(new KeyboardEvent("keydown", { key, code: key, bubbles: true, cancelable: true }));
+  target.dispatchEvent(new KeyboardEvent("keydown", { key, code: key, bubbles: true, cancelable: true, repeat: true }));
 }
 function padMenuConfirm() {
   const el = document.activeElement;
@@ -1278,6 +1313,12 @@ function pollMenuPad(now) {
       fire = true;
     }
     if (!fire || !active) continue;
+    // The celebration takes the press; the A that completes the code never clicks the menu.
+    if (konamiLayer?.blocking) {
+      konamiLayer.dismiss();
+      continue;
+    }
+    if (control === "confirm" && konamiProgress === KONAMI_LENGTH - 1) continue;
     if (control === "confirm") padMenuConfirm();
     else if (control === "back") padMenuBack();
     else if (control === "start") padMenuKey("Enter");
@@ -1292,6 +1333,159 @@ window.addEventListener?.("gamepadconnected", () => {
   padMenu.held = { confirm: { wait: 1 }, start: { wait: 1 }, back: { wait: 1 } };
   window.requestAnimationFrame(pollMenuPad);
 });
+// ─── KONAMI CODE ─────────────────────────────────────────────────────────────
+// ↑↑↓↓←→←→ B A on any menu (keyboard, pad, or touch swipes + taps; src/konami.js) unlocks the
+// cheats. Fights, bonus stages and cutscenes ignore it: player two plays on the arrows.
+const KONAMI_LENGTH = 10;
+let konamiProgress = 0,
+  konamiLayer = null,
+  pipTimer = null;
+const RAINBOW = ["#ff4d6d", "#ffb547", "#ffe877", "#5ef38c", "#4dd2ff", "#a77bff"];
+function konamiBlocked() {
+  return ["", "combat", "versus", "bonus"].includes(state.screen) || document.body.classList.contains("cutscene-open");
+}
+function cheatBadge() {
+  if (!cheats.unlocked) return "";
+  const list = cheatList();
+  const on = list.filter((c) => cheats[c.id]).length;
+  return `<i></i><button class="cheat-badge${on ? " on" : ""}" data-action="settings" aria-label="Cheats: ${on} of ${list.length} on. Open settings">${on} <small>CHEAT${on === 1 ? "" : "S"} ON</small></button>`;
+}
+function cheatsPanel() {
+  const list = cheatList();
+  if (!list.length) return "";
+  return `<div class="cheats-panel"><strong>CHEATS <span>✦ KONAMI</span></strong><small>Cheated fights are marked on the result screen and never touch your record.</small>${list
+    .map(
+      (c) =>
+        `<div class="setting-row"><div><strong>${esc(c.name)}</strong><small>${esc(c.blurb)}</small></div><button class="toggle ${cheats[c.id] ? "active" : ""}" data-cheat="${c.id}" aria-pressed="${Boolean(cheats[c.id])}" aria-label="${esc(c.name)}">${cheats[c.id] ? "ON" : "OFF"}</button></div>`,
+    )
+    .join("")}<div class="input-meta"><span>STORED ON THIS DEVICE</span><button class="text-button" data-lock-cheats>LOCK CHEATS</button></div></div>`;
+}
+function bindCheatsPanel(layer) {
+  layer.querySelectorAll("[data-cheat]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const id = b.dataset.cheat;
+        cheats = { ...cheats, [id]: !cheats[id] };
+        storeCheats();
+        b.classList.toggle("active", cheats[id]);
+        b.setAttribute("aria-pressed", cheats[id]);
+        b.textContent = cheats[id] ? "ON" : "OFF";
+      }),
+  );
+  const lock = layer.querySelector("[data-lock-cheats]");
+  if (lock)
+    lock.onclick = () => {
+      cheats = typeof defaultCheats === "function" ? defaultCheats() : { unlocked: false };
+      storeCheats();
+      layer.querySelector(".cheats-panel")?.remove();
+      layer.querySelector(".modal-done")?.focus();
+    };
+}
+// Ten pips under the title light up as the code goes in; they fade once input stops.
+function showKonamiProgress(n) {
+  konamiProgress = n;
+  const pips = app.querySelector(".konami-pips");
+  if (!pips) return;
+  const show = n > 0 && state.screen === "title" && !konamiBlocked();
+  pips.classList.toggle("on", show);
+  pips.querySelectorAll("i").forEach((pip, i) => pip.classList.toggle("lit", show && i < n));
+  if (pipTimer) clearTimeout(pipTimer);
+  pipTimer = null;
+  if (show) pipTimer = setTimeout(() => showKonamiProgress(0), 2600);
+}
+function konamiJingle() {
+  // a rising arpeggio, a hop and a held top note over a triangle bass
+  const lead = [[523.25, 0], [659.25, 0.08], [783.99, 0.16], [1046.5, 0.24], [783.99, 0.36], [1046.5, 0.42]];
+  for (const [f, at] of lead) beep(f, { at, len: 0.085, gain: 0.03 });
+  beep(1318.5, { at: 0.5, len: 0.42, gain: 0.03 });
+  beep(1567.98, { at: 0.5, len: 0.42, gain: 0.012 });
+  for (const [f, at, len] of [[130.81, 0, 0.24], [196, 0.24, 0.24], [261.63, 0.5, 0.45]]) beep(f, { at, len, type: "triangle", gain: 0.05 });
+}
+function konamiFireworks() {
+  if (settings.reducedMotion || typeof SCREEN_FX === "undefined") return;
+  const w = window.innerWidth || 1280,
+    h = window.innerHeight || 720;
+  // the burst frame scales to cover the viewport, so a phone gets fewer, edge-hugging shells
+  const spots =
+    w < 700
+      ? [[0.25, 0.08, 0.1], [0.75, 0.92, 0.5], [0.5, 0.06, 0.9]]
+      : [[0.2, 0.28, 0.1], [0.8, 0.24, 0.35], [0.5, 0.16, 0.6], [0.3, 0.7, 0.9], [0.72, 0.68, 1.15]];
+  spots.forEach(([x, y, delay], i) => burst(SCREEN_FX.victory[1], { x: w * x, y: h * y }, { delay, palette: [RAINBOW[i % 6], RAINBOW[(i + 2) % 6], "#fff6e6"] }));
+  burst(SCREEN_FX.victory[0], { x: w / 2, y: h * (w < 700 ? 0.15 : 0.4) }, { delay: 0.25, palette: RAINBOW });
+  if (w >= 700) burst(SCREEN_FX.champion[0], { x: w * 0.9, y: h * 0.85 }, { delay: 0.5, palette: RAINBOW });
+}
+// A full-screen card (unlock) or a small toast (already unlocked). The card eats keys and taps
+// while it is up so the dismissing press never reaches the menu beneath it.
+function konamiOverlay(html, { blocking = true, duration = 2600 } = {}) {
+  konamiLayer?.close();
+  const layer = document.createElement("div");
+  layer.className = `konami-overlay${blocking ? "" : " toast"}`;
+  layer.setAttribute("role", "status");
+  layer.setAttribute("aria-live", "polite");
+  layer.innerHTML = html;
+  const opened = Date.now();
+  let timer = null;
+  const close = () => {
+    if (konamiLayer !== handle) return;
+    konamiLayer = null;
+    clearTimeout(timer);
+    window.removeEventListener("keydown", onKey, true);
+    layer.remove();
+  };
+  // presses in the first moment belong to the code itself (its final A), not to a dismissal
+  const dismiss = () => {
+    if (Date.now() - opened >= 350) close();
+  };
+  const onKey = (e) => {
+    if (e.key === "Tab" || e.key === "Shift") return;
+    e.preventDefault();
+    e.stopPropagation();
+    dismiss();
+  };
+  if (blocking) {
+    window.addEventListener("keydown", onKey, true);
+    layer.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dismiss();
+    });
+  }
+  document.body.append(layer);
+  const handle = { blocking, close, dismiss, layer };
+  konamiLayer = handle;
+  timer = setTimeout(close, duration);
+  return handle;
+}
+function konamiUnlocked() {
+  if (konamiBlocked()) return;
+  showKonamiProgress(0);
+  if (cheats.unlocked) {
+    konamiOverlay(`<div class="konami-toast"><b>CHEATS ALREADY UNLOCKED</b><span>SETTINGS → CHEATS</span></div>`, { blocking: false, duration: 1800 });
+    beep(1046.5, { len: 0.08 });
+    beep(1318.5, { at: 0.08, len: 0.16 });
+    return;
+  }
+  cheats = typeof unlockCheats === "function" ? unlockCheats(cheats) : { ...cheats, unlocked: true };
+  storeCheats();
+  // the title's badge and an open settings panel pick the new cheats up
+  if (state.screen === "title" && !document.querySelector(".modal-layer")) title();
+  else if (document.querySelector(".modal-layer.settings-modal")) showSettings();
+  const list = cheatList();
+  konamiOverlay(
+    `<div class="konami-card"><span class="konami-code" aria-label="Up up down down left right left right B A">↑ ↑ ↓ ↓ ← → ← → B A</span><h2>KONAMI CODE<br><em>ACCEPTED.</em></h2><p class="konami-sub">CHEATS UNLOCKED</p><ul class="konami-list">${list.map((c, i) => `<li style="--i:${i};--c:${RAINBOW[i % RAINBOW.length]}">${esc(c.name)}</li>`).join("")}</ul><small>TURN THEM ON IN SETTINGS → CHEATS</small></div>`,
+  );
+  konamiJingle();
+  konamiFireworks();
+}
+try {
+  if (typeof installKonami === "function")
+    installKonami({
+      target: document,
+      onUnlock: konamiUnlocked,
+      onProgress: showKonamiProgress,
+      getGamepads: () => window.navigator.getGamepads?.() || [],
+    });
+} catch {}
+// ─── END KONAMI CODE ─────────────────────────────────────────────────────────
 registerPWA();
 onInstallChange(() => {
   if (state.screen === "title") title();
