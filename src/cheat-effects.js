@@ -19,8 +19,8 @@ export const CHEAT_LABELS = {
   bigHead: "BIG HEAD",
   rainbow: "RAINBOW",
   crt: "CRT",
-  meter: "INFINITE POWER",
-  lives30: "30 LIVES",
+  meter: "INFINITE METER",
+  lives30: "30 CONTINUES",
 };
 
 /** The active cheat ids for a settings object ([] when settings.cheats is missing or locked). */
